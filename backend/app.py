@@ -1,5 +1,6 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS
+from flask_socketio import SocketIO
 from tradingview_ta import TA_Handler, Interval
 import time
 import threading
@@ -21,12 +22,18 @@ from nvidia_chat import nvidia_chat, AVAILABLE_MODELS
 
 app = Flask(__name__)
 CORS(app, resources={
-    r"/api/*": {
+    r"/*": {
         "origins": ["http://localhost:3000"],
         "methods": ["GET", "POST", "OPTIONS"],
         "allow_headers": ["Content-Type"]
     }
 })
+
+# Initialize SocketIO
+socketio = SocketIO(app, cors_allowed_origins="http://localhost:3000", async_mode='threading')
+
+# Import social/socket logic
+from sockets import init_sockets
 
 @app.before_request
 def log_request_info():
@@ -36,7 +43,7 @@ def log_request_info():
     logger.info(f"URL: {request.url}")
     logger.info("----------------------")
 
-CACHE_TTL = 15
+CACHE_TTL = 30
 cache = {}
 locks = {}
 cache_lock = threading.Lock()
@@ -303,17 +310,33 @@ def get_trading_cached(symbol, interval_str='15m'):
     now = time.time()
     entry = cache.get(cache_key)
     if entry and now - entry['ts'] <= CACHE_TTL:
+        if 'error' in entry:
+            raise Exception('429: TradingView Rate Limit Exceeded (Cached)')
         return entry['data']
 
     lock = get_symbol_lock(cache_key)
     with lock:
         entry = cache.get(cache_key)
         if entry and now - entry['ts'] <= CACHE_TTL:
+            if 'error' in entry:
+                raise Exception('429: TradingView Rate Limit Exceeded (Cached)')
             return entry['data']
 
-        data = fetch_from_ta(symbol, interval_str)
-        cache[cache_key] = {'data': data, 'ts': time.time()}
-        return data
+        try:
+            data = fetch_from_ta(symbol, interval_str)
+            cache[cache_key] = {'data': data, 'ts': time.time()}
+            return data
+        except Exception as e:
+            if '429' in str(e):
+                logger.warning(f"Rate limit hit for {cache_key}. Backing off.")
+                if entry and 'data' in entry:
+                    # Extend old cache validity by 60 seconds to allow TradingView to recover
+                    cache[cache_key]['ts'] = time.time() + 60
+                    return entry['data']
+                else:
+                    # Cache the rate limit state to avoid hammering TradingView
+                    cache[cache_key] = {'error': '429', 'ts': time.time() + 300} # Block for 300s + CACHE_TTL
+            raise
 
 
 @app.route('/api/trading/<symbol>')
@@ -328,6 +351,8 @@ def get_trading_data(symbol):
         data = get_trading_cached(symbol, interval)
         return jsonify(data)
     except Exception as e:
+        if '429' in str(e):
+            return jsonify({'error': 'TradingView Rate Limit Exceeded'}), 429
         return jsonify({'error': str(e)}), 500
 
 
@@ -393,5 +418,8 @@ def get_models():
     return jsonify(models)
 
 
+# Initialize sockets after all functions are defined
+init_sockets(socketio, get_trading_cached)
+
 if __name__ == '__main__':
-    app.run(port=5000, debug=True, threaded=True)
+    socketio.run(app, port=5000, debug=True, host='127.0.0.1')

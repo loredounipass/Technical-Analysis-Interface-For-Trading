@@ -25,22 +25,20 @@ async function request(path, { method = 'GET', headers = {}, body = null, timeou
         data = text;
       }
 
-      if (!res.ok) {
-        const err = new Error(data && data.error ? data.error : `HTTP ${res.status}`);
-        err.status = res.status;
+      const isRateLimit = res.status === 429 || (data && data.error && data.error.toLowerCase().includes('rate limit'));
+
+      if (!res.ok || (data && data.error)) {
+        const errorMessage = data && data.error ? data.error : `HTTP ${res.status}`;
+        const err = new Error(errorMessage);
+        err.status = data && data.status ? data.status : (res.status !== 200 ? res.status : 400);
         err.body = data;
-        // retry on 5xx
-        if (res.status >= 500 && attempt < retries) {
-          await new Promise(r => setTimeout(r, 2 ** attempt * 100));
+
+        // retry on 5xx or rate limit
+        if ((err.status >= 500 || isRateLimit) && attempt < retries) {
+          const delay = isRateLimit ? 2000 * (attempt + 1) : 2 ** attempt * 100;
+          await new Promise(r => setTimeout(r, delay));
           continue;
         }
-        throw err;
-      }
-
-      if (data && data.error) {
-        const err = new Error(data.error);
-        err.status = data.status || 400;
-        err.body = data;
         throw err;
       }
 
@@ -60,6 +58,6 @@ async function request(path, { method = 'GET', headers = {}, body = null, timeou
 
 export const fetchTradingData = async (symbol, interval = '15m') => {
   if (!symbol) throw new Error('symbol is required');
-  return request(`/trading/${symbol}?interval=${interval}`);
+  return request(`/trading/${symbol}?interval=${interval}`, { retries: 4 });
 };
 

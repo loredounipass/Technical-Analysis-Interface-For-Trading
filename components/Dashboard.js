@@ -8,6 +8,7 @@ import AiChat from "@/components/AiChat"
 import { getRecommendation } from "@/utils/dataUtils"
 import { fetchTradingData } from "@/utils/apiService"
 import { useState, useEffect } from "react"
+import useTradingSocket from "@/hooks/useTradingSocket"
 
 export default function Dashboard({ moneda, onCambiarMoneda }) {
   const [datos, setDatos] = useState(null)
@@ -15,6 +16,9 @@ export default function Dashboard({ moneda, onCambiarMoneda }) {
   const [error, setError] = useState(null)
   const [ultimaActualizacion, setUltimaActualizacion] = useState(null)
   const [timeframe, setTimeframe] = useState("15m")
+
+  // Use our new real-time socket hook
+  const { liveData, isConnected } = useTradingSocket(moneda.symbol, timeframe)
 
   const fetchData = async (selectedTimeframe = timeframe) => {
     try {
@@ -36,10 +40,20 @@ export default function Dashboard({ moneda, onCambiarMoneda }) {
     fetchData(newTimeframe)
   }
 
+  // Effect for initial fetch and cleanup
   useEffect(() => {
     setLoading(true)
     fetchData()
   }, [moneda.symbol])
+
+  // Effect to update data when socket emits new info
+  useEffect(() => {
+    if (liveData) {
+      setDatos(liveData)
+      setUltimaActualizacion(new Date().toLocaleString())
+      setLoading(false)
+    }
+  }, [liveData])
 
   if (loading) {
     return (
@@ -70,6 +84,18 @@ export default function Dashboard({ moneda, onCambiarMoneda }) {
   return (
     <div className="min-h-screen trading-gradient p-4">
       <div className="max-w-7xl mx-auto">
+        {/* Connection Status Badge */}
+        <div className="flex justify-end mb-2">
+          <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-mono border ${
+            isConnected 
+              ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
+              : 'bg-red-500/10 text-red-400 border-red-500/20'
+          }`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${isConnected ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
+            {isConnected ? 'LIVE CONNECTION ACTIVE' : 'CONNECTION OFFLINE'}
+          </div>
+        </div>
+
         <Header
           moneda={moneda}
           ultimaActualizacion={ultimaActualizacion}
