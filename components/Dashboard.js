@@ -4,6 +4,7 @@ import Header from "@/components/Header"
 import PriceCard from "@/components/indicators/PriceCard"
 import RecommendationCard from "@/components/indicators/RecommendationCard"
 import IndicatorGrid from "@/components/indicators/IndicatorGrid"
+import AiChat from "@/components/AiChat"
 import { getRecommendation } from "@/utils/dataUtils"
 import { fetchTradingData } from "@/utils/apiService"
 import { useState, useEffect } from "react"
@@ -83,6 +84,9 @@ export default function Dashboard({ moneda, onCambiarMoneda }) {
         {/* Technical Indicators */}
         <IndicatorGrid datos={datos} />
       </div>
+
+      {/* AI Trading Agent Chat */}
+      <AiChat symbol={moneda.symbol} datos={datos} />
     </div>
   )
 }

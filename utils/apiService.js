@@ -1,6 +1,6 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000/api';
 
-async function request(path, { method = 'GET', headers = {}, body = null, timeout = 5000, retries = 2 } = {}) {
+async function request(path, { method = 'GET', headers = {}, body = null, timeout = 15000, retries = 2 } = {}) {
   const url = `${API_BASE_URL}${path.startsWith('/') ? '' : '/'}${path}`;
 
   for (let attempt = 0; attempt <= retries; attempt++) {

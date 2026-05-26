@@ -6,6 +6,13 @@ import threading
 import requests
 import statistics
 import math
+import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
+
+from nvidia_chat import nvidia_chat, AVAILABLE_MODELS
 
 app = Flask(__name__)
 CORS(app, resources={
@@ -246,6 +253,65 @@ def get_trading_data(symbol):
         return jsonify(data)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/chat', methods=['POST'])
+def chat_endpoint():
+    """AI Trading Agent chat endpoint. Fetches latest indicator data for context."""
+    ip = request.remote_addr or 'unknown'
+    if rate_limited(ip):
+        return jsonify({'error': 'Too many requests'}), 429
+
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'JSON body required'}), 400
+
+    prompt = data.get('prompt', '').strip()
+    if not prompt:
+        return jsonify({'error': 'prompt is required'}), 400
+
+    model_key = data.get('model', 'nvidia-llama')
+    symbol = data.get('symbol', 'BTCUSDT')
+    history = data.get('history', [])
+    temperature = data.get('temperature', 0.3)
+
+    # Fetch the latest indicator data for the current symbol
+    indicator_data = None
+    try:
+        indicator_data = get_trading_cached(symbol)
+        indicator_data['symbol'] = symbol
+    except Exception as e:
+        # If we can't get indicator data, continue without it
+        indicator_data = {'symbol': symbol, 'error': str(e)}
+
+    try:
+        response = nvidia_chat(
+            prompt=prompt,
+            model_key=model_key,
+            temperature=temperature,
+            max_tokens=4096,
+            history=history,
+            indicator_data=indicator_data,
+        )
+        if response is None:
+            return jsonify({'error': 'AI service unavailable. Check NVIDIA_API_KEY.'}), 503
+        return jsonify({'response': response, 'model': model_key})
+    except Exception as e:
+        return jsonify({'error': f'Chat error: {str(e)}'}), 500
+
+
+@app.route('/api/models')
+def get_models():
+    """Returns available AI models."""
+    models = []
+    for key, config in AVAILABLE_MODELS.items():
+        models.append({
+            'key': key,
+            'name': config['name'],
+            'provider': config['provider'],
+            'free': config.get('free', False),
+        })
+    return jsonify(models)
 
 
 if __name__ == '__main__':
