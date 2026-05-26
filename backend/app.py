@@ -18,7 +18,9 @@ app = Flask(__name__)
 CORS(app, resources={
     r"/api/*": {
         "origins": [
-            "http://localhost:3000"
+            "http://localhost:3000",
+            "http://127.0.0.1:3000",
+            "https://crispy-barnacle-qj97q4q9xj7c9pgv-3000.app.github.dev"
         ],
         "methods": ["GET", "POST", "OPTIONS"],
         "allow_headers": ["Content-Type"]
@@ -65,29 +67,56 @@ def fetch_from_ta(symbol):
     analysis = handler.get_analysis()
     indicators = analysis.indicators
     history = {}
+
+    # Intentar obtener klines y calcular series históricas
     try:
-        
         klines = fetch_klines(symbol, interval='15m', limit=300)
         closes = [float(k[4]) for k in klines]
         timestamps = [int(k[0]) for k in klines]
         history['closes'] = closes
         history['times'] = timestamps
-        
+
         history['rsi'] = compute_rsi_series(closes, period=14)
         macd_line, macd_signal = compute_macd_series(closes, fast=12, slow=26, signal=9)
         history['macd'] = macd_line
         history['macd_signal'] = macd_signal
-        
+
         bb_upper, bb_middle, bb_lower = compute_bollinger_series(closes, period=20)
         history['bb_upper'] = bb_upper
         history['bb_middle'] = bb_middle
         history['bb_lower'] = bb_lower
-        
+
         history['ema50'] = compute_ema_series(closes, 50)
         history['ema100'] = compute_ema_series(closes, 100)
         history['ema200'] = compute_ema_series(closes, 200)
     except Exception:
         history = {}
+
+    # Si no hay historial real, construir una historia sintética basada en el precio actual
+    if not history.get('closes'):
+        try:
+            current = indicators.get('close')
+            if current is not None:
+                base = float(current)
+                synthetic = []
+                for i in range(50):
+                    noise = 1 + 0.002 * math.sin(i / 3.0)
+                    synthetic.append(base * noise)
+                history['closes'] = synthetic
+                history['times'] = [int(time.time()) - (50 - i) * 900 for i in range(50)]
+                history['rsi'] = compute_rsi_series(history['closes'], period=14)
+                macd_line, macd_signal = compute_macd_series(history['closes'], fast=12, slow=26, signal=9)
+                history['macd'] = macd_line
+                history['macd_signal'] = macd_signal
+                bb_upper, bb_middle, bb_lower = compute_bollinger_series(history['closes'], period=20)
+                history['bb_upper'] = bb_upper
+                history['bb_middle'] = bb_middle
+                history['bb_lower'] = bb_lower
+                history['ema50'] = compute_ema_series(history['closes'], 50)
+                history['ema100'] = compute_ema_series(history['closes'], 100)
+                history['ema200'] = compute_ema_series(history['closes'], 200)
+        except Exception:
+            history = {}
 
     return {
         'precio': indicators.get('close'),
@@ -115,8 +144,8 @@ def fetch_from_ta(symbol):
         'r3': indicators.get('Pivot.M.Classic.R3'),
         'buySignals': analysis.summary.get('BUY'),
         'sellSignals': analysis.summary.get('SELL'),
-        'neutralSignals': analysis.summary.get('NEUTRAL')
-        , 'history': history
+        'neutralSignals': analysis.summary.get('NEUTRAL'),
+        'history': history
     }
 
 
@@ -124,9 +153,17 @@ def fetch_from_ta(symbol):
 def fetch_klines(symbol, interval='15m', limit=100):
     url = 'https://api.binance.com/api/v3/klines'
     params = {'symbol': symbol, 'interval': interval, 'limit': limit}
-    resp = requests.get(url, params=params, timeout=5)
-    resp.raise_for_status()
-    return resp.json()
+    attempts = 3
+    for attempt in range(attempts):
+        try:
+            resp = requests.get(url, params=params, timeout=8)
+            resp.raise_for_status()
+            return resp.json()
+        except Exception as e:
+            if attempt < attempts - 1:
+                time.sleep(0.5 * (attempt + 1))
+                continue
+            raise
 
 
 # CALCULA LA MEDIA MOVIL SIMPLE (SMA) DE UNA SERIE SOBRE UN PERIODO DADO

@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://crispy-barnacle-qj97q4q9xj7c9pgv-5000.app.github.dev/api';
 
 async function request(path, { method = 'GET', headers = {}, body = null, timeout = 15000, retries = 2 } = {}) {
   const url = `${API_BASE_URL}${path.startsWith('/') ? '' : '/'}${path}`;
