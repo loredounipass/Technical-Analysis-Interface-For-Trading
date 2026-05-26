@@ -7,7 +7,12 @@ import requests
 import statistics
 import math
 import os
+import logging
 from dotenv import load_dotenv
+
+# Configurar logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 # Load environment variables from .env file
 load_dotenv()
@@ -17,15 +22,19 @@ from nvidia_chat import nvidia_chat, AVAILABLE_MODELS
 app = Flask(__name__)
 CORS(app, resources={
     r"/api/*": {
-        "origins": [
-            "http://localhost:3000",
-            "http://127.0.0.1:3000",
-            "https://crispy-barnacle-qj97q4q9xj7c9pgv-3000.app.github.dev"
-        ],
+        "origins": ["http://localhost:3000"],
         "methods": ["GET", "POST", "OPTIONS"],
         "allow_headers": ["Content-Type"]
     }
 })
+
+@app.before_request
+def log_request_info():
+    logger.info("--- NUEVA PETICIÓN ---")
+    logger.info(f"Origin: {request.headers.get('Origin')}")
+    logger.info(f"Method: {request.method}")
+    logger.info(f"URL: {request.url}")
+    logger.info("----------------------")
 
 CACHE_TTL = 15
 cache = {}
