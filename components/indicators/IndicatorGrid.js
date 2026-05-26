@@ -81,101 +81,87 @@ export default function IndicatorGrid({ datos }) {
 
       {/* Volume and ADX with detailed numbers */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-        <IndicatorCard title="VOLUME ANALYSIS" icon={<BarChart4 className="h-5 w-5 mr-2 text-trading-yellow-500" />}>
+        <IndicatorCard title="VOLUME ANALYSIS" icon={<BarChart4 className="h-3.5 w-3.5 mr-1.5 text-yellow-500" />}>
           <div className="space-y-3">
-            <div className="bg-trading-dark-700 p-3 rounded border border-trading-dark-600">
+            <div className="bg-[#05070a]/50 p-3 rounded border border-white/5">
               <div className="flex justify-between items-center mb-2">
-                <span className="text-xs text-trading-dark-300 font-mono">24h Volume:</span>
-                <span className="text-lg font-bold text-trading-yellow-400 font-mono">
+                <span className="text-[10px] text-gray-500 font-mono tracking-widest uppercase">24h Vol</span>
+                <span className="text-lg font-bold text-yellow-400 font-mono tabular-nums">
                   {(datos.volumen / 1000000).toFixed(2)}M
                 </span>
               </div>
               <div className="flex justify-between items-center mb-2">
-                <span className="text-xs text-trading-dark-300 font-mono">Raw Volume:</span>
-                <span className="text-sm text-white font-mono">{datos.volumen.toLocaleString()}</span>
+                <span className="text-[10px] text-gray-500 font-mono tracking-widest uppercase">Raw</span>
+                <span className="text-[11px] text-white font-mono tabular-nums">{datos.volumen.toLocaleString()}</span>
               </div>
-              <div className="w-full bg-trading-dark-600 rounded-full h-2">
+              <div className="w-full bg-gray-900 rounded-sm h-1.5 overflow-hidden flex">
                 <div
-                  className="bg-trading-yellow-500 h-2 rounded-full transition-all duration-500"
+                  className="bg-yellow-500 h-1.5 transition-all duration-500 shadow-[0_0_8px_rgba(234,179,8,0.5)]"
                   style={{ width: `${Math.min((datos.volumen / 2000000) * 100, 100)}%` }}
                 ></div>
               </div>
-              <div className="text-xs text-trading-dark-300 font-mono mt-1">
-                Volume Strength: {datos.volumen > 1000000 ? "High" : datos.volumen > 500000 ? "Medium" : "Low"}
+              <div className="text-[9px] text-gray-500 font-mono mt-1 text-right tracking-widest uppercase">
+                Strength: {datos.volumen > 1000000 ? "HIGH" : datos.volumen > 500000 ? "MED" : "LOW"}
               </div>
             </div>
           </div>
         </IndicatorCard>
 
-        <IndicatorCard title="ADX TREND STRENGTH" icon={<ArrowUpDown className="h-5 w-5 mr-2 text-trading-blue-500" />}>
+        <IndicatorCard title="ADX TREND STRENGTH" icon={<ArrowUpDown className="h-3.5 w-3.5 mr-1.5 text-blue-500" />}>
           <div className="space-y-3">
-            <div className="bg-trading-dark-700 p-3 rounded border border-trading-dark-600">
+            <div className="bg-[#05070a]/50 p-3 rounded border border-white/5">
               <div className="flex justify-between items-center mb-2">
-                <span className="text-xs text-trading-dark-300 font-mono">ADX Value:</span>
-                <span className="text-xl font-bold text-trading-blue-400 font-mono">{datos.adx.toFixed(2)}</span>
+                <span className="text-[10px] text-gray-500 font-mono tracking-widest uppercase">ADX Value</span>
+                <span className="text-xl font-bold text-blue-400 font-mono tabular-nums">{datos.adx.toFixed(2)}</span>
               </div>
-              <div className="w-full bg-trading-dark-600 rounded-full h-2 mb-2">
+              <div className="w-full bg-gray-900 rounded-sm h-1.5 mb-2 overflow-hidden flex relative">
+                {/* Scale markers */}
+                <div className="absolute left-1/4 top-0 bottom-0 w-[1px] bg-white/10" />
+                <div className="absolute left-1/2 top-0 bottom-0 w-[1px] bg-white/10" />
+                <div className="absolute left-3/4 top-0 bottom-0 w-[1px] bg-white/10" />
+                
                 <div
-                  className={`h-2 rounded-full transition-all duration-500 ${
-                    datos.adx > 50
-                      ? "bg-trading-green-500"
-                      : datos.adx > 25
-                        ? "bg-trading-yellow-500"
-                        : "bg-trading-red-500"
+                  className={`h-1.5 transition-all duration-500 ${
+                    datos.adx > 50 ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" : 
+                    datos.adx > 25 ? "bg-yellow-500 shadow-[0_0_8px_rgba(234,179,8,0.5)]" : 
+                    "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]"
                   }`}
                   style={{ width: `${Math.min(datos.adx, 100)}%` }}
                 ></div>
               </div>
-              <div className="grid grid-cols-3 gap-1 text-xs font-mono">
-                <div
-                  className={`text-center p-1 rounded ${datos.adx > 50 ? "bg-trading-green-600/20 text-trading-green-400" : "text-trading-dark-400"}`}
-                >
-                  Strong
-                </div>
-                <div
-                  className={`text-center p-1 rounded ${datos.adx > 25 && datos.adx <= 50 ? "bg-trading-yellow-600/20 text-trading-yellow-400" : "text-trading-dark-400"}`}
-                >
-                  Moderate
-                </div>
-                <div
-                  className={`text-center p-1 rounded ${datos.adx <= 25 ? "bg-trading-red-600/20 text-trading-red-400" : "text-trading-dark-400"}`}
-                >
-                  Weak
-                </div>
+              <div className="grid grid-cols-3 gap-1 text-[9px] font-mono tracking-widest uppercase">
+                <div className={`text-center p-1 rounded border ${datos.adx > 50 ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30" : "text-gray-600 border-transparent"}`}>Strong</div>
+                <div className={`text-center p-1 rounded border ${datos.adx > 25 && datos.adx <= 50 ? "bg-yellow-500/10 text-yellow-400 border-yellow-500/30" : "text-gray-600 border-transparent"}`}>Med</div>
+                <div className={`text-center p-1 rounded border ${datos.adx <= 25 ? "bg-red-500/10 text-red-400 border-red-500/30" : "text-gray-600 border-transparent"}`}>Weak</div>
               </div>
             </div>
           </div>
         </IndicatorCard>
 
-        <IndicatorCard title="STOCHASTIC RSI" icon={<Percent className="h-5 w-5 mr-2 text-trading-green-500" />}>
+        <IndicatorCard title="STOCHASTIC RSI" icon={<Percent className="h-3.5 w-3.5 mr-1.5 text-emerald-500" />}>
           <div className="space-y-3">
-            <div className="bg-trading-dark-700 p-3 rounded border border-trading-dark-600">
+            <div className="bg-[#05070a]/50 p-3 rounded border border-white/5">
               <div className="flex justify-between items-center mb-2">
-                <span className="text-xs text-trading-dark-300 font-mono">Stoch RSI:</span>
-                <span className="text-xl font-bold text-trading-green-400 font-mono">{datos.rsiStoch.toFixed(2)}</span>
+                <span className="text-[10px] text-gray-500 font-mono tracking-widest uppercase">Value</span>
+                <span className="text-xl font-bold text-emerald-400 font-mono tabular-nums">{datos.rsiStoch.toFixed(2)}</span>
               </div>
               <div className="flex justify-between items-center mb-2">
-                <span className="text-xs text-trading-dark-300 font-mono">Status:</span>
-                <span
-                  className={`text-sm font-bold font-mono ${
-                    datos.rsiStoch > 80
-                      ? "text-trading-red-400"
-                      : datos.rsiStoch < 20
-                        ? "text-trading-green-400"
-                        : "text-trading-blue-400"
-                  }`}
-                >
-                  {datos.rsiStoch > 80 ? "Overbought" : datos.rsiStoch < 20 ? "Oversold" : "Neutral"}
+                <span className="text-[10px] text-gray-500 font-mono tracking-widest uppercase">Status</span>
+                <span className={`text-[10px] font-bold font-mono uppercase tracking-widest ${
+                  datos.rsiStoch > 80 ? "text-red-400" : 
+                  datos.rsiStoch < 20 ? "text-emerald-400" : "text-blue-400"
+                }`}>
+                  {datos.rsiStoch > 80 ? "OB" : datos.rsiStoch < 20 ? "OS" : "NEUT"}
                 </span>
               </div>
-              <div className="w-full bg-trading-dark-600 rounded-full h-2">
+              <div className="w-full bg-gray-900 rounded-sm h-1.5 overflow-hidden relative flex">
+                <div className="absolute left-[20%] top-0 bottom-0 w-[1px] bg-emerald-500/50" />
+                <div className="absolute left-[80%] top-0 bottom-0 w-[1px] bg-red-500/50" />
                 <div
-                  className={`h-2 rounded-full transition-all duration-500 ${
-                    datos.rsiStoch > 80
-                      ? "bg-trading-red-500"
-                      : datos.rsiStoch < 20
-                        ? "bg-trading-green-500"
-                        : "bg-trading-blue-500"
+                  className={`h-1.5 transition-all duration-500 ${
+                    datos.rsiStoch > 80 ? "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]" : 
+                    datos.rsiStoch < 20 ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" : 
+                    "bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]"
                   }`}
                   style={{ width: `${datos.rsiStoch}%` }}
                 ></div>
@@ -207,101 +193,80 @@ export default function IndicatorGrid({ datos }) {
 
       {/* Oscillators with detailed values */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        <IndicatorCard title="STOCHASTIC OSCILLATOR" icon={<Activity className="h-5 w-5 mr-2 text-trading-blue-500" />}>
+        <IndicatorCard title="STOCHASTIC OSCILLATOR" icon={<Activity className="h-3.5 w-3.5 mr-1.5 text-blue-500" />}>
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
-              <div className="bg-trading-dark-700 p-3 rounded border border-trading-dark-600">
-                <div className="text-xs text-trading-blue-300 font-mono mb-1">%K Line</div>
-                <div className="text-xl font-bold text-trading-blue-400 font-mono">{datos.stochK.toFixed(2)}</div>
-                <div className="text-xs text-trading-dark-300 font-mono">
-                  {datos.stochK > 80 ? "Overbought" : datos.stochK < 20 ? "Oversold" : "Normal"}
+              <div className="bg-[#05070a]/50 p-3 rounded border border-white/5">
+                <div className="text-[10px] text-blue-500/70 font-mono tracking-widest uppercase mb-1">%K LINE</div>
+                <div className="text-xl font-bold text-blue-400 font-mono tabular-nums">{datos.stochK.toFixed(2)}</div>
+                <div className="text-[9px] text-gray-500 font-mono tracking-widest uppercase">
+                  {datos.stochK > 80 ? "OB" : datos.stochK < 20 ? "OS" : "NEUT"}
                 </div>
               </div>
-              <div className="bg-trading-dark-700 p-3 rounded border border-trading-dark-600">
-                <div className="text-xs text-trading-green-300 font-mono mb-1">%D Line</div>
-                <div className="text-xl font-bold text-trading-green-400 font-mono">{datos.stochD.toFixed(2)}</div>
-                <div className="text-xs text-trading-dark-300 font-mono">
-                  {datos.stochD > 80 ? "Overbought" : datos.stochD < 20 ? "Oversold" : "Normal"}
+              <div className="bg-[#05070a]/50 p-3 rounded border border-white/5">
+                <div className="text-[10px] text-emerald-500/70 font-mono tracking-widest uppercase mb-1">%D LINE</div>
+                <div className="text-xl font-bold text-emerald-400 font-mono tabular-nums">{datos.stochD.toFixed(2)}</div>
+                <div className="text-[9px] text-gray-500 font-mono tracking-widest uppercase">
+                  {datos.stochD > 80 ? "OB" : datos.stochD < 20 ? "OS" : "NEUT"}
                 </div>
               </div>
             </div>
-            <div className="space-y-2">
-              <div className="flex justify-between text-xs font-mono">
-                <span className="text-trading-blue-300">%K:</span>
-                <span className="text-white">{datos.stochK.toFixed(2)}%</span>
+            <div className="space-y-2 pt-2 border-t border-white/5">
+              <div className="flex justify-between text-[10px] font-mono tracking-wider">
+                <span className="text-blue-400">%K</span>
+                <span className="text-white tabular-nums">{datos.stochK.toFixed(2)}</span>
               </div>
-              <div className="w-full bg-trading-dark-600 rounded-full h-1">
-                <div
-                  className="bg-trading-blue-500 h-1 rounded-full transition-all duration-500"
-                  style={{ width: `${datos.stochK}%` }}
-                ></div>
+              <div className="w-full bg-gray-900 rounded-sm h-1 overflow-hidden relative">
+                <div className="absolute left-[20%] top-0 bottom-0 w-[1px] bg-emerald-500/50" />
+                <div className="absolute left-[80%] top-0 bottom-0 w-[1px] bg-red-500/50" />
+                <div className="bg-blue-500 h-1 transition-all duration-500 shadow-[0_0_8px_rgba(59,130,246,0.8)]" style={{ width: `${datos.stochK}%` }} />
               </div>
-              <div className="flex justify-between text-xs font-mono">
-                <span className="text-trading-green-300">%D:</span>
-                <span className="text-white">{datos.stochD.toFixed(2)}%</span>
+              <div className="flex justify-between text-[10px] font-mono tracking-wider">
+                <span className="text-emerald-400">%D</span>
+                <span className="text-white tabular-nums">{datos.stochD.toFixed(2)}</span>
               </div>
-              <div className="w-full bg-trading-dark-600 rounded-full h-1">
-                <div
-                  className="bg-trading-green-500 h-1 rounded-full transition-all duration-500"
-                  style={{ width: `${datos.stochD}%` }}
-                ></div>
+              <div className="w-full bg-gray-900 rounded-sm h-1 overflow-hidden relative">
+                <div className="absolute left-[20%] top-0 bottom-0 w-[1px] bg-emerald-500/50" />
+                <div className="absolute left-[80%] top-0 bottom-0 w-[1px] bg-red-500/50" />
+                <div className="bg-emerald-500 h-1 transition-all duration-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" style={{ width: `${datos.stochD}%` }} />
               </div>
             </div>
           </div>
         </IndicatorCard>
 
-        <IndicatorCard title="CCI INDICATOR" icon={<Compass className="h-5 w-5 mr-2 text-trading-yellow-500" />}>
+        <IndicatorCard title="CCI INDICATOR" icon={<Compass className="h-3.5 w-3.5 mr-1.5 text-yellow-500" />}>
           <div className="space-y-3">
-            <div className="bg-trading-dark-700 p-3 rounded border border-trading-dark-600">
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-xs text-trading-dark-300 font-mono">CCI (20):</span>
-                <span
-                  className={`text-xl font-bold font-mono ${
-                    datos.cci > 100
-                      ? "text-trading-red-400"
-                      : datos.cci < -100
-                        ? "text-trading-green-400"
-                        : "text-trading-yellow-400"
-                  }`}
-                >
+            <div className="bg-[#05070a]/50 p-4 rounded border border-white/5 h-full">
+              <div className="flex justify-between items-center mb-4">
+                <span className="text-[10px] text-gray-500 font-mono tracking-widest uppercase">CCI (20)</span>
+                <span className={`text-2xl font-bold font-mono tabular-nums ${
+                    datos.cci > 100 ? "text-red-400" : 
+                    datos.cci < -100 ? "text-emerald-400" : "text-yellow-400"
+                  }`}>
                   {datos.cci.toFixed(2)}
                 </span>
               </div>
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-xs text-trading-dark-300 font-mono">Signal:</span>
-                <span
-                  className={`text-sm font-bold font-mono ${
-                    datos.cci > 100
-                      ? "text-trading-red-400"
-                      : datos.cci < -100
-                        ? "text-trading-green-400"
-                        : "text-trading-yellow-400"
-                  }`}
-                >
-                  {datos.cci > 100 ? "Overbought" : datos.cci < -100 ? "Oversold" : "Normal Range"}
-                </span>
-              </div>
-              <div className="w-full bg-trading-dark-600 rounded-full h-2 relative overflow-hidden">
-                <div className="absolute left-1/2 top-0 w-0.5 h-2 bg-trading-dark-400"></div>
+              
+              <div className="w-full bg-gray-900 rounded-sm h-2 relative overflow-hidden flex items-center shadow-inner">
+                <div className="absolute left-1/2 top-0 bottom-0 w-[1px] bg-gray-600 z-10" />
+                <div className="absolute left-[25%] top-0 bottom-0 w-[1px] bg-emerald-500/50 z-10" />
+                <div className="absolute left-[75%] top-0 bottom-0 w-[1px] bg-red-500/50 z-10" />
                 <div
-                  className={`h-2 rounded-full transition-all duration-500 ${
-                    datos.cci > 100
-                      ? "bg-trading-red-500"
-                      : datos.cci < -100
-                        ? "bg-trading-green-500"
-                        : "bg-trading-yellow-500"
+                  className={`h-2 transition-all duration-500 ${
+                    datos.cci > 100 ? "bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.8)]" : 
+                    datos.cci < -100 ? "bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.8)]" : 
+                    "bg-yellow-500 shadow-[0_0_10px_rgba(234,179,8,0.8)]"
                   }`}
                   style={{
                     width: `${Math.min((Math.abs(datos.cci) / 200) * 50, 50)}%`,
-                    marginLeft:
-                      datos.cci < 0 ? `${Math.max(50 - Math.min((Math.abs(datos.cci) / 200) * 50, 50), 0)}%` : "50%",
+                    marginLeft: datos.cci < 0 ? `${Math.max(50 - Math.min((Math.abs(datos.cci) / 200) * 50, 50), 0)}%` : "50%",
                   }}
                 ></div>
               </div>
-              <div className="grid grid-cols-3 gap-1 text-xs font-mono mt-2">
-                <div className="text-center text-trading-green-300">-200</div>
-                <div className="text-center text-trading-dark-300">0</div>
-                <div className="text-center text-trading-red-300">+200</div>
+              <div className="grid grid-cols-3 gap-1 text-[9px] font-mono mt-2 tracking-widest uppercase">
+                <div className="text-left text-emerald-500">-200</div>
+                <div className="text-center text-gray-600">0</div>
+                <div className="text-right text-red-500">+200</div>
               </div>
             </div>
           </div>
@@ -310,84 +275,42 @@ export default function IndicatorGrid({ datos }) {
 
       {/* Support and Resistance with detailed values */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <IndicatorCard title="SUPPORT LEVELS" icon={<Shield className="h-5 w-5 mr-2 text-trading-green-500" />}>
-          <div className="space-y-3">
+        <IndicatorCard title="SUPPORT LEVELS" icon={<Shield className="h-3.5 w-3.5 mr-1.5 text-emerald-500" />}>
+          <div className="space-y-1">
             {[
-              {
-                level: "S1",
-                value: datos.s1,
-                strength: "Strong",
-                distance: ((datos.precio - datos.s1) / datos.precio) * 100,
-              },
-              {
-                level: "S2",
-                value: datos.s2,
-                strength: "Medium",
-                distance: ((datos.precio - datos.s2) / datos.precio) * 100,
-              },
-              {
-                level: "S3",
-                value: datos.s3,
-                strength: "Weak",
-                distance: ((datos.precio - datos.s3) / datos.precio) * 100,
-              },
+              { level: "S1", value: datos.s1, strength: "STR", distance: ((datos.precio - datos.s1) / datos.precio) * 100 },
+              { level: "S2", value: datos.s2, strength: "MED", distance: ((datos.precio - datos.s2) / datos.precio) * 100 },
+              { level: "S3", value: datos.s3, strength: "WK",  distance: ((datos.precio - datos.s3) / datos.precio) * 100 },
             ].map((support, index) => (
-              <div
-                key={support.level}
-                className="bg-trading-green-600/10 p-3 rounded border border-trading-green-600/20"
-              >
-                <div className="flex justify-between items-center mb-1">
-                  <div className="flex items-center">
-                    <span className="text-trading-green-400 font-mono font-bold mr-2">{support.level}</span>
-                    <span className="text-xs text-trading-green-300">{support.strength}</span>
-                  </div>
-                  <span className="text-white font-mono font-bold">${support.value.toFixed(2)}</span>
+              <div key={support.level} className="flex items-center justify-between bg-emerald-500/5 hover:bg-emerald-500/10 transition-colors p-2 rounded border border-emerald-500/10">
+                <div className="flex items-center gap-3">
+                  <span className="text-emerald-400 font-mono text-[10px] font-bold w-4">{support.level}</span>
+                  <span className="text-[9px] text-emerald-500/60 font-mono uppercase">{support.strength}</span>
                 </div>
-                <div className="flex justify-between items-center text-xs">
-                  <span className="text-trading-dark-300 font-mono">Distance:</span>
-                  <span className="text-trading-green-300 font-mono">{support.distance.toFixed(2)}% below</span>
+                <div className="flex flex-col items-end">
+                  <span className="text-white font-mono tabular-nums text-sm">${support.value.toFixed(2)}</span>
+                  <span className="text-[9px] text-emerald-400/80 font-mono tabular-nums">-{support.distance.toFixed(2)}%</span>
                 </div>
               </div>
             ))}
           </div>
         </IndicatorCard>
 
-        <IndicatorCard title="RESISTANCE LEVELS" icon={<Target className="h-5 w-5 mr-2 text-trading-red-500" />}>
-          <div className="space-y-3">
+        <IndicatorCard title="RESISTANCE LEVELS" icon={<Target className="h-3.5 w-3.5 mr-1.5 text-red-500" />}>
+          <div className="space-y-1">
             {[
-              {
-                level: "R1",
-                value: datos.r1,
-                strength: "Strong",
-                distance: ((datos.r1 - datos.precio) / datos.precio) * 100,
-              },
-              {
-                level: "R2",
-                value: datos.r2,
-                strength: "Medium",
-                distance: ((datos.r2 - datos.precio) / datos.precio) * 100,
-              },
-              {
-                level: "R3",
-                value: datos.r3,
-                strength: "Weak",
-                distance: ((datos.r3 - datos.precio) / datos.precio) * 100,
-              },
+              { level: "R1", value: datos.r1, strength: "STR", distance: ((datos.r1 - datos.precio) / datos.precio) * 100 },
+              { level: "R2", value: datos.r2, strength: "MED", distance: ((datos.r2 - datos.precio) / datos.precio) * 100 },
+              { level: "R3", value: datos.r3, strength: "WK",  distance: ((datos.r3 - datos.precio) / datos.precio) * 100 },
             ].map((resistance, index) => (
-              <div
-                key={resistance.level}
-                className="bg-trading-red-600/10 p-3 rounded border border-trading-red-600/20"
-              >
-                <div className="flex justify-between items-center mb-1">
-                  <div className="flex items-center">
-                    <span className="text-trading-red-400 font-mono font-bold mr-2">{resistance.level}</span>
-                    <span className="text-xs text-trading-red-300">{resistance.strength}</span>
-                  </div>
-                  <span className="text-white font-mono font-bold">${resistance.value.toFixed(2)}</span>
+              <div key={resistance.level} className="flex items-center justify-between bg-red-500/5 hover:bg-red-500/10 transition-colors p-2 rounded border border-red-500/10">
+                <div className="flex items-center gap-3">
+                  <span className="text-red-400 font-mono text-[10px] font-bold w-4">{resistance.level}</span>
+                  <span className="text-[9px] text-red-500/60 font-mono uppercase">{resistance.strength}</span>
                 </div>
-                <div className="flex justify-between items-center text-xs">
-                  <span className="text-trading-dark-300 font-mono">Distance:</span>
-                  <span className="text-trading-red-300 font-mono">{resistance.distance.toFixed(2)}% above</span>
+                <div className="flex flex-col items-end">
+                  <span className="text-white font-mono tabular-nums text-sm">${resistance.value.toFixed(2)}</span>
+                  <span className="text-[9px] text-red-400/80 font-mono tabular-nums">+{resistance.distance.toFixed(2)}%</span>
                 </div>
               </div>
             ))}

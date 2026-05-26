@@ -5,10 +5,13 @@ import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tool
 export default function ChartCard({ title, icon, type, datos = {} }) {
   // HELPER: ESTILO COMÚN PARA TOOLTIP (REUTILIZADO EN LOS GRÁFICOS)
   const TOOLTIP_STYLE = {
-    backgroundColor: "#1a1a1a",
-    border: "1px solid #404040",
+    backgroundColor: "rgba(5, 7, 10, 0.9)",
+    border: "1px solid rgba(255, 255, 255, 0.1)",
     borderRadius: "4px",
     color: "#fff",
+    backdropFilter: "blur(4px)",
+    fontSize: "11px",
+    fontFamily: "monospace"
   }
 
   // HELPER: FORMATEAR NÚMEROS DE MANERA SEGURA A STRING CON DECIMALES
@@ -176,7 +179,7 @@ export default function ChartCard({ title, icon, type, datos = {} }) {
             {rsiChartData.length > 0 ? (
               <ResponsiveContainer width="100%" height={180}>
                 <LineChart data={rsiChartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#404040" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
                   <XAxis dataKey="name" tick={{ fill: "#a3a3a3", fontSize: 10 }} />
                   <YAxis domain={[0, 100]} tick={{ fill: "#a3a3a3", fontSize: 10 }} />
                   <Tooltip contentStyle={TOOLTIP_STYLE} />
@@ -297,7 +300,7 @@ export default function ChartCard({ title, icon, type, datos = {} }) {
             {macdChartData.length > 0 ? (
               <ResponsiveContainer width="100%" height={180}>
                 <LineChart data={macdChartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#404040" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
                   <XAxis dataKey="name" tick={{ fill: "#a3a3a3", fontSize: 10 }} />
                   <YAxis domain={macdYDomain} tick={{ fill: "#a3a3a3", fontSize: 10 }} />
                   <Tooltip contentStyle={TOOLTIP_STYLE} />
@@ -446,7 +449,7 @@ export default function ChartCard({ title, icon, type, datos = {} }) {
             {bbChartData.length > 0 ? (
               <ResponsiveContainer width="100%" height={180}>
                 <LineChart data={bbChartData} margin={{ left: 40, right: 40 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#404040" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
                   <XAxis dataKey="name" tick={{ fill: "#a3a3a3", fontSize: 10 }} />
                   <YAxis domain={bbYDomain} tick={{ fill: "#a3a3a3", fontSize: 10 }} />
                   <Tooltip contentStyle={TOOLTIP_STYLE} />
@@ -641,7 +644,7 @@ export default function ChartCard({ title, icon, type, datos = {} }) {
             {emaChartData.length > 0 ? (
               <ResponsiveContainer width="100%" height={180}>
                 <LineChart data={emaChartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#404040" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
                   <XAxis dataKey="name" tick={{ fill: "#a3a3a3", fontSize: 10 }} />
                   <YAxis domain={yDomain} tick={{ fill: "#a3a3a3", fontSize: 10 }} />
                   <Tooltip contentStyle={TOOLTIP_STYLE} />
@@ -695,14 +698,15 @@ export default function ChartCard({ title, icon, type, datos = {} }) {
   }
 
   return (
-    <Card className="trading-card">
-      <CardHeader>
-        <CardTitle className="text-white flex items-center font-mono text-sm">
+    <Card className="trading-card border border-white/5 bg-[#0a0e14]/80 backdrop-blur-sm relative overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-b from-white/[0.02] to-transparent opacity-50 pointer-events-none" />
+      <CardHeader className="pb-2 relative z-10 border-b border-white/[0.02]">
+        <CardTitle className="text-gray-400 text-[10px] tracking-widest flex items-center font-mono uppercase">
           {icon}
           {title}
         </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="pt-4 relative z-10">
         <div className="chart-container">{renderChart()}</div>
       </CardContent>
     </Card>

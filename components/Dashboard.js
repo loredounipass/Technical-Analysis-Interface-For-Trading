@@ -112,37 +112,61 @@ export default function Dashboard({ moneda, onCambiarMoneda }) {
   const recomendacion = getRecommendation(datos)
 
   return (
-    <div className="min-h-screen relative overflow-hidden" style={{ background: "#05070a" }}>
-      {/* Animated grid background */}
-      <div className="fixed inset-0 opacity-[0.03] pointer-events-none" style={{
-        backgroundImage: `linear-gradient(rgba(16, 185, 129, 0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(16, 185, 129, 0.5) 1px, transparent 1px)`,
-        backgroundSize: "60px 60px",
+    <div className="min-h-screen relative overflow-hidden font-mono" style={{ background: "#05070a", color: "#e2e8f0" }}>
+      {/* Precision Grid Background */}
+      <div className="fixed inset-0 pointer-events-none opacity-[0.04]" style={{
+        backgroundImage: `
+          linear-gradient(rgba(16, 185, 129, 0.4) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(16, 185, 129, 0.4) 1px, transparent 1px),
+          linear-gradient(rgba(16, 185, 129, 0.2) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(16, 185, 129, 0.2) 1px, transparent 1px)
+        `,
+        backgroundSize: "100px 100px, 100px 100px, 20px 20px, 20px 20px",
+        backgroundPosition: "-1px -1px, -1px -1px, -1px -1px, -1px -1px"
       }} />
 
-      {/* Radial glow */}
-      <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full opacity-20 pointer-events-none"
-        style={{ background: "radial-gradient(circle, rgba(16, 185, 129, 0.15) 0%, transparent 70%)" }} />
+      {/* Deep Space Radial Glow */}
+      <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1200px] h-[1200px] rounded-full opacity-10 pointer-events-none"
+        style={{ background: "radial-gradient(circle, rgba(6, 182, 212, 0.15) 0%, rgba(16, 185, 129, 0.05) 40%, transparent 70%)" }} />
 
-      {/* Corner accents */}
-      <div className="fixed top-0 left-0 w-32 h-32 opacity-20 pointer-events-none z-50"
-        style={{ borderTop: "1px solid #10b981", borderLeft: "1px solid #10b981" }} />
-      <div className="fixed bottom-0 right-0 w-32 h-32 opacity-20 pointer-events-none z-50"
-        style={{ borderBottom: "1px solid #10b981", borderRight: "1px solid #10b981" }} />
+      {/* Terminal Corner Crosshairs */}
+      <div className="fixed top-4 left-4 w-6 h-6 opacity-40 pointer-events-none z-50">
+        <div className="absolute top-0 left-0 w-full h-[1px] bg-emerald-500" />
+        <div className="absolute top-0 left-0 w-[1px] h-full bg-emerald-500" />
+      </div>
+      <div className="fixed top-4 right-4 w-6 h-6 opacity-40 pointer-events-none z-50">
+        <div className="absolute top-0 right-0 w-full h-[1px] bg-emerald-500" />
+        <div className="absolute top-0 right-0 w-[1px] h-full bg-emerald-500" />
+      </div>
+      <div className="fixed bottom-4 left-4 w-6 h-6 opacity-40 pointer-events-none z-50">
+        <div className="absolute bottom-0 left-0 w-full h-[1px] bg-emerald-500" />
+        <div className="absolute bottom-0 left-0 w-[1px] h-full bg-emerald-500" />
+      </div>
+      <div className="fixed bottom-4 right-4 w-6 h-6 opacity-40 pointer-events-none z-50">
+        <div className="absolute bottom-0 right-0 w-full h-[1px] bg-emerald-500" />
+        <div className="absolute bottom-0 right-0 w-[1px] h-full bg-emerald-500" />
+      </div>
 
-      {/* Top status bar */}
-      <div className="relative z-10 flex items-center justify-between px-6 py-3">
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="text-[10px] font-mono text-emerald-400/60 uppercase tracking-widest">System Online</span>
-        </div>
+      {/* Top Ticker Status Bar */}
+      <div className="relative z-10 flex items-center justify-between px-6 py-2 border-b border-emerald-900/30 bg-[#05070a]/90 backdrop-blur-md">
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-1.5">
-            <Activity className={`w-3 h-3 ${isConnected ? 'text-emerald-500/50' : 'text-red-500/50'}`} />
-            <span className={`text-[10px] font-mono uppercase tracking-wider ${isConnected ? 'text-emerald-500/50' : 'text-red-500/50'}`}>
-              {isConnected ? 'LIVE' : 'OFFLINE'}
+          <div className="flex items-center gap-2 px-2 py-0.5 rounded bg-emerald-950/40 border border-emerald-900/50">
+            <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
+            <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">SYS.ON</span>
+          </div>
+          <span className="text-[10px] text-gray-500 uppercase tracking-widest border-l border-gray-800 pl-4">DATA FEED ACTIVE</span>
+        </div>
+        <div className="flex items-center gap-6">
+          <div className="flex items-center gap-2">
+            <Activity className={`w-3.5 h-3.5 ${isConnected ? 'text-emerald-400' : 'text-red-500'}`} />
+            <span className={`text-[10px] font-bold uppercase tracking-wider ${isConnected ? 'text-emerald-400' : 'text-red-500'}`}>
+              {isConnected ? 'CONN.STABLE' : 'CONN.LOST'}
             </span>
           </div>
-          <span className="text-[10px] font-mono text-gray-600 uppercase tracking-wider">UTC {time}</span>
+          <div className="flex items-center gap-2 px-3 py-1 bg-gray-900/80 rounded border border-gray-800">
+            <span className="text-[10px] text-gray-400 uppercase tracking-wider">TIME (UTC)</span>
+            <span className="text-[11px] text-white font-bold">{time}</span>
+          </div>
         </div>
       </div>
 
@@ -155,16 +179,16 @@ export default function Dashboard({ moneda, onCambiarMoneda }) {
             onCambiarMoneda={onCambiarMoneda}
           />
 
-          {/* Timeframe Selector */}
-          <div className="flex items-center gap-2 mb-6 bg-gray-900/40 p-1 rounded-xl border border-white/5 w-fit">
+          {/* Professional Timeframe Selector */}
+          <div className="flex items-center gap-1 mb-6 bg-[#0a0e14]/80 backdrop-blur-sm p-1 rounded border border-white/5 w-fit shadow-lg shadow-black/50">
             {["1m", "5m", "15m", "1h", "4h", "1d"].map((tf) => (
               <button
                 key={tf}
                 onClick={() => handleTimeframeChange(tf)}
-                className={`px-4 py-1.5 rounded-lg text-xs font-mono transition-all duration-200 ${
+                className={`px-4 py-1 rounded text-xs font-bold transition-all duration-150 ${
                   timeframe === tf
-                    ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20"
-                    : "text-gray-400 hover:text-white hover:bg-white/5"
+                    ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shadow-[0_0_10px_rgba(16,185,129,0.15)]"
+                    : "text-gray-500 hover:text-gray-300 hover:bg-white/5 border border-transparent"
                 }`}
               >
                 {tf.toUpperCase()}
