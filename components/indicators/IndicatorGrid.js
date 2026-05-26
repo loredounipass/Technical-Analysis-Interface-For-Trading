@@ -1,7 +1,7 @@
 import IndicatorCard from "@/components/indicators/IndicatorCard"
 import ChartCard from "@/components/indicators/ChartCard"
 import CandleChart from "@/components/indicators/CandleChart"
-import { Activity, Shield, Target, BarChart3, TrendingUp, Zap, Presentation } from "lucide-react"
+import { Activity, Shield, Target, BarChart4, ArrowUpDown, CandlestickChart, Gauge, Crosshair, Percent, Waves, GitCompare, Compass } from "lucide-react"
 
 export default function IndicatorGrid({ datos }) {
   // Prepare chart data
@@ -46,7 +46,7 @@ export default function IndicatorGrid({ datos }) {
     <>
       {/* Professional Candlestick Chart */}
       <div className="mb-6">
-        <IndicatorCard title="LIVE MARKET PRICE ACTION" icon={<Presentation className="h-5 w-5 mr-2 text-emerald-400" />}>
+        <IndicatorCard title="LIVE MARKET PRICE ACTION" icon={<CandlestickChart className="h-5 w-5 mr-2 text-emerald-400" />}>
            <div className="bg-trading-dark-900/50 rounded-xl p-2 border border-white/5">
              {candleData.length > 0 ? (
                <CandleChart data={candleData} decimales={datos.decimales} />
@@ -63,7 +63,7 @@ export default function IndicatorGrid({ datos }) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <ChartCard
           title="RSI OSCILLATOR"
-          icon={<Activity className="h-5 w-5 mr-2 text-trading-blue-500" />}
+          icon={<Gauge className="h-5 w-5 mr-2 text-trading-blue-500" />}
           data={rsiData}
           type="rsi"
           currentValue={datos.rsi}
@@ -71,7 +71,7 @@ export default function IndicatorGrid({ datos }) {
         />
         <ChartCard
           title="MACD INDICATOR"
-          icon={<TrendingUp className="h-5 w-5 mr-2 text-trading-green-500" />}
+          icon={<Crosshair className="h-5 w-5 mr-2 text-trading-green-500" />}
           data={macdData}
           type="macd"
           currentValue={datos.macdValue}
@@ -81,7 +81,7 @@ export default function IndicatorGrid({ datos }) {
 
       {/* Volume and ADX with detailed numbers */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-        <IndicatorCard title="VOLUME ANALYSIS" icon={<BarChart3 className="h-5 w-5 mr-2 text-trading-yellow-500" />}>
+        <IndicatorCard title="VOLUME ANALYSIS" icon={<BarChart4 className="h-5 w-5 mr-2 text-trading-yellow-500" />}>
           <div className="space-y-3">
             <div className="bg-trading-dark-700 p-3 rounded border border-trading-dark-600">
               <div className="flex justify-between items-center mb-2">
@@ -107,7 +107,7 @@ export default function IndicatorGrid({ datos }) {
           </div>
         </IndicatorCard>
 
-        <IndicatorCard title="ADX TREND STRENGTH" icon={<Zap className="h-5 w-5 mr-2 text-trading-blue-500" />}>
+        <IndicatorCard title="ADX TREND STRENGTH" icon={<ArrowUpDown className="h-5 w-5 mr-2 text-trading-blue-500" />}>
           <div className="space-y-3">
             <div className="bg-trading-dark-700 p-3 rounded border border-trading-dark-600">
               <div className="flex justify-between items-center mb-2">
@@ -147,7 +147,7 @@ export default function IndicatorGrid({ datos }) {
           </div>
         </IndicatorCard>
 
-        <IndicatorCard title="STOCHASTIC RSI" icon={<Activity className="h-5 w-5 mr-2 text-trading-green-500" />}>
+        <IndicatorCard title="STOCHASTIC RSI" icon={<Percent className="h-5 w-5 mr-2 text-trading-green-500" />}>
           <div className="space-y-3">
             <div className="bg-trading-dark-700 p-3 rounded border border-trading-dark-600">
               <div className="flex justify-between items-center mb-2">
@@ -189,7 +189,7 @@ export default function IndicatorGrid({ datos }) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <ChartCard
           title="BOLLINGER BANDS"
-          icon={<BarChart3 className="h-5 w-5 mr-2 text-trading-blue-500" />}
+          icon={<Waves className="h-5 w-5 mr-2 text-trading-blue-500" />}
           data={bollingerData}
           type="bollinger"
           currentValue={datos.precio}
@@ -197,7 +197,7 @@ export default function IndicatorGrid({ datos }) {
         />
         <ChartCard
           title="MOVING AVERAGES"
-          icon={<TrendingUp className="h-5 w-5 mr-2 text-trading-green-500" />}
+          icon={<GitCompare className="h-5 w-5 mr-2 text-trading-green-500" />}
           data={emaData}
           type="ema"
           currentValue={datos.precio}
@@ -250,7 +250,7 @@ export default function IndicatorGrid({ datos }) {
           </div>
         </IndicatorCard>
 
-        <IndicatorCard title="CCI INDICATOR" icon={<Zap className="h-5 w-5 mr-2 text-trading-yellow-500" />}>
+        <IndicatorCard title="CCI INDICATOR" icon={<Compass className="h-5 w-5 mr-2 text-trading-yellow-500" />}>
           <div className="space-y-3">
             <div className="bg-trading-dark-700 p-3 rounded border border-trading-dark-600">
               <div className="flex justify-between items-center mb-2">

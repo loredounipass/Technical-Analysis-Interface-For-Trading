@@ -61,7 +61,11 @@
 /* Professional trading styles */
 @layer components {
   .trading-card {
-    @apply bg-trading-dark-800 border border-trading-dark-600 backdrop-blur-sm transition-all duration-300 hover:bg-trading-dark-700 hover:border-trading-dark-500;
+    @apply border border-trading-dark-600 backdrop-blur-sm transition-all duration-300 hover:border-trading-dark-500;
+    background: rgba(17, 17, 17, 0.7);
+  }
+  .trading-card:hover {
+    background: rgba(26, 26, 26, 0.85);
   }
 
   .trading-button {
@@ -173,8 +177,191 @@
   animation: market-pulse 2s ease-in-out infinite;
 }
 
-/* Responsive adjustments */
+/* Custom scrollbar reusable */
+.cyber-scrollbar::-webkit-scrollbar {
+  width: 3px;
+}
+.cyber-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.cyber-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(16, 185, 129, 0.15);
+}
+.cyber-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(16, 185, 129, 0.3);
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Woody scan line animation */
+@keyframes scanDown {
+  0% { top: -2px; }
+  100% { top: 100%; }
+}
+.woody-scan-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: transparent;
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.5), 0 0 60px rgba(6, 182, 212, 0.3);
+  animation: scanDown 2s linear infinite;
+}
+.woody-scan-line::before {
+  content: '';
+  position: absolute;
+  top: -8px;
+  left: 0;
+  right: 0;
+  height: 18px;
+  background: linear-gradient(180deg, transparent, rgba(16, 185, 129, 0.15), transparent);
+  pointer-events: none;
+}
+
+/* News page utilities */
+.news-featured-img {
+  height: 420px;
+}
+.news-card-img {
+  height: 220px;
+}
+.news-thumb {
+  width: 64px;
+  height: 64px;
+}
+
+/* News grid layout */
+.news-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2.5rem;
+}
+
+/* News card base styles */
+.news-card {
+  background: rgba(17, 17, 17, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 1rem;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+.news-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.3), 0 0 30px rgba(16, 185, 129, 0.06);
+  border-color: rgba(16, 185, 129, 0.15);
+}
+
+/* News featured card */
+.news-featured-card {
+  background: rgba(17, 17, 17, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 1rem;
+  overflow: hidden;
+  box-shadow: 0 4px 40px rgba(0, 0, 0, 0.3);
+  transition: all 0.5s ease;
+}
+.news-featured-card:hover {
+  box-shadow: 0 8px 60px rgba(0, 0, 0, 0.4), 0 0 40px rgba(16, 185, 129, 0.08);
+  border-color: rgba(16, 185, 129, 0.15);
+}
+
+/* News card image zoom */
+.news-card-img-zoom {
+  transition: transform 0.9s ease-out;
+}
+.news-card:hover .news-card-img-zoom,
+.news-featured-card:hover .news-card-img-zoom {
+  transform: scale(1.08);
+}
+
+/* News card reveal animation */
+@keyframes newsCardReveal {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.news-card-reveal {
+  animation: newsCardReveal 0.5s ease forwards;
+}
+
+/* Coin filter tab bar */
+.news-filter-bar {
+  background: rgba(17, 17, 17, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  border-radius: 1rem;
+  padding: 0.25rem;
+}
+.news-filter-tab {
+  padding: 0.625rem 1.25rem;
+  border-radius: 0.75rem;
+  font-size: 0.8125rem;
+  font-family: Monaco, Menlo, "Ubuntu Mono", monospace;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+  border: 1px solid transparent;
+  color: rgba(148, 163, 184, 0.5);
+  background: transparent;
+  cursor: pointer;
+}
+.news-filter-tab.active {
+  background: rgba(17, 17, 17, 0.9);
+  color: #e2e8f0;
+  border-color: rgba(16, 185, 129, 0.18);
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+.news-filter-tab:hover:not(.active) {
+  color: rgba(148, 163, 184, 0.8);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+@media (max-width: 1024px) {
+  .news-featured-img {
+    height: 360px;
+  }
+  .news-card-img {
+    height: 200px;
+  }
+  .news-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 2rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .news-featured-img {
+    height: 300px;
+  }
+  .news-card-img {
+    height: 180px;
+  }
+  .news-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+}
+
 @media (max-width: 640px) {
+  .news-featured-img {
+    height: 240px;
+  }
+  .news-card-img {
+    height: 160px;
+  }
+  .news-thumb {
+    width: 48px;
+    height: 48px;
+  }
+
   .crypto-icon {
     @apply text-3xl;
   }

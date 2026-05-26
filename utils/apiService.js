@@ -61,3 +61,12 @@ export const fetchTradingData = async (symbol, interval = '15m') => {
   return request(`/trading/${symbol}?interval=${interval}`, { retries: 4 });
 };
 
+export const fetchNews = async (symbol) => {
+  if (!symbol) return [];
+  try {
+    return await request(`/news/${symbol}`, { retries: 2, timeout: 8000 });
+  } catch {
+    return [];
+  }
+};
+

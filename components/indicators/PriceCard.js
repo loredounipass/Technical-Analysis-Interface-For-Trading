@@ -15,11 +15,9 @@ export default function PriceCard({ precio, decimales = 2, symbol, history = {} 
       const lastComma = s.lastIndexOf(',')
       const lastDot = s.lastIndexOf('.')
       if (lastComma > lastDot) {
-        // comma is decimal, dots are thousands
         s = s.replace(/\./g, '')
         s = s.replace(/,/g, '.')
       } else {
-        // dot is decimal, commas are thousands
         s = s.replace(/,/g, '')
       }
     } else if (hasComma) {
@@ -27,10 +25,8 @@ export default function PriceCard({ precio, decimales = 2, symbol, history = {} 
       if (parts.length > 1) {
         const last = parts[parts.length - 1]
         if (last.length === 3) {
-          // commas are thousands
           s = parts.join('')
         } else {
-          // last comma is decimal, remove other commas
           const intPart = parts.slice(0, -1).join('')
           s = `${intPart}.${last}`
         }
@@ -40,10 +36,8 @@ export default function PriceCard({ precio, decimales = 2, symbol, history = {} 
       if (parts.length > 1) {
         const last = parts[parts.length - 1]
         if (last.length === 3) {
-          // dots are thousands
           s = parts.join('')
         } else {
-          // dot is decimal -> keep as-is
         }
       }
     }
@@ -62,7 +56,6 @@ export default function PriceCard({ precio, decimales = 2, symbol, history = {} 
   const value = parsePrecio(precio)
   const formatted = formatWithDots(value, decimales)
 
-  // Prepare small price history chart data (last 24 points or available)
   let priceChartData = []
   try {
     if (history && Array.isArray(history.closes) && history.closes.length > 0) {
@@ -72,7 +65,6 @@ export default function PriceCard({ precio, decimales = 2, symbol, history = {} 
       const fmtTime = (t) => {
         try {
           const ts = Number(t)
-          // Binance returns ms timestamps
           const d = new Date(ts)
           return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         } catch (e) {
@@ -85,7 +77,6 @@ export default function PriceCard({ precio, decimales = 2, symbol, history = {} 
         price: Number(p)
       }))
 
-      // ensure last point matches current price (real-time)
       if (priceChartData.length > 0) {
         const lastName = times && times[times.length - 1] ? fmtTime(times[times.length - 1]) : 'T-0'
         priceChartData[priceChartData.length - 1] = { name: lastName, price: value }

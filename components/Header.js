@@ -1,10 +1,13 @@
 "use client"
 
-import { RefreshCw, ArrowLeft, Activity, TrendingUp } from "lucide-react"
+import { RefreshCw, ArrowLeft, Activity, TrendingUp, Newspaper } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { useRouter } from "next/navigation"
 
 export default function Header({ moneda, ultimaActualizacion, onActualizar, onCambiarMoneda }) {
+  const router = useRouter()
+
   return (
     <Card className="mb-6 header-gradient">
       <CardContent className="p-6">
@@ -22,10 +25,16 @@ export default function Header({ moneda, ultimaActualizacion, onActualizar, onCa
               <p className="text-trading-dark-200 font-mono text-sm">Last Update: {ultimaActualizacion}</p>
             </div>
           </div>
-          <div className="flex space-x-2">
+          <div className="flex flex-wrap gap-2">
             <Button onClick={onActualizar} className="trading-button">
               <RefreshCw className="h-4 w-4 mr-2" />
               Refresh Data
+            </Button>
+            <Button onClick={() => router.push('/news')} className="trading-button-secondary"
+              style={{ borderColor: "rgba(16, 185, 129, 0.3)" }}
+            >
+              <Newspaper className="h-4 w-4 mr-2 text-emerald-400" />
+              MARKET NEWS
             </Button>
             <Button onClick={onCambiarMoneda} className="trading-button-secondary">
               <ArrowLeft className="h-4 w-4 mr-2" />

@@ -43,10 +43,22 @@ def log_request_info():
     logger.info(f"URL: {request.url}")
     logger.info("----------------------")
 
-CACHE_TTL = 30
+CACHE_TTL = 120
+STALE_TTL = 600
+TV_MAX_CALLS = 30
+TV_WINDOW = 60
 cache = {}
 locks = {}
 cache_lock = threading.Lock()
+
+tv_call_timestamps = []
+tv_call_lock = threading.Lock()
+
+symbol_backoff = {}
+symbol_backoff_lock = threading.Lock()
+
+in_flight = {}
+in_flight_lock = threading.Lock()
 
 INTERVAL_MAP = {
     "1m": Interval.INTERVAL_1_MINUTE,
@@ -82,6 +94,64 @@ def get_symbol_lock(symbol):
         if symbol not in locks:
             locks[symbol] = threading.Lock()
         return locks[symbol]
+
+# GOBERNADOR GLOBAL: MAX N LLAMADAS A TRADINGVIEW POR VENTANA DE TIEMPO
+def tv_rate_governor():
+    now = time.time()
+    with tv_call_lock:
+        tv_call_timestamps[:] = [t for t in tv_call_timestamps if now - t <= TV_WINDOW]
+        if len(tv_call_timestamps) >= TV_MAX_CALLS:
+            return False
+        tv_call_timestamps.append(now)
+        return True
+
+# VERIFICA SI UN SIMBOLO ESTA EN BACKOFF POR RATE LIMIT PREVIO
+def is_symbol_backoff(cache_key):
+    with symbol_backoff_lock:
+        until = symbol_backoff.get(cache_key)
+        if until and time.time() < until:
+            return True
+        return False
+
+# MARCA UN SIMBOLO CON BACKOFF EXPONENCIAL
+def mark_symbol_backoff(cache_key):
+    with symbol_backoff_lock:
+        last_until = symbol_backoff.get(cache_key, 0)
+        now = time.time()
+        wait = max(120, (last_until - now) * 2) if last_until > now else 120
+        wait = min(wait, 1800)
+        symbol_backoff[cache_key] = now + wait
+        logger.warning(f"[Backoff] {cache_key} marked for {wait:.0f}s")
+
+# DEDUPLICACION DE PETICIONES EN VUELO
+def wait_for_in_flight(cache_key, timeout=30):
+    with in_flight_lock:
+        if cache_key not in in_flight:
+            return None
+        event, result_container = in_flight[cache_key]
+    event.wait(timeout)
+    with in_flight_lock:
+        entry = in_flight.get(cache_key)
+        if entry:
+            _, result_container = entry
+            return result_container.get('data')
+    return None
+
+def set_in_flight(cache_key):
+    event = threading.Event()
+    result_container = {}
+    with in_flight_lock:
+        in_flight[cache_key] = (event, result_container)
+    return event, result_container
+
+def clear_in_flight(cache_key, result_container=None):
+    with in_flight_lock:
+        if cache_key in in_flight:
+            evt, container = in_flight[cache_key]
+            if result_container and container:
+                container['data'] = result_container.get('data')
+            evt.set()
+            del in_flight[cache_key]
 # OBTIENE ANALISIS DE TRADINGVIEW Y CALCULA SERIES TECNICAS ADICIONALES (RSI, MACD, BB, EMAs)
 def fetch_from_ta(symbol, interval_str='15m'):
     tv_interval = INTERVAL_MAP.get(interval_str, Interval.INTERVAL_15_MINUTES)
@@ -304,15 +374,63 @@ def compute_bollinger_series(prices, period=20, mult=2):
         lower.append(middle[i] - mult * sd if middle[i] is not None else None)
     return upper, middle, lower
 
-# RETORNA DATOS DE TRADING CACHEADOS PARA UN SIMBOLO, O ACTUALIZA LA CACHE SI ES NECESARIO
+# RETORNA DATOS DE TRADING CACHEADOS CON STALE-WHILE-REVALIDATE + RATE GOVERNOR + BACKOFF
 def get_trading_cached(symbol, interval_str='15m'):
     cache_key = f"{symbol}_{interval_str}"
     now = time.time()
     entry = cache.get(cache_key)
+
+    # Si el simbolo esta en backoff por rate limit previo, devolver stale data sin preguntar
+    if is_symbol_backoff(cache_key):
+        if entry and 'data' in entry:
+            logger.info(f"[Backoff] {cache_key} en backoff, sirviendo stale data")
+            return entry['data']
+        elif entry and 'error' in entry:
+            raise Exception('429: TradingView Rate Limit Exceeded (Cached)')
+
+    # Cache FRESCO: devolver inmediato
     if entry and now - entry['ts'] <= CACHE_TTL:
         if 'error' in entry:
             raise Exception('429: TradingView Rate Limit Exceeded (Cached)')
         return entry['data']
+
+    # Cache STALE pero dentro de STALE_TTL: servir stale y refrescar en background
+    if entry and 'data' in entry and now - entry['ts'] <= STALE_TTL:
+        # Verificar si ya hay una peticion en vuelo para este cache_key
+        if cache_key in in_flight:
+            return entry['data']
+        # Intentar refresh en background (no bloqueante)
+        if tv_rate_governor():
+            def refresh():
+                try:
+                    data = fetch_from_ta(symbol, interval_str)
+                    with cache_lock:
+                        cache[cache_key] = {'data': data, 'ts': time.time()}
+                    logger.info(f"[StaleRefresh] {cache_key} refrescado en background")
+                except Exception as e:
+                    logger.warning(f"[StaleRefresh] {cache_key} fallo: {e}")
+            t = threading.Thread(target=refresh, daemon=True)
+            t.start()
+        return entry['data']
+
+    # Cache EXPIRADA o no existe: refrescar sincronicamente con rate governing
+    # Verificar dedup: si hay una peticion en vuelo, esperar
+    flight_result = wait_for_in_flight(cache_key)
+    if flight_result:
+        return flight_result
+
+    # Verificar rate governor global
+    if not tv_rate_governor():
+        if entry and 'data' in entry:
+            logger.warning(f"[RateGovernor] {cache_key} diferido por rate global, sirviendo stale")
+            return entry['data']
+        raise Exception('429: TradingView global rate limit exceeded')
+
+    # Verificar backoff por simbolo
+    if is_symbol_backoff(cache_key):
+        if entry and 'data' in entry:
+            return entry['data']
+        raise Exception('429: TradingView Rate Limit Exceeded (Backoff)')
 
     lock = get_symbol_lock(cache_key)
     with lock:
@@ -321,21 +439,25 @@ def get_trading_cached(symbol, interval_str='15m'):
             if 'error' in entry:
                 raise Exception('429: TradingView Rate Limit Exceeded (Cached)')
             return entry['data']
+        if entry and 'data' in entry and now - entry['ts'] <= STALE_TTL:
+            return entry['data']
 
+        event, result_container = set_in_flight(cache_key)
         try:
             data = fetch_from_ta(symbol, interval_str)
             cache[cache_key] = {'data': data, 'ts': time.time()}
+            clear_in_flight(cache_key, {'data': data})
             return data
         except Exception as e:
+            clear_in_flight(cache_key)
             if '429' in str(e):
-                logger.warning(f"Rate limit hit for {cache_key}. Backing off.")
+                logger.warning(f"Rate limit hit for {cache_key}. Marking backoff.")
+                mark_symbol_backoff(cache_key)
                 if entry and 'data' in entry:
-                    # Extend old cache validity by 60 seconds to allow TradingView to recover
-                    cache[cache_key]['ts'] = time.time() + 60
+                    cache[cache_key]['ts'] = time.time() + CACHE_TTL
                     return entry['data']
                 else:
-                    # Cache the rate limit state to avoid hammering TradingView
-                    cache[cache_key] = {'error': '429', 'ts': time.time() + 300} # Block for 300s + CACHE_TTL
+                    cache[cache_key] = {'error': '429', 'ts': time.time() + 300}
             raise
 
 
@@ -355,6 +477,86 @@ def get_trading_data(symbol):
             return jsonify({'error': 'TradingView Rate Limit Exceeded'}), 429
         return jsonify({'error': str(e)}), 500
 
+
+NEWS_CATEGORIES = {
+    "BTCUSDT": "BTC",
+    "ETHUSDT": "ETH",
+    "SOLUSDT": "SOL",
+    "PEPEUSDT": "PEPE",
+    "DOGEUSDT": "DOGE",
+}
+
+NEWS_CACHE = {}
+NEWS_CACHE_TTL = 300
+
+CRYPTOCOMPARE_API_KEY = os.getenv('CRYPTOCOMPARE_API_KEY')
+
+@app.route('/api/news/<symbol>')
+def get_news(symbol):
+    now = time.time()
+    cached = NEWS_CACHE.get(symbol)
+    if cached and now - cached['ts'] <= NEWS_CACHE_TTL:
+        return jsonify(cached['articles'])
+
+    category = NEWS_CATEGORIES.get(symbol, symbol.replace('USDT', ''))
+    try:
+        headers = {}
+        if CRYPTOCOMPARE_API_KEY:
+            headers['authorization'] = f'Apikey {CRYPTOCOMPARE_API_KEY}'
+        resp = requests.get(
+            'https://min-api.cryptocompare.com/data/v2/news/',
+            params={'lang': 'EN', 'categories': category, 'limit': 5},
+            headers=headers,
+            timeout=6
+        )
+        if resp.status_code == 429:
+            if cached:
+                return jsonify(cached['articles'])
+            return jsonify([])
+        resp.raise_for_status()
+        try:
+            data = resp.json()
+        except Exception:
+            logger.warning(f"News API invalid JSON for {symbol}")
+            if cached:
+                return jsonify(cached['articles'])
+            return jsonify([])
+
+        if not isinstance(data, dict):
+            logger.warning(f"News API unexpected response type for {symbol}: {type(data)}")
+            if cached:
+                return jsonify(cached['articles'])
+            return jsonify([])
+
+        if data.get('Response') == 'Error':
+            logger.warning(f"News API error for {symbol}: {data.get('Message')}")
+            if cached:
+                return jsonify(cached['articles'])
+            return jsonify([])
+
+        articles = []
+        raw_articles = data.get('Data')
+        if isinstance(raw_articles, list):
+            for item in raw_articles[:5]:
+                body = item.get('body', '') or ''
+                articles.append({
+                    'title': item.get('title'),
+                    'source': item.get('source'),
+                    'url': item.get('url'),
+                    'published': item.get('published_on'),
+                    'body': body[:200],
+                    'imageurl': item.get('imageurl'),
+                })
+        elif raw_articles is not None:
+            logger.warning(f"Unexpected news Data format for {symbol}: {type(raw_articles)}")
+
+        NEWS_CACHE[symbol] = {'articles': articles, 'ts': now}
+        return jsonify(articles)
+    except Exception as e:
+        logger.warning(f"News fetch failed for {symbol}: {e}")
+        if cached:
+            return jsonify(cached['articles'])
+        return jsonify([])
 
 @app.route('/api/chat', methods=['POST'])
 def chat_endpoint():
