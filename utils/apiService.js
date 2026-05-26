@@ -58,8 +58,8 @@ async function request(path, { method = 'GET', headers = {}, body = null, timeou
   }
 }
 
-export const fetchTradingData = async (symbol) => {
+export const fetchTradingData = async (symbol, interval = '15m') => {
   if (!symbol) throw new Error('symbol is required');
-  return request(`/trading/${symbol}`);
+  return request(`/trading/${symbol}?interval=${interval}`);
 };
 

@@ -41,6 +41,16 @@ cache = {}
 locks = {}
 cache_lock = threading.Lock()
 
+INTERVAL_MAP = {
+    "1m": Interval.INTERVAL_1_MINUTE,
+    "5m": Interval.INTERVAL_5_MINUTES,
+    "15m": Interval.INTERVAL_15_MINUTES,
+    "1h": Interval.INTERVAL_1_HOUR,
+    "4h": Interval.INTERVAL_4_HOURS,
+    "1d": Interval.INTERVAL_1_DAY,
+    "1w": Interval.INTERVAL_1_WEEK,
+}
+
 RATE_WINDOW = 60
 RATE_LIMIT = 60
 ip_requests = {}
@@ -66,12 +76,14 @@ def get_symbol_lock(symbol):
             locks[symbol] = threading.Lock()
         return locks[symbol]
 # OBTIENE ANALISIS DE TRADINGVIEW Y CALCULA SERIES TECNICAS ADICIONALES (RSI, MACD, BB, EMAs)
-def fetch_from_ta(symbol):
+def fetch_from_ta(symbol, interval_str='15m'):
+    tv_interval = INTERVAL_MAP.get(interval_str, Interval.INTERVAL_15_MINUTES)
+    
     handler = TA_Handler(
         symbol=symbol,
         screener="crypto",
         exchange="BINANCE",
-        interval=Interval.INTERVAL_15_MINUTES
+        interval=tv_interval
     )
     analysis = handler.get_analysis()
     indicators = analysis.indicators
@@ -79,9 +91,16 @@ def fetch_from_ta(symbol):
 
     # Intentar obtener klines y calcular series históricas
     try:
-        klines = fetch_klines(symbol, interval='15m', limit=300)
+        klines = fetch_klines(symbol, interval=interval_str, limit=300)
+        opens = [float(k[1]) for k in klines]
+        highs = [float(k[2]) for k in klines]
+        lows = [float(k[3]) for k in klines]
         closes = [float(k[4]) for k in klines]
         timestamps = [int(k[0]) for k in klines]
+        
+        history['opens'] = opens
+        history['highs'] = highs
+        history['lows'] = lows
         history['closes'] = closes
         history['times'] = timestamps
 
@@ -112,7 +131,15 @@ def fetch_from_ta(symbol):
                     noise = 1 + 0.002 * math.sin(i / 3.0)
                     synthetic.append(base * noise)
                 history['closes'] = synthetic
-                history['times'] = [int(time.time()) - (50 - i) * 900 for i in range(50)]
+                # Adjust timestamps based on interval approximate seconds
+                interval_seconds = 900 # default 15m
+                if interval_str == "1m": interval_seconds = 60
+                elif interval_str == "5m": interval_seconds = 300
+                elif interval_str == "1h": interval_seconds = 3600
+                elif interval_str == "4h": interval_seconds = 14400
+                elif interval_str == "1d": interval_seconds = 86400
+
+                history['times'] = [int(time.time()) - (50 - i) * interval_seconds for i in range(50)]
                 history['rsi'] = compute_rsi_series(history['closes'], period=14)
                 macd_line, macd_signal = compute_macd_series(history['closes'], fast=12, slow=26, signal=9)
                 history['macd'] = macd_line
@@ -154,6 +181,7 @@ def fetch_from_ta(symbol):
         'buySignals': analysis.summary.get('BUY'),
         'sellSignals': analysis.summary.get('SELL'),
         'neutralSignals': analysis.summary.get('NEUTRAL'),
+        'timeframe': interval_str,
         'history': history
     }
 
@@ -270,20 +298,21 @@ def compute_bollinger_series(prices, period=20, mult=2):
     return upper, middle, lower
 
 # RETORNA DATOS DE TRADING CACHEADOS PARA UN SIMBOLO, O ACTUALIZA LA CACHE SI ES NECESARIO
-def get_trading_cached(symbol):
+def get_trading_cached(symbol, interval_str='15m'):
+    cache_key = f"{symbol}_{interval_str}"
     now = time.time()
-    entry = cache.get(symbol)
+    entry = cache.get(cache_key)
     if entry and now - entry['ts'] <= CACHE_TTL:
         return entry['data']
 
-    lock = get_symbol_lock(symbol)
+    lock = get_symbol_lock(cache_key)
     with lock:
-        entry = cache.get(symbol)
+        entry = cache.get(cache_key)
         if entry and now - entry['ts'] <= CACHE_TTL:
             return entry['data']
 
-        data = fetch_from_ta(symbol)
-        cache[symbol] = {'data': data, 'ts': time.time()}
+        data = fetch_from_ta(symbol, interval_str)
+        cache[cache_key] = {'data': data, 'ts': time.time()}
         return data
 
 
@@ -294,8 +323,9 @@ def get_trading_data(symbol):
     if rate_limited(ip):
         return jsonify({'error': 'Too many requests'}), 429
 
+    interval = request.args.get('interval', '15m')
     try:
-        data = get_trading_cached(symbol)
+        data = get_trading_cached(symbol, interval)
         return jsonify(data)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -318,13 +348,15 @@ def chat_endpoint():
 
     model_key = data.get('model', 'nvidia-llama')
     symbol = data.get('symbol', 'BTCUSDT')
+    interval = data.get('interval', '15m')
     history = data.get('history', [])
+    global_context = data.get('global_context', '')
     temperature = data.get('temperature', 0.3)
 
     # Fetch the latest indicator data for the current symbol
     indicator_data = None
     try:
-        indicator_data = get_trading_cached(symbol)
+        indicator_data = get_trading_cached(symbol, interval)
         indicator_data['symbol'] = symbol
     except Exception as e:
         # If we can't get indicator data, continue without it
@@ -337,6 +369,7 @@ def chat_endpoint():
             temperature=temperature,
             max_tokens=4096,
             history=history,
+            global_context=global_context,
             indicator_data=indicator_data,
         )
         if response is None:

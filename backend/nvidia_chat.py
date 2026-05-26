@@ -57,14 +57,22 @@ AVAILABLE_MODELS = {
 }
 
 
-def get_trading_system_prompt(indicator_data=None):
-    """Build a specialized trading agent system prompt with live indicator data."""
+def get_trading_system_prompt(indicator_data=None, global_context=None):
+    """Build a specialized trading agent system prompt with live indicator data and global context."""
     base = (
         "You are a SENIOR QUANTITATIVE CRYPTO STRATEGIST and PROFESSIONAL TRADER with 15+ years of experience in global markets. "
         "Your expertise covers Market Microstructure, Price Action (PA), Wyckoff Theory, Elliott Wave Principle, and advanced Technical Indicators. "
         "You specialize in identifying high-probability setups and managing risk in the volatile crypto market.\n\n"
         "Your task is to provide a PROFESSIONAL TRADING ANALYSIS based EXCLUSIVELY on the live market data provided below. "
         "Do not hallucinate data. If a specific value is 'N/A', ignore it in your analysis.\n\n"
+    )
+
+    if global_context:
+        base += f"=== CROSS-SESSION CONTEXT (MEMORY) ===\n"
+        base += f"The user has other active analysis sessions: {global_context}. "
+        base += f"If the user refers to past discussions or other symbols, use this overview to maintain continuity.\n\n"
+
+    base += (
         "=== PROFESSIONAL ANALYSIS FRAMEWORK ===\n"
         "When analyzing, follow this structure:\n"
         "1. **Market Context & Trend**: Identify the prevailing trend (Bullish/Bearish/Side) using EMAs (50/100/200) and Price Action.\n"
@@ -73,37 +81,43 @@ def get_trading_system_prompt(indicator_data=None):
         "4. **Key Levels & Structure**: Reference Pivot Points (S1-S3, R1-R3) as support/resistance zones.\n"
         "5. **Market Sentiment & Emotion**: Analyze the current 'Market Mood' based on the combination of data (e.g., high volume with low RSI = panic/exhaustion).\n"
         "6. **Actionable Execution**: Provide a specific recommendation (BUY / SELL / HOLD / WAIT) with entry zones, stop-loss (SL), and take-profit (TP) levels.\n\n"
-        "=== OPERATIONAL RULES ===\n"
+        "=== OPERATIONAL RULES & PERSONALITY ===\n"
+        "- **BE DYNAMIC**: If the user is just greeting you (e.g., 'Hello', 'How are you?'), respond naturally and professionally without performing a technical analysis unless they ask for it or mention a symbol.\n"
+        "- **BE CONVERSATIONAL**: You are a professional assistant, not a rigid script. Maintain a senior trader persona but be approachable.\n"
         "- Respond in the SAME LANGUAGE as the user.\n"
         "- Use professional trading terminology (e.g., 'liquidity sweep', 'order block', 'fair value gap', 'confluence').\n"
-        "- Be objective, precise, and data-driven.\n"
-        "- Always include a risk disclaimer at the end.\n"
+        "- Be objective, precise, and data-driven when doing analysis.\n"
+        "- Always include a risk disclaimer at the end of technical analyses.\n"
+        "- Use Markdown for clarity.\n"
     )
 
     if indicator_data:
-        data_block = "\n📊 [LIVE INDICATOR FEED - REAL-TIME REQUEST]\n"
-        data_block += f"| DATA POINT | VALUE | CONTEXT |\n"
+        data_block = "\n📊 [EXACT MARKET DATA FEED - REAL-TIME SOURCE OF TRUTH]\n"
+        data_block += f"| CORE METRIC | VALUE | CONTEXT |\n"
         data_block += f"| :--- | :--- | :--- |\n"
         data_block += f"| Symbol | {indicator_data.get('symbol', 'N/A')} | Pair |\n"
-        data_block += f"| Price | {indicator_data.get('precio', 'N/A')} | Spot Price |\n"
-        data_block += f"| RSI (14) | {indicator_data.get('rsi', 'N/A')} | <30: OS, >70: OB |\n"
-        data_block += f"| Stoch RSI K | {indicator_data.get('rsiStoch', 'N/A')} | Momentum |\n"
-        data_block += f"| Volume | {indicator_data.get('volumen', 'N/A')} | Participation |\n"
-        data_block += f"| MACD Line | {indicator_data.get('macdValue', 'N/A')} | Trend |\n"
-        data_block += f"| MACD Signal | {indicator_data.get('macdSignal', 'N/A')} | Trigger |\n"
-        data_block += f"| ADX | {indicator_data.get('adx', 'N/A')} | >25: Strong Trend |\n"
-        data_block += f"| BB Width | {indicator_data.get('bbUpper', 0) - indicator_data.get('bbLower', 0)} | Volatility |\n"
-        data_block += f"| EMA 50/200 | {indicator_data.get('ema50', 'N/A')} / {indicator_data.get('ema200', 'N/A')} | Golden/Death Cross |\n"
-        data_block += f"| Support S1/S2 | {indicator_data.get('s1', 'N/A')} / {indicator_data.get('s2', 'N/A')} | Floor |\n"
-        data_block += f"| Resistance R1/R2 | {indicator_data.get('r1', 'N/A')} / {indicator_data.get('r2', 'N/A')} | Ceiling |\n"
-        data_block += f"| Summary Signals | B: {indicator_data.get('buySignals')} | S: {indicator_data.get('sellSignals')} | N: {indicator_data.get('neutralSignals')} |\n"
-        data_block += "\nInterpret the 'EMOTION' of the market: Panic (Low RSI + High Vol + Sell Signals), Greed (High RSI + High Vol + Buy Signals), or Indecision.\n"
+        data_block += f"| Current Price | {indicator_data.get('precio', 'N/A')} | Spot |\n"
+        data_block += f"| RSI (14) | {indicator_data.get('rsi', 'N/A')} | Momentum |\n"
+        data_block += f"| Stoch RSI K | {indicator_data.get('rsiStoch', 'N/A')} | Timing |\n"
+        data_block += f"| Stoch K / D | {indicator_data.get('stochK', '0')} / {indicator_data.get('stochD', '0')} | Overbought/Oversold |\n"
+        data_block += f"| CCI (20) | {indicator_data.get('cci', 'N/A')} | Trend Deviation |\n"
+        data_block += f"| Volume | {indicator_data.get('volumen', 'N/A')} | Market Participation |\n"
+        data_block += f"| MACD Line | {indicator_data.get('macdValue', 'N/A')} | Trend Direction |\n"
+        data_block += f"| MACD Signal | {indicator_data.get('macdSignal', 'N/A')} | Trigger Line |\n"
+        data_block += f"| ADX | {indicator_data.get('adx', 'N/A')} | Trend Strength |\n"
+        data_block += f"| Bollinger Upper | {indicator_data.get('bbUpper', 'N/A')} | Resistance Ceiling |\n"
+        data_block += f"| Bollinger Middle | {indicator_data.get('bbMiddle', 'N/A')} | Mean Reversion |\n"
+        data_block += f"| Bollinger Lower | {indicator_data.get('bbLower', 'N/A')} | Support Floor |\n"
+        data_block += f"| EMA 50 / 100 / 200 | {indicator_data.get('ema50', 'N/A')} / {indicator_data.get('ema100', 'N/A')} / {indicator_data.get('ema200', 'N/A')} | Moving Averages |\n"
+        data_block += f"| Pivot Points (R) | R1: {indicator_data.get('r1')} | R2: {indicator_data.get('r2')} | R3: {indicator_data.get('r3')} |\n"
+        data_block += f"| Pivot Points (S) | S1: {indicator_data.get('s1')} | S2: {indicator_data.get('s2')} | S3: {indicator_data.get('s3')} |\n"
+        data_block += f"| Summary Signals | BUY: {indicator_data.get('buySignals')} | SELL: {indicator_data.get('sellSignals')} | NEUTRAL: {indicator_data.get('neutralSignals')} |\n"
+        
+        data_block += "\nUse THESE EXACT VALUES for your analysis. If the user asks for a specific indicator (like CCI or Stochastics), reference these values from the table.\n"
         base += data_block
 
     return base
 
-
-    return base
 
 
 def get_api_key() -> Optional[str]:
@@ -131,6 +145,7 @@ def nvidia_chat(
     temperature: float = 0.3,
     max_tokens: int = 4096,
     history: list | None = None,
+    global_context: str | None = None,
     indicator_data: dict | None = None,
 ) -> Optional[str]:
     api_key = get_api_key()
@@ -141,10 +156,9 @@ def nvidia_chat(
     if not model_config:
         logger.error(f"Unknown model key: {model_key}")
         return None
-
     model_id = model_config["id"]
-    timeout = model_config.get("timeout", REQUEST_TIMEOUT)
-    system_prompt = get_trading_system_prompt(indicator_data)
+    timeout = float(model_config.get("timeout", REQUEST_TIMEOUT))
+    system_prompt = get_trading_system_prompt(indicator_data, global_context)
     url = f"{NVIDIA_API_BASE}/chat/completions"
     headers = {
         "Authorization": f"Bearer {api_key}",

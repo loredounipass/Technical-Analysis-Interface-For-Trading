@@ -14,10 +14,11 @@ export default function Dashboard({ moneda, onCambiarMoneda }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [ultimaActualizacion, setUltimaActualizacion] = useState(null)
+  const [timeframe, setTimeframe] = useState("15m")
 
-  const fetchData = async () => {
+  const fetchData = async (selectedTimeframe = timeframe) => {
     try {
-      const nuevoDatos = await fetchTradingData(moneda.symbol)
+      const nuevoDatos = await fetchTradingData(moneda.symbol, selectedTimeframe)
       setDatos(nuevoDatos)
       setUltimaActualizacion(new Date().toLocaleString())
       setError(null)
@@ -27,6 +28,12 @@ export default function Dashboard({ moneda, onCambiarMoneda }) {
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleTimeframeChange = (newTimeframe) => {
+    setTimeframe(newTimeframe)
+    setLoading(true)
+    fetchData(newTimeframe)
   }
 
   useEffect(() => {
@@ -66,9 +73,26 @@ export default function Dashboard({ moneda, onCambiarMoneda }) {
         <Header
           moneda={moneda}
           ultimaActualizacion={ultimaActualizacion}
-          onActualizar={fetchData}
+          onActualizar={() => fetchData()}
           onCambiarMoneda={onCambiarMoneda}
         />
+
+        {/* Timeframe Selector */}
+        <div className="flex items-center gap-2 mb-6 bg-gray-900/40 p-1 rounded-xl border border-white/5 w-fit">
+          {["1m", "5m", "15m", "1h", "4h", "1d"].map((tf) => (
+            <button
+              key={tf}
+              onClick={() => handleTimeframeChange(tf)}
+              className={`px-4 py-1.5 rounded-lg text-xs font-mono transition-all duration-200 ${
+                timeframe === tf
+                  ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20"
+                  : "text-gray-400 hover:text-white hover:bg-white/5"
+              }`}
+            >
+              {tf.toUpperCase()}
+            </button>
+          ))}
+        </div>
 
         {/* Price and Recommendation */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -86,7 +110,7 @@ export default function Dashboard({ moneda, onCambiarMoneda }) {
       </div>
 
       {/* AI Trading Agent Chat */}
-      <AiChat symbol={moneda.symbol} datos={datos} />
+      <AiChat symbol={moneda.symbol} datos={datos} interval={timeframe} />
     </div>
   )
 }

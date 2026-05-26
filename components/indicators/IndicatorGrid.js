@@ -1,6 +1,7 @@
 import IndicatorCard from "@/components/indicators/IndicatorCard"
 import ChartCard from "@/components/indicators/ChartCard"
-import { Activity, Shield, Target, BarChart3, TrendingUp, Zap } from "lucide-react"
+import CandleChart from "@/components/indicators/CandleChart"
+import { Activity, Shield, Target, BarChart3, TrendingUp, Zap, Presentation } from "lucide-react"
 
 export default function IndicatorGrid({ datos }) {
   // Prepare chart data
@@ -18,8 +19,46 @@ export default function IndicatorGrid({ datos }) {
     { name: "EMA200", value: datos.ema200 },
   ]
 
+  const candleData = []
+  if (datos.history && datos.history.opens) {
+    const len = datos.history.closes.length
+    const startIdx = Math.max(0, len - 40)
+    for (let i = startIdx; i < len; i++) {
+      const o = datos.history.opens[i]
+      const h = datos.history.highs[i]
+      const l = datos.history.lows[i]
+      const c = datos.history.closes[i]
+      // Binance times are ms
+      const t = new Date(datos.history.times[i]).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+      candleData.push({
+        time: t,
+        open: o,
+        high: h,
+        low: l,
+        close: c,
+        wickRange: [l, h],
+        bodyRange: [o, c]
+      })
+    }
+  }
+
   return (
     <>
+      {/* Professional Candlestick Chart */}
+      <div className="mb-6">
+        <IndicatorCard title="LIVE MARKET PRICE ACTION" icon={<Presentation className="h-5 w-5 mr-2 text-emerald-400" />}>
+           <div className="bg-trading-dark-900/50 rounded-xl p-2 border border-white/5">
+             {candleData.length > 0 ? (
+               <CandleChart data={candleData} decimales={datos.decimales} />
+             ) : (
+               <div className="h-[300px] flex items-center justify-center text-gray-500 font-mono italic">
+                 Awaiting real-time price action data...
+               </div>
+             )}
+           </div>
+        </IndicatorCard>
+      </div>
+
       {/* Main Indicators with Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <ChartCard
