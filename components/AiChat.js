@@ -331,7 +331,7 @@ export default function AiChat({ symbol, datos, interval = "15m", onAnalysisChan
           model: selectedModel,
           symbol: symbol,
           interval: interval,
-          history: history,
+          history: messages.map(m => ({ role: m.role, content: m.content })),
           global_context: globalContext,
           temperature: 0.3,
         }),

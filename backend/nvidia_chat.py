@@ -57,10 +57,11 @@ AVAILABLE_MODELS = {
 }
 
 
-def get_trading_system_prompt(indicator_data=None, global_context=None):
+def get_trading_system_prompt(indicator_data=None, global_context=None, model_name="AI"):
     """Build a specialized trading agent system prompt with live indicator data and global context."""
     base = (
-        "You are a SENIOR QUANTITATIVE CRYPTO STRATEGIST and PROFESSIONAL TRADER with 15+ years of experience in global markets. "
+        f"You are a SENIOR QUANTITATIVE CRYPTO STRATEGIST and PROFESSIONAL TRADER with 15+ years of experience in global markets. "
+        f"You are operating as the AI model {model_name}. "
         "Your expertise covers Market Microstructure, Price Action (PA), Wyckoff Theory, Elliott Wave Principle, and advanced Technical Indicators. "
         "You specialize in identifying high-probability setups and managing risk in the volatile crypto market.\n\n"
         "Your task is to provide a PROFESSIONAL TRADING ANALYSIS based EXCLUSIVELY on the live market data provided below. "
@@ -161,8 +162,9 @@ def nvidia_chat(
         logger.error(f"Unknown model key: {model_key}")
         return None
     model_id = model_config["id"]
+    model_name = model_config["name"]
     timeout = float(model_config.get("timeout", REQUEST_TIMEOUT))
-    system_prompt = get_trading_system_prompt(indicator_data, global_context)
+    system_prompt = get_trading_system_prompt(indicator_data, global_context, model_name)
     url = f"{NVIDIA_API_BASE}/chat/completions"
     headers = {
         "Authorization": f"Bearer {api_key}",
