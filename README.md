@@ -40,9 +40,9 @@ cd Technical-Analysis-Interface-For-Trading
 
 2. Install frontend dependencies:
 ```bash
-npm install
+pnpm install
 # or
-npm install --force
+pnpm install --force
 ```
 
 3. Install backend dependencies:
@@ -60,9 +60,9 @@ python app.py
 
 2. In another terminal, start the frontend:
 ```bash
-npm run dev
+pnpm run dev
 # or
-pnpm dev
+ppnpm dev
 ```
 
 
