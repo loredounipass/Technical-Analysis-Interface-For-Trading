@@ -1,7 +1,7 @@
 # Trading Bot UI
 
 ## 📊 Description
-This project is a professional-grade cryptocurrency trading interface that retrieves real-time market data directly from the TradingView API. It is designed to empower traders with advanced technical analysis tools and a modern, responsive user experience. The platform integrates a robust set of technical indicators, allowing users to analyze price trends, identify trading opportunities, and make informed decisions. Built with Next.js for the frontend and Python for the backend, it seamlessly combines performance, flexibility, and a visually appealing dashboard for both novice and experienced traders.
+This project is a professional-grade cryptocurrency trading interface that retrieves real-time market data directly from the TradingView API. It is designed to empower traders with advanced technical analysis tools and a modern, responsive user experience. The platform integrates a robust set of technical indicators, allowing users to analyze price trends, identify trading opportunities, and make informed decisions. Additionally, it now features an AI-powered technical analysis agent capable of generating market insights, detecting patterns, evaluating indicators, and assisting traders with smarter decision-making in real time. Built with Next.js for the frontend and Python for the backend, it seamlessly combines performance, flexibility, and a visually appealing dashboard for both novice and experienced traders.
 
 ## ✨ Features
 
