@@ -148,15 +148,15 @@ export default function Dashboard({ moneda, onCambiarMoneda }) {
       </div>
 
       {/* Top Ticker Status Bar */}
-      <div className="relative z-10 flex items-center justify-between px-6 py-2 border-b border-emerald-900/30 bg-[#05070a]/90 backdrop-blur-md">
-        <div className="flex items-center gap-4">
+      <div className="relative z-10 flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5 px-4 sm:px-6 py-2 border-b border-emerald-900/30 bg-[#05070a]/90 backdrop-blur-md">
+        <div className="flex items-center gap-3 sm:gap-4">
           <div className="flex items-center gap-2 px-2 py-0.5 rounded bg-emerald-950/40 border border-emerald-900/50">
             <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
             <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">SYS.ON</span>
           </div>
-          <span className="text-[10px] text-gray-500 uppercase tracking-widest border-l border-gray-800 pl-4">DATA FEED ACTIVE</span>
+          <span className="text-[10px] text-gray-500 uppercase tracking-widest border-l border-gray-800 pl-3 sm:pl-4">DATA FEED ACTIVE</span>
         </div>
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-4 sm:gap-6">
           <div className="flex items-center gap-2">
             <Activity className={`w-3.5 h-3.5 ${isConnected ? 'text-emerald-400' : 'text-red-500'}`} />
             <span className={`text-[10px] font-bold uppercase tracking-wider ${isConnected ? 'text-emerald-400' : 'text-red-500'}`}>
@@ -180,12 +180,12 @@ export default function Dashboard({ moneda, onCambiarMoneda }) {
           />
 
           {/* Professional Timeframe Selector */}
-          <div className="flex items-center gap-1 mb-6 bg-[#0a0e14]/80 backdrop-blur-sm p-1 rounded border border-white/5 w-fit shadow-lg shadow-black/50">
+          <div className="flex items-center gap-1 mb-6 bg-[#0a0e14]/80 backdrop-blur-sm p-1 rounded border border-white/5 w-fit max-w-full overflow-x-auto shadow-lg shadow-black/50">
             {["1m", "5m", "15m", "1h", "4h", "1d"].map((tf) => (
               <button
                 key={tf}
                 onClick={() => handleTimeframeChange(tf)}
-                className={`px-4 py-1 rounded text-xs font-bold transition-all duration-150 ${
+                className={`px-3 sm:px-4 py-1 rounded text-xs font-bold whitespace-nowrap transition-all duration-150 ${
                   timeframe === tf
                     ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shadow-[0_0_10px_rgba(16,185,129,0.15)]"
                     : "text-gray-500 hover:text-gray-300 hover:bg-white/5 border border-transparent"
