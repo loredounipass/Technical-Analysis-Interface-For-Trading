@@ -22,6 +22,12 @@ from nvidia_chat import nvidia_chat, AVAILABLE_MODELS
 
 app = Flask(__name__)
 
+# Confia en X-Forwarded-For/Proto de Render para ver la IP real del cliente.
+# Sin esto, request.remote_addr es siempre 127.0.0.1 (el proxy de Render)
+# y el rate limiting se aplica a TODOS los usuarios como si fueran uno solo.
+from werkzeug.middleware.proxy_fix import ProxyFix
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)
+
 # Origenes permitidos para CORS (separados por coma). En produccion se debe
 # configurar la URL del frontend, ej: https://mi-frontend.onrender.com
 DEFAULT_ORIGIN = "http://localhost:3000"
@@ -93,6 +99,11 @@ def rate_limited(ip):
             ip_requests[ip] = [now]
             return False
         arr = [t for t in arr if now - t <= RATE_WINDOW]
+        if not arr:
+            # Entrada vencida: limpiar para que el dict no crezca sin limite
+            del ip_requests[ip]
+            ip_requests[ip] = [now]
+            return False
         arr.append(now)
         ip_requests[ip] = arr
         if len(arr) > RATE_LIMIT:
