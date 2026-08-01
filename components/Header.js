@@ -26,18 +26,18 @@ export default function Header({ moneda, ultimaActualizacion, onActualizar, onCa
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button onClick={onActualizar} className="trading-button">
-              <RefreshCw className="h-4 w-4 mr-2" />
+            <Button onClick={onActualizar} size="sm" className="trading-button h-8 sm:h-9 px-2.5 sm:px-3 text-[11px] sm:text-xs [&_svg]:h-3.5 [&_svg]:w-3.5 sm:[&_svg]:h-4 sm:[&_svg]:w-4">
+              <RefreshCw className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               Refresh Data
             </Button>
-            <Button onClick={() => router.push('/news')} className="trading-button-secondary"
+            <Button onClick={() => router.push('/news')} size="sm" className="trading-button-secondary h-8 sm:h-9 px-2.5 sm:px-3 text-[11px] sm:text-xs [&_svg]:h-3.5 [&_svg]:w-3.5 sm:[&_svg]:h-4 sm:[&_svg]:w-4"
               style={{ borderColor: "rgba(16, 185, 129, 0.3)" }}
             >
-              <Newspaper className="h-4 w-4 mr-2 text-emerald-400" />
+              <Newspaper className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-emerald-400" />
               MARKET NEWS
             </Button>
-            <Button onClick={onCambiarMoneda} className="trading-button-secondary">
-              <ArrowLeft className="h-4 w-4 mr-2" />
+            <Button onClick={onCambiarMoneda} size="sm" className="trading-button-secondary h-8 sm:h-9 px-2.5 sm:px-3 text-[11px] sm:text-xs [&_svg]:h-3.5 [&_svg]:w-3.5 sm:[&_svg]:h-4 sm:[&_svg]:w-4">
+              <ArrowLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               Change Pair
             </Button>
           </div>
