@@ -214,10 +214,25 @@ def fetch_from_ta(symbol, interval_str='15m'):
             if current is not None:
                 base = float(current)
                 synthetic = []
+                opens = []
+                highs = []
+                lows = []
+                prev_close = base
                 for i in range(50):
                     noise = 1 + 0.002 * math.sin(i / 3.0)
-                    synthetic.append(base * noise)
+                    close = base * noise
+                    open_ = prev_close
+                    high = max(open_, close) * 1.0005
+                    low = min(open_, close) * 0.9995
+                    synthetic.append(close)
+                    opens.append(open_)
+                    highs.append(high)
+                    lows.append(low)
+                    prev_close = close
                 history['closes'] = synthetic
+                history['opens'] = opens
+                history['highs'] = highs
+                history['lows'] = lows
                 # Adjust timestamps based on interval approximate seconds
                 interval_seconds = 900 # default 15m
                 if interval_str == "1m": interval_seconds = 60
@@ -274,8 +289,11 @@ def fetch_from_ta(symbol, interval_str='15m'):
 
 
 # REALIZA UNA PETICION A LA API DE BINANCE PARA OBTENER KLINES (OHLCV)
+# data-api.binance.vision es el endpoint publico de market data y NO esta
+# bloqueado geograficamente (api.binance.com da 403 desde IPs de EE.UU.,
+# por lo que en Render/Railway/Fly fallaba)
 def fetch_klines(symbol, interval='15m', limit=100):
-    url = 'https://api.binance.com/api/v3/klines'
+    url = 'https://data-api.binance.vision/api/v3/klines'
     params = {'symbol': symbol, 'interval': interval, 'limit': limit}
     attempts = 3
     for attempt in range(attempts):
