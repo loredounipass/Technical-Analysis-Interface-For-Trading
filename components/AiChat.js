@@ -170,8 +170,6 @@ export default function AiChat({ symbol, datos, interval = "15m", onAnalysisChan
           { key: "nvidia-kimi", name: "Kimi K2.6", provider: "Moonshot AI", free: true },
           { key: "nvidia-gpt-oss", name: "GPT-OSS 20B", provider: "OpenAI", free: true },
           { key: "nvidia-gpt-oss-120b", name: "GPT-OSS 120B", provider: "OpenAI", free: true },
-          { key: "nvidia-glm", name: "GLM-5.1", provider: "Z-ai", free: true },
-          { key: "nvidia-mistral", name: "Mistral Small 4 119B", provider: "Mistral AI", free: true },
         ])
       }
     }

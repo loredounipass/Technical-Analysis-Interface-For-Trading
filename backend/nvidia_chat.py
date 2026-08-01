@@ -42,18 +42,6 @@ AVAILABLE_MODELS = {
         "provider": "OpenAI",
         "free": True,
     },
-    "nvidia-glm": {
-        "id": "z-ai/glm-5.1",
-        "name": "GLM-5.1",
-        "provider": "Z-ai",
-        "free": True,
-    },
-    "nvidia-mistral": {
-        "id": "mistralai/mistral-small-4-119b-2603",
-        "name": "Mistral Small 4 119B",
-        "provider": "Mistral AI",
-        "free": True,
-    },
 }
 
 
