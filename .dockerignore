@@ -1,0 +1,13 @@
+node_modules
+.next
+out
+build
+.git
+.gitignore
+*.md
+photos
+.env
+.env*.local
+docker-compose.yml
+render.yaml
+pnpm-lock.yaml

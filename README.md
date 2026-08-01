@@ -68,6 +68,60 @@ ppnpm dev
 
 3. Open [http://localhost:3000](http://localhost:3000) in your browser.
 
+## 🐳 Docker (local)
+
+Requisito: Docker Desktop instalado y corriendo.
+
+```bash
+# 1. Copia y ajusta las variables (opcional, hay defaults)
+cp .env.example .env
+
+# 2. Levanta frontend + backend
+docker compose up --build
+
+# 3. Abre http://localhost:3000
+```
+
+Para correr solo un servicio:
+
+```bash
+docker compose up --build backend   # API en http://localhost:5000
+docker compose up --build frontend  # UI en http://localhost:3000
+```
+
+## ☁️ Deploy en Render (https://dashboard.render.com/web/new)
+
+La app tiene 2 servicios (frontend y backend), cada uno con su propio `Dockerfile`. Render los detecta automáticamente (Entorno: **Docker**).
+
+### 1. Backend (crear primero)
+
+1. Conecta tu repo de GitHub en Render → **New → Web Service**.
+2. **Root Directory**: `backend` → Render detecta `backend/Dockerfile` y usa **Docker**.
+3. **Name**: `trading-backend`
+4. En **Environment** agrega:
+   - `ALLOWED_ORIGINS`: la URL de tu frontend, ej. `https://trading-frontend.onrender.com`
+   - `NVIDIA_API_KEY` (opcional, para el chat IA)
+   - `CRYPTOCOMPARE_API_KEY` (opcional, para noticias)
+5. **Create Web Service**. Espera el deploy y copia la URL asignada, ej. `https://trading-backend.onrender.com`.
+
+### 2. Frontend (crear después)
+
+1. **New → Web Service**, mismo repo.
+2. **Root Directory**: `/` → Render detecta el `Dockerfile` de la raíz y usa **Docker**.
+3. **Name**: `trading-frontend`
+4. En **Environment** agrega (estas se inyectan durante el build del Dockerfile):
+   - `NEXT_PUBLIC_API_BASE_URL`: `https://trading-backend.onrender.com/api`
+   - `NEXT_PUBLIC_SOCKET_URL`: `https://trading-backend.onrender.com`
+5. **Create Web Service**.
+
+> 💡 Las variables `NEXT_PUBLIC_*` se inyectan en el build del frontend. Si cambias la URL del backend, ve al servicio en Render → **Environment** → guarda y usa **Deploy → Clear build cache & Deploy**.
+
+> ⚠️ En el plan **Free**, Render pone los servicios a dormir tras ~15 min sin tráfico; el primer acceso puede tardar ~50s en responder.
+
+### Alternativa: Blueprint (1 click)
+
+En Render → **New → Blueprint**, conecta el repo. Se crean ambos servicios con `render.yaml`. Luego edita las env vars marcadas con `sync: false` con las URLs reales de cada servicio.
+
 ## 📷 Capturas de pantalla
 
 A continuación se muestran imágenes de la interfaz:

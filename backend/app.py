@@ -21,16 +21,26 @@ load_dotenv()
 from nvidia_chat import nvidia_chat, AVAILABLE_MODELS
 
 app = Flask(__name__)
+
+# Origenes permitidos para CORS (separados por coma). En produccion se debe
+# configurar la URL del frontend, ej: https://mi-frontend.onrender.com
+DEFAULT_ORIGIN = "http://localhost:3000"
+ALLOWED_ORIGINS = [
+    o.strip() for o in os.getenv("ALLOWED_ORIGINS", DEFAULT_ORIGIN).split(",") if o.strip()
+]
+if DEFAULT_ORIGIN not in ALLOWED_ORIGINS:
+    ALLOWED_ORIGINS.append(DEFAULT_ORIGIN)
+
 CORS(app, resources={
     r"/*": {
-        "origins": ["http://localhost:3000"],
+        "origins": ALLOWED_ORIGINS,
         "methods": ["GET", "POST", "OPTIONS"],
         "allow_headers": ["Content-Type"]
     }
 })
 
 # Initialize SocketIO
-socketio = SocketIO(app, cors_allowed_origins="http://localhost:3000", async_mode='threading')
+socketio = SocketIO(app, cors_allowed_origins=ALLOWED_ORIGINS, async_mode='threading')
 
 # Import social/socket logic
 from sockets import init_sockets
@@ -624,4 +634,6 @@ def get_models():
 init_sockets(socketio, get_trading_cached)
 
 if __name__ == '__main__':
-    socketio.run(app, port=5000, debug=True, host='127.0.0.1')
+    port = int(os.environ.get('PORT', 5000))
+    debug = os.environ.get('FLASK_DEBUG', 'false').lower() == 'true'
+    socketio.run(app, port=port, debug=debug, host='0.0.0.0', allow_unsafe_werkzeug=True)

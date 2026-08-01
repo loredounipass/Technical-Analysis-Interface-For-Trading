@@ -1,7 +1,11 @@
 import { useEffect, useState } from "react"
 import { io } from "socket.io-client"
 
-const SOCKET_URL = "http://localhost:5000"
+const SOCKET_URL =
+  process.env.NEXT_PUBLIC_SOCKET_URL ||
+  (process.env.NEXT_PUBLIC_API_BASE_URL
+    ? process.env.NEXT_PUBLIC_API_BASE_URL.replace(/\/+$/, "").replace(/\/api$/, "")
+    : "http://localhost:5000")
 
 /**
  * Custom hook to handle real-time trading data via WebSockets.

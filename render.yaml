@@ -1,0 +1,31 @@
+# Render Blueprint (opcional)
+# Despliegue alternativo: "New Blueprint" desde el repo.
+# NOTA: despues de crear los servicios, edita las env vars de cada uno
+# con las URLs reales asignadas por Render (se generan automaticamente).
+services:
+  # ============ BACKEND ============
+  - type: web
+    name: trading-backend
+    runtime: docker
+    rootDir: backend
+    plan: free
+    healthCheckPath: /api/models
+    envVars:
+      - key: ALLOWED_ORIGINS
+        sync: false # la llenas tu: https://<TU-FRONTEND>.onrender.com
+      - key: NVIDIA_API_KEY
+        sync: false # opcional, para el chat IA
+      - key: CRYPTOCOMPARE_API_KEY
+        sync: false # opcional
+
+  # ============ FRONTEND ============
+  - type: web
+    name: trading-frontend
+    runtime: docker
+    rootDir: .
+    plan: free
+    envVars:
+      - key: NEXT_PUBLIC_API_BASE_URL
+        sync: false # https://<TU-BACKEND>.onrender.com/api
+      - key: NEXT_PUBLIC_SOCKET_URL
+        sync: false # https://<TU-BACKEND>.onrender.com
