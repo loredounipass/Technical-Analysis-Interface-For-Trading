@@ -379,7 +379,7 @@ export default function AiChat({ symbol, datos, interval = "15m", onAnalysisChan
       <button
         id="ai-chat-toggle"
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 z-50 group"
+        className="fixed bottom-[max(24px,env(safe-area-inset-bottom))] right-[max(24px,env(safe-area-inset-right))] z-50 group"
       >
         <div className="relative">
           <div className="absolute inset-0 bg-gradient-to-r from-emerald-400 to-cyan-400 rounded-full blur-xl opacity-70 group-hover:opacity-100 transition-opacity duration-500" />
@@ -404,7 +404,7 @@ export default function AiChat({ symbol, datos, interval = "15m", onAnalysisChan
   }
 
   return (
-    <div className="fixed top-0 right-0 bottom-0 z-50 flex flex-col w-[480px] max-w-[100vw] h-screen overflow-hidden"
+    <div className="fixed top-0 right-0 bottom-0 z-50 flex flex-col w-full sm:w-[480px] max-w-[100vw] h-screen h-[100dvh] overflow-hidden"
       style={{
         background: "#080b11",
         border: "1px solid rgba(16, 185, 129, 0.2)",
@@ -454,7 +454,7 @@ export default function AiChat({ symbol, datos, interval = "15m", onAnalysisChan
 
       {/* Sidebar */}
       <div
-        className={`absolute top-0 left-0 bottom-0 z-50 w-72 transition-transform duration-300 ease-out flex flex-col border-r ${
+        className={`absolute top-0 left-0 bottom-0 z-50 w-[80vw] max-w-72 transition-transform duration-300 ease-out flex flex-col border-r ${
           isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
         style={{
@@ -524,7 +524,7 @@ export default function AiChat({ symbol, datos, interval = "15m", onAnalysisChan
       </div>
 
       {/* Header */}
-      <div className="relative flex items-center justify-between px-4 py-2.5 z-10"
+      <div className="relative flex items-center justify-between px-4 pt-[max(10px,env(safe-area-inset-top))] pb-2.5 z-10"
         style={{
           borderBottom: "1px solid rgba(16, 185, 129, 0.12)",
           background: "linear-gradient(180deg, rgba(16, 185, 129, 0.06) 0%, transparent 100%)",
@@ -608,7 +608,7 @@ export default function AiChat({ symbol, datos, interval = "15m", onAnalysisChan
         </button>
         {showModelSelect && (
           <div
-            className="mt-1 overflow-hidden"
+            className="mt-1 overflow-hidden max-h-[45vh] overflow-y-auto"
             style={{
               background: "#0a0e15",
               border: "1px solid rgba(16, 185, 129, 0.1)",
@@ -827,7 +827,7 @@ export default function AiChat({ symbol, datos, interval = "15m", onAnalysisChan
       </div>
 
       {/* Input */}
-      <div className="px-4 py-2.5 z-10" style={{ borderTop: "1px solid rgba(16, 185, 129, 0.08)", background: "rgba(0, 0, 0, 0.5)" }}>
+      <div className="px-4 pt-2.5 pb-[max(10px,env(safe-area-inset-bottom))] z-10" style={{ borderTop: "1px solid rgba(16, 185, 129, 0.08)", background: "rgba(0, 0, 0, 0.5)" }}>
         <div
           className="flex items-end gap-2 px-3 py-2"
           style={{
