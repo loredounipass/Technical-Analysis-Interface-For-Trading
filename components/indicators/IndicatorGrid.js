@@ -51,7 +51,7 @@ export default function IndicatorGrid({ datos }) {
              {candleData.length > 0 ? (
                <CandleChart data={candleData} decimales={datos.decimales} />
              ) : (
-               <div className="h-[300px] flex items-center justify-center text-gray-500 font-mono italic">
+               <div className="h-[240px] flex items-center justify-center text-gray-500 font-mono italic">
                  Awaiting real-time price action data...
                </div>
              )}
@@ -60,7 +60,7 @@ export default function IndicatorGrid({ datos }) {
       </div>
 
       {/* Main Indicators with Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
         <ChartCard
           title="RSI OSCILLATOR"
           icon={<Gauge className="h-5 w-5 mr-2 text-trading-blue-500" />}
@@ -80,10 +80,10 @@ export default function IndicatorGrid({ datos }) {
       </div>
 
       {/* Volume and ADX with detailed numbers */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
         <IndicatorCard title="VOLUME ANALYSIS" icon={<BarChart4 className="h-3.5 w-3.5 mr-1.5 text-yellow-500" />}>
           <div className="space-y-3">
-            <div className="bg-[#05070a]/50 p-3 rounded border border-white/5">
+            <div className="bg-[#05070a]/50 p-2.5 rounded border border-white/5">
               <div className="flex justify-between items-center mb-2">
                 <span className="text-[10px] text-gray-500 font-mono tracking-widest uppercase">24h Vol</span>
                 <span className="text-lg font-bold text-yellow-400 font-mono tabular-nums">
@@ -109,10 +109,10 @@ export default function IndicatorGrid({ datos }) {
 
         <IndicatorCard title="ADX TREND STRENGTH" icon={<ArrowUpDown className="h-3.5 w-3.5 mr-1.5 text-blue-500" />}>
           <div className="space-y-3">
-            <div className="bg-[#05070a]/50 p-3 rounded border border-white/5">
+            <div className="bg-[#05070a]/50 p-2.5 rounded border border-white/5">
               <div className="flex justify-between items-center mb-2">
                 <span className="text-[10px] text-gray-500 font-mono tracking-widest uppercase">ADX Value</span>
-                <span className="text-xl font-bold text-blue-400 font-mono tabular-nums">{datos.adx.toFixed(2)}</span>
+                <span className="text-lg font-bold text-blue-400 font-mono tabular-nums">{datos.adx.toFixed(2)}</span>
               </div>
               <div className="w-full bg-gray-900 rounded-sm h-1.5 mb-2 overflow-hidden flex relative">
                 {/* Scale markers */}
@@ -140,10 +140,10 @@ export default function IndicatorGrid({ datos }) {
 
         <IndicatorCard title="STOCHASTIC RSI" icon={<Percent className="h-3.5 w-3.5 mr-1.5 text-emerald-500" />}>
           <div className="space-y-3">
-            <div className="bg-[#05070a]/50 p-3 rounded border border-white/5">
+            <div className="bg-[#05070a]/50 p-2.5 rounded border border-white/5">
               <div className="flex justify-between items-center mb-2">
                 <span className="text-[10px] text-gray-500 font-mono tracking-widest uppercase">Value</span>
-                <span className="text-xl font-bold text-emerald-400 font-mono tabular-nums">{datos.rsiStoch.toFixed(2)}</span>
+                <span className="text-lg font-bold text-emerald-400 font-mono tabular-nums">{datos.rsiStoch.toFixed(2)}</span>
               </div>
               <div className="flex justify-between items-center mb-2">
                 <span className="text-[10px] text-gray-500 font-mono tracking-widest uppercase">Status</span>
@@ -172,7 +172,7 @@ export default function IndicatorGrid({ datos }) {
       </div>
 
       {/* Bollinger Bands and EMAs */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
         <ChartCard
           title="BOLLINGER BANDS"
           icon={<Waves className="h-5 w-5 mr-2 text-trading-blue-500" />}
@@ -192,20 +192,20 @@ export default function IndicatorGrid({ datos }) {
       </div>
 
       {/* Oscillators with detailed values */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
         <IndicatorCard title="STOCHASTIC OSCILLATOR" icon={<Activity className="h-3.5 w-3.5 mr-1.5 text-blue-500" />}>
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
-              <div className="bg-[#05070a]/50 p-3 rounded border border-white/5">
+              <div className="bg-[#05070a]/50 p-2.5 rounded border border-white/5">
                 <div className="text-[10px] text-blue-500/70 font-mono tracking-widest uppercase mb-1">%K LINE</div>
-                <div className="text-xl font-bold text-blue-400 font-mono tabular-nums">{datos.stochK.toFixed(2)}</div>
+                <div className="text-lg font-bold text-blue-400 font-mono tabular-nums">{datos.stochK.toFixed(2)}</div>
                 <div className="text-[9px] text-gray-500 font-mono tracking-widest uppercase">
                   {datos.stochK > 80 ? "OB" : datos.stochK < 20 ? "OS" : "NEUT"}
                 </div>
               </div>
-              <div className="bg-[#05070a]/50 p-3 rounded border border-white/5">
+              <div className="bg-[#05070a]/50 p-2.5 rounded border border-white/5">
                 <div className="text-[10px] text-emerald-500/70 font-mono tracking-widest uppercase mb-1">%D LINE</div>
-                <div className="text-xl font-bold text-emerald-400 font-mono tabular-nums">{datos.stochD.toFixed(2)}</div>
+                <div className="text-lg font-bold text-emerald-400 font-mono tabular-nums">{datos.stochD.toFixed(2)}</div>
                 <div className="text-[9px] text-gray-500 font-mono tracking-widest uppercase">
                   {datos.stochD > 80 ? "OB" : datos.stochD < 20 ? "OS" : "NEUT"}
                 </div>
@@ -236,10 +236,10 @@ export default function IndicatorGrid({ datos }) {
 
         <IndicatorCard title="CCI INDICATOR" icon={<Compass className="h-3.5 w-3.5 mr-1.5 text-yellow-500" />}>
           <div className="space-y-3">
-            <div className="bg-[#05070a]/50 p-4 rounded border border-white/5 h-full">
-              <div className="flex justify-between items-center mb-4">
+            <div className="bg-[#05070a]/50 p-3 rounded border border-white/5 h-full">
+              <div className="flex justify-between items-center mb-3">
                 <span className="text-[10px] text-gray-500 font-mono tracking-widest uppercase">CCI (20)</span>
-                <span className={`text-2xl font-bold font-mono tabular-nums ${
+                <span className={`text-xl font-bold font-mono tabular-nums ${
                     datos.cci > 100 ? "text-red-400" : 
                     datos.cci < -100 ? "text-emerald-400" : "text-yellow-400"
                   }`}>
@@ -247,12 +247,12 @@ export default function IndicatorGrid({ datos }) {
                 </span>
               </div>
               
-              <div className="w-full bg-gray-900 rounded-sm h-2 relative overflow-hidden flex items-center shadow-inner">
+              <div className="w-full bg-gray-900 rounded-sm h-1.5 relative overflow-hidden flex items-center shadow-inner">
                 <div className="absolute left-1/2 top-0 bottom-0 w-[1px] bg-gray-600 z-10" />
                 <div className="absolute left-[25%] top-0 bottom-0 w-[1px] bg-emerald-500/50 z-10" />
                 <div className="absolute left-[75%] top-0 bottom-0 w-[1px] bg-red-500/50 z-10" />
                 <div
-                  className={`h-2 transition-all duration-500 ${
+                  className={`h-1.5 transition-all duration-500 ${
                     datos.cci > 100 ? "bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.8)]" : 
                     datos.cci < -100 ? "bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.8)]" : 
                     "bg-yellow-500 shadow-[0_0_10px_rgba(234,179,8,0.8)]"
@@ -274,7 +274,7 @@ export default function IndicatorGrid({ datos }) {
       </div>
 
       {/* Support and Resistance with detailed values */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <IndicatorCard title="SUPPORT LEVELS" icon={<Shield className="h-3.5 w-3.5 mr-1.5 text-emerald-500" />}>
           <div className="space-y-1">
             {[

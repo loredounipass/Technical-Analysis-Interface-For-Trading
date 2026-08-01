@@ -10,7 +10,7 @@ export default function IndicatorCard({ title, icon, children }) {
           {title}
         </CardTitle>
       </CardHeader>
-      <CardContent className="pt-4 relative z-10">{children}</CardContent>
+      <CardContent className="pt-3 relative z-10">{children}</CardContent>
     </Card>
   )
 }

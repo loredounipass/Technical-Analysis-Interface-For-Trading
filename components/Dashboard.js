@@ -197,7 +197,7 @@ export default function Dashboard({ moneda, onCambiarMoneda }) {
           </div>
 
           {/* Price and Recommendation */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <PriceCard precio={datos.precio} decimales={datos.decimales} symbol={moneda.symbol} history={datos.history} />
             <RecommendationCard
               recomendacion={recomendacion}

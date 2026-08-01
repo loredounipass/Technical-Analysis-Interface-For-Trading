@@ -127,22 +127,14 @@ export default function ChartCard({ title, icon, type, datos = {} }) {
           const offset = Math.max(0, histLen - displayLen)
           return Math.min(histLen - 1, offset + displayIndex)
         }
-        // Debug: mostrar tamaños y primeros/últimos valores
-        try {
-          console.log("ChartCard RSI data:", {
-            historyRsiLen: datos.history?.rsi?.length,
-            rsiChartLen: rsiChartData.length,
-            sample: rsiChartData.slice(0, 6)
-          })
-        } catch (e) {}
         return (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {/* Numerical Values */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-trading-dark-700 p-3 rounded border border-trading-dark-600">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-trading-dark-700 p-2.5 rounded border border-trading-dark-600">
                 <div className="text-xs text-trading-dark-300 font-mono mb-1">RSI (14)</div>
                 <div
-                  className={`text-xl font-bold font-mono ${
+                  className={`text-lg font-bold font-mono ${
                     datos.rsi > 70
                       ? "text-trading-red-400"
                       : datos.rsi < 30
@@ -156,10 +148,10 @@ export default function ChartCard({ title, icon, type, datos = {} }) {
                   {datos.rsi > 70 ? "Overbought" : datos.rsi < 30 ? "Oversold" : "Neutral"}
                 </div>
               </div>
-              <div className="bg-trading-dark-700 p-3 rounded border border-trading-dark-600">
+              <div className="bg-trading-dark-700 p-2.5 rounded border border-trading-dark-600">
                 <div className="text-xs text-trading-dark-300 font-mono mb-1">Stoch RSI</div>
                 <div
-                  className={`text-xl font-bold font-mono ${
+                  className={`text-lg font-bold font-mono ${
                     datos.rsiStoch > 80
                       ? "text-trading-red-400"
                       : datos.rsiStoch < 20
@@ -177,7 +169,7 @@ export default function ChartCard({ title, icon, type, datos = {} }) {
 
             {/* Chart */}
             {rsiChartData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={180}>
+              <ResponsiveContainer width="100%" height={140}>
                 <LineChart data={rsiChartData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
                   <XAxis dataKey="name" tick={{ fill: "#a3a3a3", fontSize: 10 }} />
@@ -203,19 +195,10 @@ export default function ChartCard({ title, icon, type, datos = {} }) {
                 </LineChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-[180px] flex items-center justify-center text-trading-dark-400 text-sm">
+              <div className="h-[140px] flex items-center justify-center text-trading-dark-400 text-sm">
                 No hay datos históricos disponibles
               </div>
             )}
-            {/* Debug breve visible en UI */}
-            <div className="mt-2 text-xs text-trading-dark-300 font-mono">
-              {(() => {
-                const vals = rsiChartData.map(d => d.rsi).filter(v => v !== null && v !== undefined && !isNaN(v))
-                const min = vals.length ? Math.min(...vals) : 'n/a'
-                const max = vals.length ? Math.max(...vals) : 'n/a'
-                return `Datos RSI: ${datos.history?.rsi?.length ?? 0} historial, serie gráfica: ${rsiChartData.length} (min: ${min}, max: ${max})`
-              })()}
-            </div>
           </div>
         )
 
@@ -247,13 +230,6 @@ export default function ChartCard({ title, icon, type, datos = {} }) {
         }
         
         macdChartData = ensureMinPoints(macdChartData)
-        try {
-          console.log("ChartCard MACD data:", {
-            historyMacdLen: datos.history?.macd?.length,
-            macdChartLen: macdChartData.length,
-            sample: macdChartData.slice(0, 6)
-          })
-        } catch (e) {}
         // Calcular dominio Y para mejor visualización
         const macdValues = macdChartData.flatMap(d => [d.macd, d.signal].filter(v => v !== null && v !== undefined && !isNaN(v)))
         let macdYDomain = ["auto", "auto"]
@@ -265,13 +241,13 @@ export default function ChartCard({ title, icon, type, datos = {} }) {
         }
 
         return (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {/* Numerical Values */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-trading-dark-700 p-3 rounded border border-trading-dark-600">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-trading-dark-700 p-2.5 rounded border border-trading-dark-600">
                 <div className="text-xs text-trading-dark-300 font-mono mb-1">MACD Line</div>
                 <div
-                  className={`text-xl font-bold font-mono ${
+                  className={`text-lg font-bold font-mono ${
                     datos.macdValue > 0 ? "text-trading-green-400" : "text-trading-red-400"
                   }`}
                 >
@@ -281,10 +257,10 @@ export default function ChartCard({ title, icon, type, datos = {} }) {
                   {datos.macdValue > 0 ? "Bullish" : "Bearish"}
                 </div>
               </div>
-              <div className="bg-trading-dark-700 p-3 rounded border border-trading-dark-600">
+              <div className="bg-trading-dark-700 p-2.5 rounded border border-trading-dark-600">
                 <div className="text-xs text-trading-dark-300 font-mono mb-1">Signal Line</div>
                 <div
-                  className={`text-xl font-bold font-mono ${
+                  className={`text-lg font-bold font-mono ${
                     datos.macdSignal > 0 ? "text-trading-green-400" : "text-trading-red-400"
                   }`}
                 >
@@ -298,7 +274,7 @@ export default function ChartCard({ title, icon, type, datos = {} }) {
 
             {/* Chart */}
             {macdChartData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={180}>
+              <ResponsiveContainer width="100%" height={140}>
                 <LineChart data={macdChartData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
                   <XAxis dataKey="name" tick={{ fill: "#a3a3a3", fontSize: 10 }} />
@@ -324,18 +300,10 @@ export default function ChartCard({ title, icon, type, datos = {} }) {
                 </LineChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-[180px] flex items-center justify-center text-trading-dark-400 text-sm">
+              <div className="h-[140px] flex items-center justify-center text-trading-dark-400 text-sm">
                 No hay datos históricos disponibles
               </div>
             )}
-            <div className="mt-2 text-xs text-trading-dark-300 font-mono">
-              {(() => {
-                const vals = macdChartData.flatMap(d => [d.macd, d.signal]).filter(v => v !== null && v !== undefined && !isNaN(v))
-                const min = vals.length ? Math.min(...vals) : 'n/a'
-                const max = vals.length ? Math.max(...vals) : 'n/a'
-                return `Datos MACD: ${datos.history?.macd?.length ?? 0} historial, serie gráfica: ${macdChartData.length} (min: ${min}, max: ${max})`
-              })()}
-            </div>
           </div>
         )
 
@@ -381,13 +349,6 @@ export default function ChartCard({ title, icon, type, datos = {} }) {
         }
         
         bbChartData = ensureMinPoints(bbChartData)
-        try {
-          console.log("ChartCard BB data:", {
-            historyClosesLen: datos.history?.closes?.length,
-            bbChartLen: bbChartData.length,
-            sample: bbChartData.slice(0, 6)
-          })
-        } catch (e) {}
         // Calcular dominio Y (usar solo las bandas, excluir precio)
         const bbValues = bbChartData.flatMap(d => [d.upper, d.middle, d.lower].filter(v => v !== null && v !== undefined && !isNaN(v)))
         if (bbValues.length > 0) {
@@ -398,30 +359,30 @@ export default function ChartCard({ title, icon, type, datos = {} }) {
         }
 
         return (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {/* Numerical Values */}
             <div className="grid grid-cols-3 gap-2">
               <div className="bg-trading-red-600/20 p-2 rounded border border-trading-red-600/30">
                 <div className="text-xs text-trading-red-300 font-mono mb-1">Upper</div>
-                <div className="text-lg font-bold font-mono text-trading-red-400">
+                <div className="text-base font-bold font-mono text-trading-red-400">
                   ${safeToFixed(datos.bbUpper, datos.decimales)}
                 </div>
               </div>
               <div className="bg-trading-yellow-600/20 p-2 rounded border border-trading-yellow-600/30">
                 <div className="text-xs text-trading-yellow-300 font-mono mb-1">Middle</div>
-                <div className="text-lg font-bold font-mono text-trading-yellow-400">
+                <div className="text-base font-bold font-mono text-trading-yellow-400">
                   ${safeToFixed(datos.bbMiddle, datos.decimales)}
                 </div>
               </div>
               <div className="bg-trading-green-600/20 p-2 rounded border border-trading-green-600/30">
                 <div className="text-xs text-trading-green-300 font-mono mb-1">Lower</div>
-                <div className="text-lg font-bold font-mono text-trading-green-400">
+                <div className="text-base font-bold font-mono text-trading-green-400">
                   ${safeToFixed(datos.bbLower, datos.decimales)}
                 </div>
               </div>
             </div>
 
-            <div className="bg-trading-dark-700 p-3 rounded border border-trading-dark-600">
+            <div className="bg-trading-dark-700 p-2.5 rounded border border-trading-dark-600">
               <div className="flex justify-between items-center">
                 <span className="text-xs text-trading-dark-300 font-mono">Current Price Position:</span>
                 <span
@@ -447,7 +408,7 @@ export default function ChartCard({ title, icon, type, datos = {} }) {
 
             {/* Chart */}
             {bbChartData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={180}>
+              <ResponsiveContainer width="100%" height={140}>
                 <LineChart data={bbChartData} margin={{ left: 40, right: 40 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
                   <XAxis dataKey="name" tick={{ fill: "#a3a3a3", fontSize: 10 }} />
@@ -481,18 +442,10 @@ export default function ChartCard({ title, icon, type, datos = {} }) {
                 </LineChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-[180px] flex items-center justify-center text-trading-dark-400 text-sm">
+              <div className="h-[140px] flex items-center justify-center text-trading-dark-400 text-sm">
                 No hay datos históricos disponibles
               </div>
             )}
-            <div className="mt-2 text-xs text-trading-dark-300 font-mono">
-              {(() => {
-                const vals = bbChartData.flatMap(d => [d.upper, d.middle, d.lower, d.price]).filter(v => v !== null && v !== undefined && !isNaN(v))
-                const min = vals.length ? Math.min(...vals) : 'n/a'
-                const max = vals.length ? Math.max(...vals) : 'n/a'
-                return `Datos BB: ${datos.history?.closes?.length ?? 0} historial, serie gráfica: ${bbChartData.length} (min: ${min}, max: ${max})`
-              })()}
-            </div>
           </div>
         )
 
@@ -573,13 +526,6 @@ export default function ChartCard({ title, icon, type, datos = {} }) {
         }
         
         emaChartData = ensureMinPoints(emaChartData)
-        try {
-          console.log("ChartCard EMA data:", {
-            historyClosesLen: datos.history?.closes?.length,
-            emaChartLen: emaChartData.length,
-            sample: emaChartData.slice(0, 6)
-          })
-        } catch (e) {}
         // Calcular dominio Y
         const emaValues = emaChartData.flatMap(d => [d.ema50, d.ema100, d.ema200, d.price].filter(v => v !== null && v !== undefined && !isNaN(v)))
         let yDomain = ["auto", "auto"]
@@ -591,9 +537,9 @@ export default function ChartCard({ title, icon, type, datos = {} }) {
         }
 
         return (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {/* Numerical Values */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
                 <div className="bg-trading-dark-700 p-2 rounded border border-trading-dark-600 flex justify-between">
                   <span className="text-xs text-trading-green-300 font-mono">EMA 50:</span>
@@ -614,7 +560,7 @@ export default function ChartCard({ title, icon, type, datos = {} }) {
                   </span>
                 </div>
               </div>
-              <div className="bg-trading-dark-700 p-3 rounded border border-trading-dark-600">
+              <div className="bg-trading-dark-700 p-2.5 rounded border border-trading-dark-600">
                 <div className="text-xs text-trading-dark-300 font-mono mb-1">Trend Analysis</div>
                 <div
                   className={`text-lg font-bold font-mono ${
@@ -642,7 +588,7 @@ export default function ChartCard({ title, icon, type, datos = {} }) {
 
             {/* Chart */}
             {emaChartData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={180}>
+              <ResponsiveContainer width="100%" height={140}>
                 <LineChart data={emaChartData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
                   <XAxis dataKey="name" tick={{ fill: "#a3a3a3", fontSize: 10 }} />
@@ -676,18 +622,10 @@ export default function ChartCard({ title, icon, type, datos = {} }) {
                 </LineChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-[180px] flex items-center justify-center text-trading-dark-400 text-sm">
+              <div className="h-[140px] flex items-center justify-center text-trading-dark-400 text-sm">
                 No hay datos históricos disponibles
               </div>
             )}
-            <div className="mt-2 text-xs text-trading-dark-300 font-mono">
-                {(() => {
-                const vals = emaChartData.flatMap(d => [d.ema50, d.ema100, d.ema200]).filter(v => v !== null && v !== undefined && !isNaN(v))
-                const min = vals.length ? Math.min(...vals) : 'n/a'
-                const max = vals.length ? Math.max(...vals) : 'n/a'
-                return `Datos EMA: ${datos.history?.closes?.length ?? 0} historial, serie gráfica: ${emaChartData.length} (min: ${min}, max: ${max})`
-              })()}
-            </div>
           </div>
         )
 
@@ -706,7 +644,7 @@ export default function ChartCard({ title, icon, type, datos = {} }) {
           {title}
         </CardTitle>
       </CardHeader>
-      <CardContent className="pt-4 relative z-10">
+      <CardContent className="pt-3 relative z-10">
         <div className="chart-container">{renderChart()}</div>
       </CardContent>
     </Card>

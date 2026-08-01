@@ -38,15 +38,15 @@ export default function RecommendationCard({ recomendacion, buySignals, sellSign
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="space-y-5">
+        <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <div className={`px-4 py-2 rounded text-lg font-bold font-mono flex items-center border ${getRecommendationStyle(recomendacion)}`}>
+            <div className={`px-3 py-1.5 rounded text-base font-bold font-mono flex items-center border ${getRecommendationStyle(recomendacion)}`}>
               {getRecommendationIcon(recomendacion)}
               {recomendacion}
             </div>
             <div className="text-right">
               <div className="text-[10px] text-gray-500 font-mono tracking-widest uppercase mb-1">Total Signals</div>
-              <div className="text-xl font-bold text-white font-mono tabular-nums">{totalSignals}</div>
+              <div className="text-lg font-bold text-white font-mono tabular-nums">{totalSignals}</div>
             </div>
           </div>
 

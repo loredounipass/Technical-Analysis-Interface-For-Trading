@@ -97,13 +97,13 @@ export default function PriceCard({ precio, decimales = 2, symbol, history = {} 
       </CardHeader>
       <CardContent className="relative z-10">
         <div className="space-y-1">
-          <div className="text-4xl font-bold text-white tabular-nums tracking-tight">
-            <span className="text-gray-500 mr-1 text-2xl">$</span>{formatted}
+          <div className="text-3xl font-bold text-white tabular-nums tracking-tight">
+            <span className="text-gray-500 mr-1 text-xl">$</span>{formatted}
           </div>
           <div className="text-[10px] text-emerald-500/80 font-bold tracking-widest">{symbol}</div>
         </div>
         {priceChartData.length > 0 && (
-          <div className="mt-6 h-[80px]">
+          <div className="mt-4 h-[60px]">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={priceChartData}>
                 <defs>
