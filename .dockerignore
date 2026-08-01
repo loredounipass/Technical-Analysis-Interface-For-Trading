@@ -10,4 +10,4 @@ photos
 .env*.local
 docker-compose.yml
 render.yaml
-pnpm-lock.yaml
+package-lock.json
