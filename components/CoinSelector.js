@@ -227,7 +227,7 @@ export default function CoinSelector({ monedas, onSelect }) {
           >
             <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
             <span className="text-[10px] font-mono text-gray-500 tracking-wider">
-              Binance • TradingView • 15m Interval • AI Agent Ready
+              WOODY AGENT • Real-Time Crypto Technical Analysis • AI-Powered
             </span>
           </div>
         </div>
