@@ -149,10 +149,26 @@ export default function AiChat({ symbol, datos, interval = "15m", onAnalysisChan
   const [showModelSelect, setShowModelSelect] = useState(false)
   const [typingText, setTypingText] = useState("")
   const [isTyping, setIsTyping] = useState(false)
+  const [panelHeight, setPanelHeight] = useState(null)
   const typingRef = useRef(null)
   const messagesEndRef = useRef(null)
   const inputRef = useRef(null)
   const chatContainerRef = useRef(null)
+
+  // Ajusta la altura del panel al area realmente visible en movil
+  // (teclado abierto, barra de navegacion del sistema, etc.)
+  useEffect(() => {
+    const vv = window.visualViewport
+    if (!vv) return
+    const update = () => setPanelHeight(`${vv.height}px`)
+    update()
+    vv.addEventListener("resize", update)
+    window.addEventListener("resize", update)
+    return () => {
+      vv.removeEventListener("resize", update)
+      window.removeEventListener("resize", update)
+    }
+  }, [])
 
   useEffect(() => {
     async function fetchModels() {
@@ -410,6 +426,7 @@ export default function AiChat({ symbol, datos, interval = "15m", onAnalysisChan
         border: "1px solid rgba(16, 185, 129, 0.2)",
         boxShadow: "0 0 30px rgba(16, 185, 129, 0.08), 0 0 60px rgba(6, 182, 212, 0.04), inset 0 0 80px rgba(16, 185, 129, 0.02)",
         fontFamily: "var(--font-inter), 'Segoe UI', system-ui, -apple-system, sans-serif",
+        height: panelHeight || undefined,
       }}
     >
       {/* Scanline overlay */}
