@@ -158,7 +158,6 @@ export default function AiChat({ symbol, datos, interval = "15m", market = "cryp
   const typingRef = useRef(null)
   const abortRef = useRef(null)
   const activeModelRef = useRef(null)
-  const messagesEndRef = useRef(null)
   const inputRef = useRef(null)
   const chatContainerRef = useRef(null)
 
@@ -212,7 +211,9 @@ export default function AiChat({ symbol, datos, interval = "15m", market = "cryp
     const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 150
 
     if (isNearBottom) {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+      // Scroll SOLO el contenedor del chat (no la pagina): scrollIntoView
+      // desplazaria tambien todos los ancestros con scroll (body/window).
+      container.scrollTo({ top: container.scrollHeight, behavior: "smooth" })
     }
   }, [messages, typingText])
 
@@ -887,8 +888,6 @@ export default function AiChat({ symbol, datos, interval = "15m", market = "cryp
             </div>
           </div>
         )}
-
-        <div ref={messagesEndRef} />
       </div>
 
       {/* Input */}
