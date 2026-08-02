@@ -97,7 +97,7 @@ STOCK_EXCHANGES = {
 
 # Whitelist de activos soportados: evita que simbolos invalidos lleguen a
 # TradingView (p.ej. USDTUSDT) y quemen el rate limit del IP para todos
-CRYPTO_SYMBOLS = {"BTCUSDT", "ETHUSDT", "SOLUSDT", "PEPEUSDT", "BNBUSDT", "MATICUSDT", "XRPUSDT"}
+CRYPTO_SYMBOLS = {"BTCUSDT", "ETHUSDT", "SOLUSDT", "PEPEUSDT", "BNBUSDT", "DOGEUSDT", "XRPUSDT"}
 STOCK_SYMBOLS = {"AAPL", "MSFT", "NVDA", "TSLA", "AMZN", "GOOGL", "META", "NFLX", "AMD", "INTC", "LMT"}
 
 RATE_WINDOW = 60

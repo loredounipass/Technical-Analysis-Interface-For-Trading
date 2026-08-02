@@ -10,6 +10,7 @@ const COINS = [
   { symbol: "BTCUSDT", name: "Bitcoin", short: "BTC", color: "#f7931a", gradient: "from-amber-500/20 to-orange-600/5" },
   { symbol: "ETHUSDT", name: "Ethereum", short: "ETH", color: "#627eea", gradient: "from-indigo-500/20 to-blue-600/5" },
   { symbol: "SOLUSDT", name: "Solana", short: "SOL", color: "#9945ff", gradient: "from-purple-500/20 to-violet-600/5" },
+  { symbol: "DOGEUSDT", name: "Dogecoin", short: "DOGE", color: "#c2a633", gradient: "from-yellow-500/20 to-amber-600/5" },
   { symbol: "PEPEUSDT", name: "Pepe", short: "PEPE", color: "#3cc68a", gradient: "from-emerald-500/20 to-green-600/5" },
 ]
 
