@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { Newspaper, ExternalLink, Loader2, Globe, Clock, TrendingUp, Zap, ArrowUpRight } from "lucide-react"
+import { Newspaper, ExternalLink, Loader2, Globe, Clock, TrendingUp, Zap, ArrowUpRight, Bitcoin, LineChart } from "lucide-react"
 import Link from "next/link"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000/api"
@@ -181,9 +181,9 @@ export default function NewsPage() {
             }}
           >
             {[
-              { key: "crypto", label: "CRYPTO", icon: "₿" },
-              { key: "stock", label: "STOCKS", icon: "📈" },
-            ].map(({ key, label, icon }) => {
+              { key: "crypto", label: "CRYPTO", Icon: Bitcoin },
+              { key: "stock", label: "STOCKS", Icon: LineChart },
+            ].map(({ key, label, Icon }) => {
               const isActive = market === key
               return (
                 <button
@@ -198,7 +198,7 @@ export default function NewsPage() {
                     boxShadow: isActive ? "0 0 16px rgba(16, 185, 129, 0.08)" : "none",
                   }}
                 >
-                  <span className="text-sm">{icon}</span>
+                  <Icon className="w-4 h-4" strokeWidth={2.2} />
                   {label}
                 </button>
               )

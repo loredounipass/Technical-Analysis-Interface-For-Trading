@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { TrendingUp, BarChart3, Activity, Zap, Shield, Globe, ChevronRight, Radio } from "lucide-react"
+import { TrendingUp, BarChart3, Activity, Zap, Shield, Globe, ChevronRight, Radio, Bitcoin, LineChart } from "lucide-react"
 import CoinLogo from "@/components/CoinLogo"
 
 export default function CoinSelector({ monedas, acciones, onSelect }) {
@@ -153,9 +153,9 @@ export default function CoinSelector({ monedas, acciones, onSelect }) {
         <div className="flex items-center justify-center mb-5">
           <div className="flex items-center gap-1 bg-[#0a0e14]/80 p-1 rounded-lg border border-white/5">
             {[
-              { key: "crypto", label: "CRYPTO", icon: "₿" },
-              { key: "stock", label: "STOCKS", icon: "📈" },
-            ].map(({ key, label, icon }) => (
+              { key: "crypto", label: "CRYPTO", Icon: Bitcoin },
+              { key: "stock", label: "STOCKS", Icon: LineChart },
+            ].map(({ key, label, Icon }) => (
               <button
                 key={key}
                 onClick={() => setMarket(key)}
@@ -165,7 +165,7 @@ export default function CoinSelector({ monedas, acciones, onSelect }) {
                     : "text-gray-500 hover:text-gray-300 hover:bg-white/5 border border-transparent"
                 }`}
               >
-                <span className="text-sm">{icon}</span>
+                <Icon className="w-3.5 h-3.5" strokeWidth={2.2} />
                 {label}
               </button>
             ))}
