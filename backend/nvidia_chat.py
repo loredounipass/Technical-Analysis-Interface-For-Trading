@@ -102,7 +102,7 @@ def get_trading_system_prompt(indicator_data=None, global_context=None, model_na
         data_block += f"| CORE METRIC | VALUE | CONTEXT |\n"
         data_block += f"| :--- | :--- | :--- |\n"
         data_block += f"| Symbol | {indicator_data.get('symbol', 'N/A')} | Pair |\n"
-        data_block += f"| Asset Type | {indicator_data.get('market', 'crypto')} | crypto (spot USDT) or stock (NASDAQ) |\n"
+        data_block += f"| Asset Type | {indicator_data.get('market', 'crypto')} | crypto (spot USDT) or stock (NYSE/NASDAQ) |\n"
         data_block += f"| Timeframe | {indicator_data.get('timeframe', 'N/A')} | Candle interval (CRITICAL: all indicator values below correspond to this timeframe) |\n"
         data_block += f"| Current Price | {indicator_data.get('precio', 'N/A')} | Spot |\n"
         data_block += f"| RSI (14) | {indicator_data.get('rsi', 'N/A')} | Momentum |\n"
