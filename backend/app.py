@@ -194,18 +194,29 @@ def fetch_trading_data(symbol, interval_str='15m', market='crypto'):
 
     vol_24h = None
     secs = interval_seconds(interval_str)
-    # Volumen 24h real. Para crypto sub-horario (1m/5m/15m) se piden velas
-    # de 1h (24 exactas); stocks suman velas de Yahoo dentro de las ultimas 24h.
+    # Volumen 24h EXACTO al de Binance: ticker oficial /ticker/24hr (ventana
+    # rodante real, quoteVolume = lo que muestra la app en USDT). Si falla, se
+    # cae a la suma de velas. Stocks no tienen equivalente Binance: se suman
+    # las velas de Yahoo dentro de las ultimas 24h.
     try:
-        if market == 'stock' and klines:
-            end_ts = timestamps[-1]
-            vol_24h = sum(klines[i][5] for i in range(len(klines)) if end_ts - timestamps[i] <= 86400000)
-        elif market == 'crypto' and klines and secs < 3600:
-            vol_klines = fetch_klines(symbol, interval='1h', limit=24)
-            vol_24h = sum(float(k[7]) for k in vol_klines)
-        elif klines:
-            bars_24h = max(1, min(len(quote_volumes), 86400 // secs))
-            vol_24h = sum(quote_volumes[-bars_24h:])
+        if market == 'crypto' and klines:
+            try:
+                ticker = requests.get(
+                    'https://data-api.binance.vision/api/v3/ticker/24hr',
+                    params={'symbol': symbol},
+                    timeout=8,
+                )
+                ticker.raise_for_status()
+                vol_24h = float(ticker.json()['quoteVolume'])
+            except Exception as e:
+                logger.warning(f"[TradingData] ticker 24h fallo para {symbol}: {e}")
+        if vol_24h is None:
+            if market == 'stock' and klines:
+                end_ts = timestamps[-1]
+                vol_24h = sum(klines[i][5] for i in range(len(klines)) if end_ts - timestamps[i] <= 86400000)
+            elif klines:
+                bars_24h = max(1, min(len(quote_volumes), 86400 // secs))
+                vol_24h = sum(quote_volumes[-bars_24h:])
     except Exception as e:
         logger.warning(f"[TradingData] volumen 24h fallo para {symbol}: {e}")
 
