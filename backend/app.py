@@ -176,6 +176,22 @@ def fetch_last_price(symbol, market):
     return float(resp.json()['price'])
 
 
+# DECIMALES DINAMICOS ESTILO BINANCE: escala segun la magnitud del precio.
+# PEPE (~0.000011) y similares necesitan 8 decimales; BTC 2; DOGE/XRP 4-6.
+def price_decimals(price):
+    if not price or price <= 0:
+        return 2
+    if price < 0.0001:
+        return 8
+    if price < 0.01:
+        return 6
+    if price < 1:
+        return 4
+    if price < 100:
+        return 3
+    return 2
+
+
 # OBTIENE DATOS DE MERCADO (BINANCE/YAHOO) Y CALCULA TODOS LOS INDICADORES
 # TECNICOS LOCALMENTE. Sin dependencia de TradingView: cero rate limit externo.
 def fetch_trading_data(symbol, interval_str='15m', market='crypto'):
@@ -228,13 +244,7 @@ def fetch_trading_data(symbol, interval_str='15m', market='crypto'):
     try:
         if market == 'crypto' and klines:
             try:
-                ticker = requests.get(
-                    'https://data-api.binance.vision/api/v3/ticker/24hr',
-                    params={'symbol': symbol},
-                    timeout=8,
-                )
-                ticker.raise_for_status()
-                vol_24h = float(ticker.json()['quoteVolume'])
+                vol_24h = fetch_quote_volume_24h(symbol)
             except Exception as e:
                 logger.warning(f"[TradingData] ticker 24h fallo para {symbol}: {e}")
         if vol_24h is None:
@@ -384,7 +394,7 @@ def fetch_trading_data(symbol, interval_str='15m', market='crypto'):
         'symbol': symbol,
         'market': market,
         'precio': precio,
-        'decimales': 8 if 'PEPE' in symbol else 2,
+        'decimales': price_decimals(precio),
         'rsi': last_non_none(rsi_series),
         'rsiStoch': last_non_none(stoch_rsi_k),
         'volumen': vol_24h if vol_24h is not None else (quote_volumes[-1] if quote_volumes else None),
