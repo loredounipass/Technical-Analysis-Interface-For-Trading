@@ -60,9 +60,26 @@ const getCoinLogo = (symbol) => {
     }[ticker] || getCoinFallbackLogo(symbol, ticker)
 }
 
+// Logo de stocks desde LoadLogo (https://img.loadlogo.com/ticker/{SYMBOL}),
+// gratis y sin API key. Ej: AAPL, MSFT, NVDA, TSLA, AMZN, GOOGL, META, NFLX, AMD, INTC.
+const getStockLogo = (symbol) => {
+    const ticker = String(symbol || '').trim().toUpperCase().replace(/^[.:-]/, '')
+    if (!ticker) return getCoinFallbackLogo(symbol)
+
+    return `https://img.loadlogo.com/ticker/${encodeURIComponent(ticker)}?size=128`
+}
+
+// Elige el logo segun el mercado: crypto -> cryptologos.cc, stock -> loadlogo
+const getAssetLogo = (symbol, market = 'crypto') => {
+    if (market === 'stock') return getStockLogo(symbol)
+    return getCoinLogo(symbol)
+}
+
 export {
     getCoinLogo,
     getCoinFallbackLogo,
+    getStockLogo,
+    getAssetLogo,
     getCoinTicker,
     normalizeCoin
 }

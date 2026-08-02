@@ -213,7 +213,7 @@ export default function CoinSelector({ monedas, acciones, onSelect }) {
                     }}
                   >
                     <span className="transition-transform duration-300" style={{ transform: isHovered ? "scale(1.1)" : "scale(1)" }}>
-                      <CoinLogo symbol={moneda.symbol} size={34} fallbackIcon={moneda.icon} />
+                      <CoinLogo symbol={moneda.symbol} market={moneda.market} size={34} fallbackIcon={moneda.icon} />
                     </span>
                   </div>
 

@@ -15,7 +15,7 @@ export default function Header({ moneda, ultimaActualizacion, onActualizar, onCa
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div className="flex items-center space-x-4">
             <div className="relative">
-              <CoinLogo symbol={moneda.symbol} size={38} fallbackIcon={moneda.icon} />
+              <CoinLogo symbol={moneda.symbol} market={moneda.market} size={38} fallbackIcon={moneda.icon} />
               <TrendingUp className="absolute -top-1 -right-1 h-4 w-4 text-trading-green-500" />
             </div>
             <div>
