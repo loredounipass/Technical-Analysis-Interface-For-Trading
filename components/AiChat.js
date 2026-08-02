@@ -183,7 +183,9 @@ export default function AiChat({ symbol, datos, interval = "15m", market = "cryp
         setModels([
           { key: "nvidia-llama", name: "Llama 3.1 8B", provider: "Meta", free: true },
           { key: "nvidia-nemotron", name: "Nemotron 3 Nano Omni", provider: "NVIDIA", free: true },
-          { key: "nvidia-deepseek-flash", name: "DeepSeek V4 Flash", provider: "DeepSeek", free: true },
+          { key: "nvidia-llama-70b", name: "Llama 3.3 70B", provider: "Meta", free: true },
+          { key: "nvidia-nemotron-super", name: "Nemotron 3 Super 120B", provider: "NVIDIA", free: true },
+          { key: "nvidia-nemotron-ultra", name: "Nemotron 3 Ultra 550B", provider: "NVIDIA", free: true },
           { key: "nvidia-gpt-oss", name: "GPT-OSS 20B", provider: "OpenAI", free: true },
           { key: "nvidia-gpt-oss-120b", name: "GPT-OSS 120B", provider: "OpenAI", free: true },
         ])

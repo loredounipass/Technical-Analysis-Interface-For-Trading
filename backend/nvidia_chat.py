@@ -24,10 +24,22 @@ AVAILABLE_MODELS = {
         "provider": "NVIDIA",
         "free": True,
     },
-    "nvidia-deepseek-flash": {
-        "id": "deepseek-ai/deepseek-v4-flash",
-        "name": "DeepSeek V4 Flash",
-        "provider": "DeepSeek",
+    "nvidia-llama-70b": {
+        "id": "meta/llama-3.3-70b-instruct",
+        "name": "Llama 3.3 70B",
+        "provider": "Meta",
+        "free": True,
+    },
+    "nvidia-nemotron-super": {
+        "id": "nvidia/nemotron-3-super-120b-a12b",
+        "name": "Nemotron 3 Super 120B",
+        "provider": "NVIDIA",
+        "free": True,
+    },
+    "nvidia-nemotron-ultra": {
+        "id": "nvidia/nemotron-3-ultra-550b-a55b",
+        "name": "Nemotron 3 Ultra 550B",
+        "provider": "NVIDIA",
         "free": True,
     },
     "nvidia-gpt-oss": {
