@@ -52,7 +52,7 @@ const getCoinLogo = (symbol) => {
         eth: `${baseApi}/ethereum-eth-logo.png`,
         sol: `${baseApi}/solana-sol-logo.png`,
         pepe: `${baseApi}/pepe-pepe-logo.png`,
-        xrp: `${baseApi}/ripple-xrp-logo.png`,
+        xrp: `${baseApi}/xrp-xrp-logo.png`,
         usdt: `${baseApi}/tether-usdt-logo.png`,
         bnb: `${baseApi}/bnb-bnb-logo.png`,
         avax: `${baseApi}/avalanche-avax-logo.png`,
