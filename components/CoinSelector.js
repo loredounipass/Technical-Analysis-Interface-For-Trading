@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { TrendingUp, BarChart3, Activity, Zap, Shield, Globe, ChevronRight, Radio } from "lucide-react"
+import CoinLogo from "@/components/CoinLogo"
 
 export default function CoinSelector({ monedas, acciones, onSelect }) {
   const [hoveredKey, setHoveredKey] = useState(null)
@@ -211,8 +212,8 @@ export default function CoinSelector({ monedas, acciones, onSelect }) {
                       border: `1px solid ${isHovered ? `${colors.from}30` : "rgba(55, 65, 81, 0.2)"}`,
                     }}
                   >
-                    <span className="text-3xl transition-transform duration-300" style={{ transform: isHovered ? "scale(1.1)" : "scale(1)" }}>
-                      {moneda.icon}
+                    <span className="transition-transform duration-300" style={{ transform: isHovered ? "scale(1.1)" : "scale(1)" }}>
+                      <CoinLogo symbol={moneda.symbol} size={34} fallbackIcon={moneda.icon} />
                     </span>
                   </div>
 
