@@ -196,8 +196,12 @@ class YahooStreamThread:
             ws = None
             try:
                 ws = websocket.WebSocket()
-                ws.settimeout(RECV_TIMEOUT)
                 ws.connect(STREAM_URL, timeout=20)
+                # OJO: connect(timeout=...) fija el timeout del socket completo
+                # y sobrescribiria RECV_TIMEOUT si se llamara settimeout antes.
+                # Se aplica DESPUES del handshake: 20s para conectar, 300s para
+                # recv (Yahoo no manda nada en fines de semana/feriados).
+                ws.settimeout(RECV_TIMEOUT)
                 sub = json.dumps({'subscribe': [s.lower() for s in self.symbols]})
                 ws.send(sub)
                 logger.info(f"[YahooStream] Conectado y suscrito ({len(self.symbols)} simbolos).")

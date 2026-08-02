@@ -153,15 +153,17 @@ class BinanceStreamThread:
         url_index = 0
         while self.running:
             try:
-                ws = websocket.WebSocket()
-                ws.settimeout(PING_KEEPALIVE + 10)
                 streams = []
                 for s in self.symbols:
                     streams.append(f"{s.lower()}@ticker")
                     for iv in self.intervals:
                         streams.append(f"{s.lower()}@kline_{iv}")
                 url = STREAM_URLS[url_index] + '?streams=' + '/'.join(streams)
+                ws = websocket.WebSocket()
                 ws.connect(url, timeout=20)
+                # connect(timeout=...) sobrescribiria un settimeout previo:
+                # se aplica el timeout de recv DESPUES del handshake.
+                ws.settimeout(PING_KEEPALIVE + 10)
                 logger.info(f"[Stream] Conectado a Binance WS ({len(streams)} streams) via {STREAM_URLS[url_index]}.")
                 backoff = BASE_RECONNECT
                 while self.running:
