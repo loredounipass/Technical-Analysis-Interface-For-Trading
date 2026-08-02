@@ -192,9 +192,10 @@ def price_decimals(price):
     return 2
 
 
-# OBTIENE DATOS DE MERCADO (BINANCE/YAHOO) Y CALCULA TODOS LOS INDICADORES
-# TECNICOS LOCALMENTE. Sin dependencia de TradingView: cero rate limit externo.
-def fetch_trading_data(symbol, interval_str='15m', market='crypto'):
+# OBTIENE KLINES DE MERCADO (BINANCE/YAHOO) + VOLUMEN 24H EXACTO.
+# NO calcula indicadores (build_payload hace eso). Separada para que el hilo
+# de streaming de Binance re-seedee sus velas sin duplicar logica.
+def _fetch_klines_and_volume(symbol, interval_str, market):
     klines = None
     try:
         if market == 'stock':
@@ -219,6 +220,36 @@ def fetch_trading_data(symbol, interval_str='15m', market='crypto'):
     except Exception as e:
         logger.warning(f"[TradingData] klines fallo para {symbol} ({market}): {e}")
 
+    vol_24h = None
+    secs = interval_seconds(interval_str)
+    # Volumen 24h EXACTO al de Binance: ticker oficial /ticker/24hr (ventana
+    # rodante real, quoteVolume = lo que muestra la app en USDT). Si falla, se
+    # cae a la suma de velas. Stocks no tienen equivalente Binance: se suman
+    # las velas de Yahoo dentro de las ultimas 24h.
+    try:
+        if market == 'crypto' and klines:
+            try:
+                vol_24h = fetch_quote_volume_24h(symbol)
+            except Exception as e:
+                logger.warning(f"[TradingData] ticker 24h fallo para {symbol}: {e}")
+        if vol_24h is None:
+            if market == 'stock' and klines:
+                end_ts = int(klines[-1][0])
+                vol_24h = sum(float(k[5]) for k in klines if end_ts - int(k[0]) <= 86400000)
+            elif klines:
+                bars_24h = max(1, min(len(klines), 86400 // secs))
+                vol_24h = sum(float(k[7]) for k in klines[-bars_24h:])
+    except Exception as e:
+        logger.warning(f"[TradingData] volumen 24h fallo para {symbol}: {e}")
+
+    return klines, vol_24h
+
+
+# CONSTRUYE EL PAYLOAD COMPLETO (indicadores + historia + senales) A PARTIR DE
+# KLINES. Funcion pura reutilizable: el hilo de streaming la invoca para
+# recalcular con la vela viva de Binance sin hacer re-fetch REST.
+def build_payload(symbol, interval_str, market, klines, vol_24h=None):
+    secs = interval_seconds(interval_str)
     opens = []
     highs = []
     lows = []
@@ -234,28 +265,6 @@ def fetch_trading_data(symbol, interval_str='15m', market='crypto'):
         quote_volumes = [float(k[7]) for k in klines]
 
     precio = closes[-1] if closes else fetch_last_price(symbol, market)
-
-    vol_24h = None
-    secs = interval_seconds(interval_str)
-    # Volumen 24h EXACTO al de Binance: ticker oficial /ticker/24hr (ventana
-    # rodante real, quoteVolume = lo que muestra la app en USDT). Si falla, se
-    # cae a la suma de velas. Stocks no tienen equivalente Binance: se suman
-    # las velas de Yahoo dentro de las ultimas 24h.
-    try:
-        if market == 'crypto' and klines:
-            try:
-                vol_24h = fetch_quote_volume_24h(symbol)
-            except Exception as e:
-                logger.warning(f"[TradingData] ticker 24h fallo para {symbol}: {e}")
-        if vol_24h is None:
-            if market == 'stock' and klines:
-                end_ts = timestamps[-1]
-                vol_24h = sum(klines[i][5] for i in range(len(klines)) if end_ts - timestamps[i] <= 86400000)
-            elif klines:
-                bars_24h = max(1, min(len(quote_volumes), 86400 // secs))
-                vol_24h = sum(quote_volumes[-bars_24h:])
-    except Exception as e:
-        logger.warning(f"[TradingData] volumen 24h fallo para {symbol}: {e}")
 
     history = {}
     if klines:
@@ -422,6 +431,12 @@ def fetch_trading_data(symbol, interval_str='15m', market='crypto'):
         'timeframe': interval_str,
         'history': history
     }
+
+
+# ENTRY POINT REST/SOCKET: KLINES + VOLUMEN + INDICADORES COMPLETOS
+def fetch_trading_data(symbol, interval_str='15m', market='crypto'):
+    klines, vol_24h = _fetch_klines_and_volume(symbol, interval_str, market)
+    return build_payload(symbol, interval_str, market, klines, vol_24h)
 
 
 # REALIZA UNA PETICION A LA API DE BINANCE PARA OBTENER KLINES (OHLCV)
@@ -828,7 +843,7 @@ def compute_signal_summary(rsi, stoch_k, stoch_d, cci, macd_v, macd_sig, adx_v,
 
 
 # RETORNA DATOS DE TRADING CACHEADOS CON STALE-WHILE-REVALIDATE
-def get_trading_cached(symbol, interval_str='15m', market='crypto'):
+def get_trading_cached(symbol, interval_str='15m', market='crypto', force=False):
     cache_key = f"{market}:{symbol}_{interval_str}"
     now = time.time()
     entry = cache.get(cache_key)
@@ -838,6 +853,31 @@ def get_trading_cached(symbol, interval_str='15m', market='crypto'):
     allowed = STOCK_SYMBOLS if market == 'stock' else CRYPTO_SYMBOLS
     if symbol not in allowed:
         raise ValueError(f"Simbolo no soportado: {symbol}")
+
+    # Refresco MANUAL (boton Refresh Data): ignora la cache fresca y vuelve a
+    # consultar las fuentes. Respeta la dedup en vuelo para no duplicar llamadas.
+    if force:
+        flight_result = wait_for_in_flight(cache_key)
+        if flight_result:
+            return flight_result
+        lock = get_symbol_lock(cache_key)
+        with lock:
+            entry = cache.get(cache_key)
+            flight_result = wait_for_in_flight(cache_key)
+            if flight_result:
+                return flight_result
+            event, result_container = set_in_flight(cache_key)
+            try:
+                data = fetch_trading_data(symbol, interval_str, market)
+                cache[cache_key] = {'data': data, 'ts': time.time(), 'last_refresh': time.time()}
+                clear_in_flight(cache_key, {'data': data})
+                return data
+            except Exception as e:
+                clear_in_flight(cache_key)
+                if entry and 'data' in entry:
+                    logger.warning(f"[TradingData] refresh manual fallo para {cache_key}, sirviendo stale: {e}")
+                    return entry['data']
+                raise
 
     # Cache FRESCO: devolver inmediato
     if entry and 'data' in entry and now - entry['ts'] <= CACHE_TTL:
@@ -903,10 +943,11 @@ def get_trading_data(symbol):
 
     interval = request.args.get('interval', '15m')
     market = request.args.get('market', 'crypto')
+    force = request.args.get('force', '0') == '1'
     if market not in ('crypto', 'stock'):
         market = 'crypto'
     try:
-        data = get_trading_cached(symbol, interval, market)
+        data = get_trading_cached(symbol, interval, market, force=force)
         return jsonify(data)
     except ValueError as e:
         return jsonify({'error': str(e)}), 400
@@ -1102,6 +1143,37 @@ def get_models():
 
 # Initialize sockets after all functions are defined
 init_sockets(socketio, get_trading_cached)
+
+# STREAMING EN TIEMPO REAL DE BINANCE: actualiza la caché y emite a las salas
+# con la vela viva (klines + volumen 24h) sin hacer re-fetch REST.
+# Los stocks no tienen WS gratuito: siguen con polling (REFRESH_MIN_GAP).
+from sockets import subscriber_rooms
+from binance_stream import init_binance_stream
+
+
+def _update_ticker_from_stream(symbol, quote_volume):
+    with _ticker_lock:
+        _ticker_cache[symbol] = (time.time(), float(quote_volume))
+
+
+def _store_stream_payload(cache_key, data):
+    with cache_lock:
+        cache[cache_key] = {'data': data, 'ts': time.time(), 'last_refresh': time.time()}
+
+
+init_binance_stream(
+    socketio,
+    {
+        'fetch_klines_vol': lambda s, iv, m: _fetch_klines_and_volume(s, iv, m),
+        'build_payload': lambda s, iv, m, k, v: build_payload(s, iv, m, k, v),
+        'get_vol_24h': fetch_quote_volume_24h,
+        'update_ticker': _update_ticker_from_stream,
+        'store_payload': _store_stream_payload,
+        'has_subscribers': lambda room: room in subscriber_rooms,
+    },
+    sorted(CRYPTO_SYMBOLS),
+    ['1m', '5m', '15m', '1h', '4h', '1d'],
+)
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))

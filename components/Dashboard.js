@@ -34,9 +34,9 @@ export default function Dashboard({ moneda, market = "crypto", onCambiarMoneda }
     return () => clearInterval(interval)
   }, [])
 
-  const fetchData = async (selectedTimeframe = timeframe) => {
+  const fetchData = async (selectedTimeframe = timeframe, force = false) => {
     try {
-      const nuevoDatos = await fetchTradingData(moneda.symbol, selectedTimeframe, market)
+      const nuevoDatos = await fetchTradingData(moneda.symbol, selectedTimeframe, market, force)
       setDatos(nuevoDatos)
       setUltimaActualizacion(new Date().toLocaleString())
       setError(null)
@@ -199,7 +199,7 @@ export default function Dashboard({ moneda, market = "crypto", onCambiarMoneda }
           <Header
             moneda={moneda}
             ultimaActualizacion={ultimaActualizacion}
-            onActualizar={() => fetchData()}
+            onActualizar={() => fetchData(timeframe, true)}
             onCambiarMoneda={onCambiarMoneda}
           />
 
