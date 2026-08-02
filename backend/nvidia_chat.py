@@ -136,6 +136,7 @@ def get_trading_system_prompt(indicator_data=None, global_context=None, model_na
             base += f"VOLUME (USDT per candle): {_format_recent_volume(hist)}\n"
             base += f"RSI(14): {_format_recent(hist, 'rsi')}\n"
             base += f"MACD: {_format_recent(hist, 'macd')} | SIGNAL: {_format_recent(hist, 'macd_signal')}\n"
+            base += f"MACD HISTOGRAM: {_format_recent(hist, 'macd_hist')}\n"
             base += f"STOCH K: {_format_recent(hist, 'stochK')} | STOCH D: {_format_recent(hist, 'stochD')}\n"
             base += f"STOCH RSI K: {_format_recent(hist, 'rsiStoch')}\n"
             base += f"CCI(20): {_format_recent(hist, 'cci')}\n"

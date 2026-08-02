@@ -16,7 +16,13 @@ BASE_RECONNECT = 2
 MAX_RECONNECT = 60
 PING_KEEPALIVE = 20
 
-STREAM_URL = 'wss://stream.binance.com:9443/stream'
+# data-stream.binance.vision es el endpoint PUBLICO de market data (mismo
+# dominio que data-api.binance.vision, que ya usamos para REST). stream.binance.com
+# devuelve 451 "restricted location" desde muchos servidores (Render, etc.).
+STREAM_URLS = [
+    'wss://data-stream.binance.vision/stream',
+    'wss://stream.binance.com:9443/stream',
+]
 
 
 class BinanceStreamThread:
@@ -137,6 +143,7 @@ class BinanceStreamThread:
     def run(self):
         logger.info("[Stream] Hilo de streaming de Binance iniciado.")
         backoff = BASE_RECONNECT
+        url_index = 0
         while self.running:
             try:
                 ws = websocket.WebSocket()
@@ -146,9 +153,9 @@ class BinanceStreamThread:
                     streams.append(f"{s.lower()}@ticker")
                     for iv in self.intervals:
                         streams.append(f"{s.lower()}@kline_{iv}")
-                url = STREAM_URL + '?streams=' + '/'.join(streams)
+                url = STREAM_URLS[url_index] + '?streams=' + '/'.join(streams)
                 ws.connect(url, timeout=20)
-                logger.info(f"[Stream] Conectado a Binance WS ({len(streams)} streams).")
+                logger.info(f"[Stream] Conectado a Binance WS ({len(streams)} streams) via {STREAM_URLS[url_index]}.")
                 backoff = BASE_RECONNECT
                 while self.running:
                     raw = ws.recv()
@@ -161,12 +168,14 @@ class BinanceStreamThread:
                     if msg.get('stream') and msg.get('data'):
                         self.handle_message(msg['stream'], msg['data'])
             except Exception as e:
-                logger.warning(f"[Stream] desconexion/error: {e}")
+                logger.warning(f"[Stream] desconexion/error en {STREAM_URLS[url_index]}: {e}")
             finally:
                 try:
                     ws.close()
                 except Exception:
                     pass
+            # Si un endpoint falla (ej. 451 restricted location), probar el otro
+            url_index = (url_index + 1) % len(STREAM_URLS)
             time.sleep(backoff)
             backoff = min(backoff * 2, MAX_RECONNECT)
 

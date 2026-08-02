@@ -310,6 +310,10 @@ def build_payload(symbol, interval_str, market, klines, vol_24h=None):
         history['rsi'] = rsi_series
         history['macd'] = macd_line
         history['macd_signal'] = macd_signal
+        history['macd_hist'] = [
+            (a - b) if (a is not None and b is not None) else None
+            for a, b in zip(macd_line, macd_signal)
+        ]
         history['bb_upper'] = bb_upper
         history['bb_middle'] = bb_middle
         history['bb_lower'] = bb_lower
@@ -369,6 +373,10 @@ def build_payload(symbol, interval_str, market, klines, vol_24h=None):
             history['rsi'] = rsi_series
             history['macd'] = macd_line
             history['macd_signal'] = macd_signal
+            history['macd_hist'] = [
+                (a - b) if (a is not None and b is not None) else None
+                for a, b in zip(macd_line, macd_signal)
+            ]
             history['bb_upper'] = bb_upper
             history['bb_middle'] = bb_middle
             history['bb_lower'] = bb_lower
