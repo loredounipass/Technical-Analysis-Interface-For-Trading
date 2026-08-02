@@ -3,6 +3,16 @@ import ChartCard from "@/components/indicators/ChartCard"
 import CandleChart from "@/components/indicators/CandleChart"
 import { Activity, Shield, Target, BarChart4, ArrowUpDown, CandlestickChart, Gauge, Crosshair, Percent, Waves, GitCompare, Compass } from "lucide-react"
 
+// Formatea volumen en USDT de forma compacta: 1.25B / 350.00M / 45.00K
+function formatVolume(v) {
+  const n = Number(v)
+  if (!isFinite(n)) return "0.00"
+  if (n >= 1e9) return (n / 1e9).toFixed(2) + "B"
+  if (n >= 1e6) return (n / 1e6).toFixed(2) + "M"
+  if (n >= 1e3) return (n / 1e3).toFixed(2) + "K"
+  return n.toFixed(2)
+}
+
 export default function IndicatorGrid({ datos }) {
   // Prepare chart data
   const rsiData = [{ name: "RSI", value: datos.rsi, threshold: 70, oversold: 30 }]
@@ -87,7 +97,7 @@ export default function IndicatorGrid({ datos }) {
               <div className="flex justify-between items-center mb-2">
                 <span className="text-[10px] text-gray-500 font-mono tracking-widest uppercase">24h Vol</span>
                 <span className="text-lg font-bold text-yellow-400 font-mono tabular-nums">
-                  {(datos.volumen / 1000000).toFixed(2)}M
+                  {formatVolume(datos.volumen)}
                 </span>
               </div>
               <div className="flex justify-between items-center mb-2">
@@ -101,7 +111,7 @@ export default function IndicatorGrid({ datos }) {
                 ></div>
               </div>
               <div className="text-[9px] text-gray-500 font-mono mt-1 text-right tracking-widest uppercase">
-                Strength: {datos.volumen > 1000000 ? "HIGH" : datos.volumen > 500000 ? "MED" : "LOW"}
+                Strength: {datos.volumen > 1000000000 ? "HIGH" : datos.volumen > 100000000 ? "MED" : "LOW"}
               </div>
             </div>
           </div>

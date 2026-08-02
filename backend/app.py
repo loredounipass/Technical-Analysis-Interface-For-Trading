@@ -195,12 +195,18 @@ def fetch_from_ta(symbol, interval_str='15m'):
         lows = [float(k[3]) for k in klines]
         closes = [float(k[4]) for k in klines]
         timestamps = [int(k[0]) for k in klines]
-        
+        quote_volumes = [float(k[7]) for k in klines]
+
         history['opens'] = opens
         history['highs'] = highs
         history['lows'] = lows
         history['closes'] = closes
         history['times'] = timestamps
+
+        # Volumen 24h real (en USDT): sumar las velas que cubren las ultimas 24h
+        secs = interval_seconds(interval_str)
+        bars_24h = max(1, min(len(quote_volumes), 86400 // secs))
+        vol_24h = sum(quote_volumes[-bars_24h:])
 
         history['rsi'] = compute_rsi_series(closes, period=14)
         macd_line, macd_signal = compute_macd_series(closes, fast=12, slow=26, signal=9)
@@ -217,6 +223,7 @@ def fetch_from_ta(symbol, interval_str='15m'):
         history['ema200'] = compute_ema_series(closes, 200)
     except Exception:
         history = {}
+        vol_24h = None
 
     # Si no hay historial real, construir una historia sintética basada en el precio actual
     if not history.get('closes'):
@@ -245,14 +252,8 @@ def fetch_from_ta(symbol, interval_str='15m'):
                 history['highs'] = highs
                 history['lows'] = lows
                 # Adjust timestamps based on interval approximate seconds
-                interval_seconds = 900 # default 15m
-                if interval_str == "1m": interval_seconds = 60
-                elif interval_str == "5m": interval_seconds = 300
-                elif interval_str == "1h": interval_seconds = 3600
-                elif interval_str == "4h": interval_seconds = 14400
-                elif interval_str == "1d": interval_seconds = 86400
-
-                history['times'] = [int(time.time()) - (50 - i) * interval_seconds for i in range(50)]
+                secs = interval_seconds(interval_str)
+                history['times'] = [int(time.time()) - (50 - i) * secs for i in range(50)]
                 history['rsi'] = compute_rsi_series(history['closes'], period=14)
                 macd_line, macd_signal = compute_macd_series(history['closes'], fast=12, slow=26, signal=9)
                 history['macd'] = macd_line
@@ -264,6 +265,11 @@ def fetch_from_ta(symbol, interval_str='15m'):
                 history['ema50'] = compute_ema_series(history['closes'], 50)
                 history['ema100'] = compute_ema_series(history['closes'], 100)
                 history['ema200'] = compute_ema_series(history['closes'], 200)
+
+                # Estimacion de volumen 24h: volumen de la vela actual extrapolado a 24h
+                bar_vol = indicators.get('volume')
+                if bar_vol is not None and vol_24h is None:
+                    vol_24h = float(bar_vol) * max(1, 86400 // secs)
         except Exception:
             history = {}
 
@@ -272,7 +278,7 @@ def fetch_from_ta(symbol, interval_str='15m'):
         'decimales': 8 if 'PEPE' in symbol else 2,
         'rsi': indicators.get('RSI'),
         'rsiStoch': indicators.get('Stoch.RSI.K'),
-        'volumen': indicators.get('volume'),
+        'volumen': vol_24h if vol_24h is not None else indicators.get('volume'),
         'bbUpper': indicators.get('BB.upper'),
         'bbMiddle': indicators.get('SMA20') or indicators.get('BB.middle'),
         'bbLower': indicators.get('BB.lower'),
@@ -317,6 +323,14 @@ def fetch_klines(symbol, interval='15m', limit=100):
                 time.sleep(0.5 * (attempt + 1))
                 continue
             raise
+
+
+# CONVIERTE UN TIMEFRAME ('15m', '4h', ...) A SEGUNDOS
+def interval_seconds(interval_str):
+    unit = interval_str[-1].lower()
+    value = int(interval_str[:-1] or 1)
+    mult = {'m': 60, 'h': 3600, 'd': 86400, 'w': 604800}.get(unit, 900)
+    return value * mult
 
 
 # CALCULA LA MEDIA MOVIL SIMPLE (SMA) DE UNA SERIE SOBRE UN PERIODO DADO
