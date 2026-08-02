@@ -2,6 +2,7 @@ import threading
 import logging
 import random
 import time
+import json
 from flask_socketio import emit, join_room, leave_room
 
 logger = logging.getLogger(__name__)
@@ -12,6 +13,10 @@ subscriber_lock = threading.Lock()
 room_errors = {}
 room_errors_lock = threading.Lock()
 
+# Ultima firma del payload emitida por sala: evita re-emitir datos identicos
+last_emitted = {}
+last_emitted_lock = threading.Lock()
+
 MAX_CONSECUTIVE_ERRORS = 3
 ERROR_BACKOFF_SECONDS = 300
 
@@ -21,6 +26,12 @@ SLEEP_PER_ROOM = 5
 JITTER = 0.2
 
 BASE_STAGGER = 3
+
+def data_signature(data):
+    try:
+        return json.dumps(data, sort_keys=True, default=str)
+    except Exception:
+        return str(time.time())
 
 def init_sockets(socketio, fetch_data_func):
     @socketio.on('join')
@@ -40,6 +51,10 @@ def init_sockets(socketio, fetch_data_func):
         with subscriber_lock:
             if room in subscriber_rooms:
                 subscriber_rooms[room] = max(0, subscriber_rooms[room] - 1)
+                if subscriber_rooms[room] == 0:
+                    del subscriber_rooms[room]
+                    with last_emitted_lock:
+                        last_emitted.pop(room, None)
         logger.info(f"[Socket] Client left room: {room} (Remaining: {subscriber_rooms.get(room, 0)})")
 
     @socketio.on('request_refresh')
@@ -76,6 +91,14 @@ def init_sockets(socketio, fetch_data_func):
         with room_errors_lock:
             room_errors.pop(room, None)
 
+    def emit_if_changed(room, data):
+        sig = data_signature(data)
+        with last_emitted_lock:
+            if last_emitted.get(room) == sig:
+                return False
+            last_emitted[room] = sig
+        return True
+
     def background_data_fetcher():
         logger.info("[Socket] Adaptive background data fetcher thread started.")
         while True:
@@ -104,7 +127,8 @@ def init_sockets(socketio, fetch_data_func):
                         if len(parts) < 3: continue
                         market, symbol, interval = parts[0], parts[1], parts[2]
                         data = fetch_data_func(symbol, interval, market)
-                        socketio.emit('trading_data_update', data, room=room_id)
+                        if emit_if_changed(room_id, data):
+                            socketio.emit('trading_data_update', data, room=room_id)
                         reset_room_errors(room_id)
                     except Exception as e:
                         logger.error(f"[Socket] Error in background fetch for room {room_id}: {e}")

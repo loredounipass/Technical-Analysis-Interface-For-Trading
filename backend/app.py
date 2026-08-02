@@ -61,6 +61,10 @@ def log_request_info():
 
 CACHE_TTL = 120
 STALE_TTL = 600
+# Espacio minimo entre refrescos en background de UN MISMO cache_key.
+# Evita que el polling del socket (cada ~20-30s por sala) dispare la API
+# en cada ciclo cuando los datos no cambiaron (ej. vela de 15m aun sin cerrar).
+REFRESH_MIN_GAP = 60
 TV_MAX_CALLS = 30
 TV_WINDOW = 60
 cache = {}
@@ -537,18 +541,25 @@ def get_trading_cached(symbol, interval_str='15m', market='crypto'):
         # Verificar si ya hay una peticion en vuelo para este cache_key
         if cache_key in in_flight:
             return entry['data']
-        # Intentar refresh en background (no bloqueante)
-        if tv_rate_governor():
-            def refresh():
-                try:
-                    data = fetch_from_ta(symbol, interval_str, market)
-                    with cache_lock:
-                        cache[cache_key] = {'data': data, 'ts': time.time()}
-                    logger.info(f"[StaleRefresh] {cache_key} refrescado en background")
-                except Exception as e:
-                    logger.warning(f"[StaleRefresh] {cache_key} fallo: {e}")
-            t = threading.Thread(target=refresh, daemon=True)
-            t.start()
+        # Refrescar como maximo una vez cada REFRESH_MIN_GAP segundos por cache_key.
+        # Sin esta guardia, cada ciclo de polling del socket dispararia la API
+        # (TradingView + Binance/Yahoo) aunque los datos no hayan cambiado.
+        last_refresh = entry.get('last_refresh', 0)
+        if now - last_refresh >= REFRESH_MIN_GAP:
+            if tv_rate_governor():
+                entry['last_refresh'] = now
+                def refresh():
+                    try:
+                        data = fetch_from_ta(symbol, interval_str, market)
+                        with cache_lock:
+                            cache[cache_key] = {'data': data, 'ts': time.time(), 'last_refresh': time.time()}
+                        logger.info(f"[StaleRefresh] {cache_key} refrescado en background")
+                    except Exception as e:
+                        if '429' in str(e):
+                            mark_symbol_backoff(cache_key)
+                        logger.warning(f"[StaleRefresh] {cache_key} fallo: {e}")
+                t = threading.Thread(target=refresh, daemon=True)
+                t.start()
         return entry['data']
 
     # Cache EXPIRADA o no existe: refrescar sincronicamente con rate governing
@@ -583,7 +594,7 @@ def get_trading_cached(symbol, interval_str='15m', market='crypto'):
         event, result_container = set_in_flight(cache_key)
         try:
             data = fetch_from_ta(symbol, interval_str, market)
-            cache[cache_key] = {'data': data, 'ts': time.time()}
+            cache[cache_key] = {'data': data, 'ts': time.time(), 'last_refresh': time.time()}
             clear_in_flight(cache_key, {'data': data})
             return data
         except Exception as e:
