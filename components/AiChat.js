@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { Send, Bot, User, Trash2, ChevronDown, Cpu, Sparkles, MessageSquare, X, Loader2, Plus, History, Menu, Terminal } from "lucide-react"
+import { Send, Bot, User, Trash2, ChevronDown, Cpu, Sparkles, MessageSquare, X, Loader2, Plus, History, Menu, Terminal, Square } from "lucide-react"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000/api"
 
@@ -143,7 +143,12 @@ export default function AiChat({ symbol, datos, interval = "15m", market = "cryp
   const [input, setInput] = useState("")
   const [loading, setLoading] = useState(false)
   const [models, setModels] = useState([])
-  const [selectedModel, setSelectedModel] = useState("nvidia-llama")
+  const [selectedModel, setSelectedModel] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("trading_terminal_model") || "nvidia-llama"
+    }
+    return "nvidia-llama"
+  })
   const [isOpen, setIsOpen] = useState(false)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [showModelSelect, setShowModelSelect] = useState(false)
@@ -151,6 +156,8 @@ export default function AiChat({ symbol, datos, interval = "15m", market = "cryp
   const [isTyping, setIsTyping] = useState(false)
   const [panelHeight, setPanelHeight] = useState(null)
   const typingRef = useRef(null)
+  const abortRef = useRef(null)
+  const activeModelRef = useRef(null)
   const messagesEndRef = useRef(null)
   const inputRef = useRef(null)
   const chatContainerRef = useRef(null)
@@ -177,6 +184,9 @@ export default function AiChat({ symbol, datos, interval = "15m", market = "cryp
         if (res.ok) {
           const data = await res.json()
           setModels(data)
+          if (!data.some((m) => m.key === selectedModel)) {
+            setSelectedModel("nvidia-llama")
+          }
         }
       } catch (e) {
         console.error("Failed to fetch models:", e)
@@ -244,6 +254,10 @@ export default function AiChat({ symbol, datos, interval = "15m", market = "cryp
   }, [input])
 
   useEffect(() => {
+    localStorage.setItem("trading_terminal_model", selectedModel)
+  }, [selectedModel])
+
+  useEffect(() => {
     if (activeSessionId) {
       setSessions(prev => prev.map(s =>
         s.id === activeSessionId ? { ...s, messages: messages } : s
@@ -299,6 +313,7 @@ export default function AiChat({ symbol, datos, interval = "15m", market = "cryp
   }
 
   const startTypingEffect = (fullText, model) => {
+    activeModelRef.current = model
     setIsTyping(true)
     setTypingText("")
     const words = fullText.split(/( )/)
@@ -338,10 +353,14 @@ export default function AiChat({ symbol, datos, interval = "15m", market = "cryp
       return `Session [${s.symbol}]: ${summary}`
     }).join(" | ")
 
+    const controller = new AbortController()
+    abortRef.current = controller
+
     try {
       const res = await fetch(`${API_BASE_URL}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
         body: JSON.stringify({
           prompt: trimmed,
           model: selectedModel,
@@ -366,6 +385,7 @@ export default function AiChat({ symbol, datos, interval = "15m", market = "cryp
         startTypingEffect(data.response, data.model)
       }
     } catch (err) {
+      if (err?.name === "AbortError") return
       setMessages((prev) => [
         ...prev,
         {
@@ -376,7 +396,27 @@ export default function AiChat({ symbol, datos, interval = "15m", market = "cryp
         },
       ])
     } finally {
+      if (abortRef.current === controller) abortRef.current = null
       setLoading(false)
+    }
+  }
+
+  const stopGeneration = () => {
+    abortRef.current?.abort()
+    abortRef.current = null
+    if (typingRef.current) {
+      clearInterval(typingRef.current)
+      typingRef.current = null
+    }
+    const partial = typingText.trim()
+    setIsTyping(false)
+    setTypingText("")
+    setLoading(false)
+    if (partial) {
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: partial, timestamp: Date.now(), model: activeModelRef.current, interrupted: true },
+      ])
     }
   }
 
@@ -783,6 +823,11 @@ export default function AiChat({ symbol, datos, interval = "15m", market = "cryp
               {msg.model && (
                 <div className="mt-2 pt-1.5 border-t border-emerald-900/20 text-[9px] font-mono text-emerald-700/60 flex items-center gap-1">
                   <Cpu className="w-2 h-2" /> {models.find((m) => m.key === msg.model)?.name || msg.model}
+                  {msg.interrupted && (
+                    <span className="text-red-500/80 inline-flex items-center gap-1 ml-1">
+                      <Square className="w-2 h-2" fill="currentColor" /> stopped
+                    </span>
+                  )}
                 </div>
               )}
             </div>
@@ -868,20 +913,35 @@ export default function AiChat({ symbol, datos, interval = "15m", market = "cryp
             className="flex-1 bg-transparent text-[13px] font-mono text-emerald-200 placeholder-emerald-800 resize-none outline-none min-h-[20px] max-h-[80px] py-1 overflow-y-auto hide-scrollbar"
             style={{ lineHeight: "1.5" }}
           />
-          <button
-            id="ai-chat-send"
-            onClick={sendMessage}
-            disabled={!input.trim() || loading}
-            className="flex-shrink-0 w-7 h-7 flex items-center justify-center transition-all duration-200 disabled:opacity-20 disabled:cursor-not-allowed"
-            style={{
-              background: input.trim() && !loading
-                ? "linear-gradient(135deg, #059669, #0d9488)"
-                : "rgba(16, 185, 129, 0.06)",
-              clipPath: "polygon(0 0, 100% 0, 100% calc(100% - 4px), calc(100% - 4px) 100%, 0 100%)",
-            }}
-          >
-            <Send className="w-3 h-3 text-white" />
-          </button>
+          {loading || isTyping ? (
+            <button
+              id="ai-chat-stop"
+              onClick={stopGeneration}
+              title="Stop generation"
+              className="flex-shrink-0 w-7 h-7 flex items-center justify-center transition-all duration-200 hover:scale-110 hover:brightness-125"
+              style={{
+                background: "linear-gradient(135deg, #ef4444, #b91c1c)",
+                clipPath: "polygon(0 0, 100% 0, 100% calc(100% - 4px), calc(100% - 4px) 100%, 0 100%)",
+              }}
+            >
+              <Square className="w-3 h-3 text-white" fill="currentColor" />
+            </button>
+          ) : (
+            <button
+              id="ai-chat-send"
+              onClick={sendMessage}
+              disabled={!input.trim() || loading}
+              className="flex-shrink-0 w-7 h-7 flex items-center justify-center transition-all duration-200 disabled:opacity-20 disabled:cursor-not-allowed"
+              style={{
+                background: input.trim() && !loading
+                  ? "linear-gradient(135deg, #059669, #0d9488)"
+                  : "rgba(16, 185, 129, 0.06)",
+                clipPath: "polygon(0 0, 100% 0, 100% calc(100% - 4px), calc(100% - 4px) 100%, 0 100%)",
+              }}
+            >
+              <Send className="w-3 h-3 text-white" />
+            </button>
+          )}
         </div>
         <div className="flex items-center justify-between mt-1.5 px-1">
           <p className="text-[9px] font-mono text-emerald-900/50 tracking-wider">WOODY AGENT — {symbol} @ {interval}</p>
