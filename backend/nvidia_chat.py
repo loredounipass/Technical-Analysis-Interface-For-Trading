@@ -1,6 +1,7 @@
 import os
 import json
 import logging
+import datetime
 from typing import Optional
 from urllib.request import Request, urlopen
 from urllib.error import URLError, HTTPError
@@ -98,18 +99,29 @@ def get_trading_system_prompt(indicator_data=None, global_context=None, model_na
     )
 
     if indicator_data:
+        market = indicator_data.get('market', 'crypto')
+        hist = indicator_data.get('history') or {}
+        times = hist.get('times') or []
+        last_ts = times[-1] if times else None
+        opens = hist.get('opens') or []
+        highs = hist.get('highs') or []
+        lows = hist.get('lows') or []
+        closes = hist.get('closes') or []
+
         data_block = "\n📊 [EXACT MARKET DATA FEED - REAL-TIME SOURCE OF TRUTH]\n"
         data_block += f"| CORE METRIC | VALUE | CONTEXT |\n"
         data_block += f"| :--- | :--- | :--- |\n"
         data_block += f"| Symbol | {indicator_data.get('symbol', 'N/A')} | Pair |\n"
-        data_block += f"| Asset Type | {indicator_data.get('market', 'crypto')} | crypto (spot USDT) or stock (NYSE/NASDAQ) |\n"
+        data_block += f"| Asset Type | {market} | crypto (spot USDT) or stock (NYSE/NASDAQ) |\n"
         data_block += f"| Timeframe | {indicator_data.get('timeframe', 'N/A')} | Candle interval (CRITICAL: all indicator values below correspond to this timeframe) |\n"
+        data_block += f"| Data Timestamp | {_fmt_ts(last_ts)} | Last candle open time (UTC) |\n"
         data_block += f"| Current Price | {indicator_data.get('precio', 'N/A')} | Spot |\n"
+        data_block += f"| 24h Volume | {_format_compact(indicator_data.get('volumen'))} | {'USDT quote volume' if market == 'crypto' else 'shares volume'} |\n"
+        data_block += f"| Last Candle OHLC | O {_fmt(opens[-1] if opens else None)} H {_fmt(highs[-1] if highs else None)} L {_fmt(lows[-1] if lows else None)} C {_fmt(closes[-1] if closes else None)} | Forming candle |\n"
         data_block += f"| RSI (14) | {indicator_data.get('rsi', 'N/A')} | Momentum |\n"
         data_block += f"| Stoch RSI K (14, 3, 3) | {indicator_data.get('rsiStoch', 'N/A')} | Timing |\n"
         data_block += f"| Stoch K / D (14, 3, 3) | {indicator_data.get('stochK', '0')} / {indicator_data.get('stochD', '0')} | Overbought/Oversold |\n"
         data_block += f"| CCI (20) | {indicator_data.get('cci', 'N/A')} | Trend Deviation |\n"
-        data_block += f"| RSI (14) | {indicator_data.get('rsi', 'N/A')} | Momentum |\n"
         data_block += f"| MACD Line (12, 26, 9) | {indicator_data.get('macdValue', 'N/A')} | Trend Direction |\n"
         data_block += f"| MACD Signal (12, 26, 9) | {indicator_data.get('macdSignal', 'N/A')} | Trigger Line |\n"
         data_block += f"| MACD Histogram (12, 26, 9) | {indicator_data.get('macdHistogram', 'N/A')} | Momentum Acceleration |\n"
@@ -126,11 +138,30 @@ def get_trading_system_prompt(indicator_data=None, global_context=None, model_na
         data_block += "\nUse THESE EXACT VALUES for your analysis. If the user asks for a specific indicator (like CCI or Stochastics), reference these values from the table.\n"
         base += data_block
 
+        # Contexto multi-temporalidad: el MISMO activo en todas las temporalidades
+        # con los mismos periodos. Permite evaluar alineacion/divergencia de
+        # tendencia entre marcos (confluencia MTF).
+        mtf = indicator_data.get('multi_timeframe') or []
+        if mtf:
+            base += "\n=== MULTI-TIMEFRAME CONTEXT (same asset, all OTHER timeframes) ===\n"
+            base += "All rows use the same periods: RSI(14) | Stoch K/D(14,3,3) | MACD Hist(12,26,9) | ADX(14) | CCI(20) | BB(20,2σ) | EMA50. Signals = BUY/SELL/NEUTRAL counts.\n"
+            base += "TF  | Price      | RSI    | StochK/D   | MACD Hist | ADX    | CCI      | BB pos | vs EMA50 | B/S/N  | Last candle (UTC)\n"
+            for s in mtf:
+                base += (
+                    f"{s.get('timeframe', '?'):>3} | {_fmt(s.get('precio')):>10} | "
+                    f"{_fmt(s.get('rsi')):>6} | {_fmt(s.get('stochK'))}/{_fmt(s.get('stochD'))} | "
+                    f"{_fmt(s.get('macdHistogram')):>7} | {_fmt(s.get('adx')):>6} | "
+                    f"{_fmt(s.get('cci')):>8} | {_bb_pos(s.get('precio'), s.get('bbUpper'), s.get('bbLower')):>6} | "
+                    f"{_pct(s.get('precio'), s.get('ema50')):>8} | "
+                    f"{s.get('buySignals', '?')}/{s.get('sellSignals', '?')}/{s.get('neutralSignals', '?')} | "
+                    f"{_fmt_ts(s.get('ts'))}\n"
+                )
+            base += "\nUse this to judge trend alignment: if the same signal repeats across most timeframes, the setup is stronger (multi-timeframe confluence). If timeframes conflict, say so.\n"
+
         # Series historicas recientes: el agente ve la EVOLUCION de cada
         # indicador (ultimos 30 candles, del mas antiguo al mas nuevo) para
         # detectar divergencias, cruces y direccion real del movimiento.
-        hist = indicator_data.get('history') or {}
-        if hist.get('closes'):
+        if closes:
             base += "\n=== RECENT INDICATOR SERIES (last 30 candles, oldest → newest) ===\n"
             base += f"PRICE: {_format_recent(hist, 'closes')}\n"
             base += f"VOLUME (USDT per candle): {_format_recent_volume(hist)}\n"
@@ -202,6 +233,61 @@ def _format_recent_volume(history):
 def _val(data, key):
     v = data.get(key)
     return 'N/A' if v is None else v
+
+
+# Formatea un valor con decimales dinamicos segun la magnitud (PEPE ~0.00001
+# necesita 8 decimales para no redondearse a 0.00).
+def _fmt(value, decimals=2):
+    if value is None:
+        return 'N/A'
+    try:
+        f = float(value)
+    except (TypeError, ValueError):
+        return str(value)
+    a = abs(f)
+    if a < 0.0001:
+        decimals = 8
+    elif a < 0.01:
+        decimals = 6
+    elif a < 1:
+        decimals = 4
+    elif a < 100:
+        decimals = 3
+    return f"{f:.{decimals}f}"
+
+
+# Cambio porcentual: (value / base - 1) * 100
+def _pct(value, base):
+    if value is None or base is None:
+        return 'N/A'
+    try:
+        return f"{(float(value) / float(base) - 1) * 100:.2f}%"
+    except (TypeError, ValueError, ZeroDivisionError):
+        return 'N/A'
+
+
+# Posicion del precio dentro de las bandas de Bollinger (0% = banda inferior,
+# 100% = banda superior).
+def _bb_pos(price, upper, lower):
+    if price is None or upper is None or lower is None:
+        return 'N/A'
+    try:
+        diff = float(upper) - float(lower)
+        if diff <= 0:
+            return 'N/A'
+        return f"{(float(price) - float(lower)) / diff * 100:.0f}%"
+    except (TypeError, ValueError):
+        return 'N/A'
+
+
+# Formatea un timestamp en ms a UTC legible
+def _fmt_ts(ms):
+    if not ms:
+        return 'N/A'
+    try:
+        return datetime.datetime.utcfromtimestamp(int(ms) / 1000).strftime('%Y-%m-%d %H:%M')
+    except Exception:
+        return str(ms)
 
 
 

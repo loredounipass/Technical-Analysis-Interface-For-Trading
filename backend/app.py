@@ -8,6 +8,7 @@ import statistics
 import math
 import os
 import logging
+import datetime
 from dotenv import load_dotenv
 
 # Configurar logging
@@ -1100,13 +1101,55 @@ def get_news(symbol):
             return jsonify(cached['articles'])
         return jsonify([])
 
+
+# Timeframes disponibles para el contexto multi-temporalidad del agente
+MTF_TIMEFRAMES = ('1m', '5m', '15m', '1h', '4h', '1d')
+
+
+def _build_multi_timeframe_context(symbol, current_interval, market):
+    """Snapshots compactos del MISMO activo en TODAS las temporalidades para
+    que el agente compare alineacion de tendencias entre marcos. Lee de la
+    cache de get_trading_cached (throttle REFRESH_MIN_GAP): la primera llamada
+    por timeframe puede hacer un fetch REST, las siguientes son instantaneas."""
+    snapshots = []
+    for tf in MTF_TIMEFRAMES:
+        if tf == current_interval:
+            continue
+        try:
+            d = get_trading_cached(symbol, tf, market)
+        except Exception as e:
+            logger.warning(f"[Chat] MTF fallo {symbol} {tf} ({market}): {e}")
+            continue
+        if not d or not isinstance(d, dict) or d.get('precio') is None:
+            continue
+        hist = d.get('history') or {}
+        times = hist.get('times') or []
+        snapshots.append({
+            'timeframe': tf,
+            'precio': d.get('precio'),
+            'rsi': d.get('rsi'),
+            'stochK': d.get('stochK'),
+            'stochD': d.get('stochD'),
+            'macdHistogram': d.get('macdHistogram'),
+            'adx': d.get('adx'),
+            'cci': d.get('cci'),
+            'ema50': d.get('ema50'),
+            'bbUpper': d.get('bbUpper'),
+            'bbLower': d.get('bbLower'),
+            'buySignals': d.get('buySignals'),
+            'sellSignals': d.get('sellSignals'),
+            'neutralSignals': d.get('neutralSignals'),
+            'ts': times[-1] if times else None,
+        })
+    return snapshots
+
+
 @app.route('/api/chat', methods=['POST'])
 def chat_endpoint():
     """AI Trading Agent chat endpoint. Fetches latest indicator data for context."""
     ip = request.remote_addr or 'unknown'
     if rate_limited(ip):
         return jsonify({'error': 'Too many requests'}), 429
-
     data = request.get_json()
     if not data:
         return jsonify({'error': 'JSON body required'}), 400
@@ -1114,7 +1157,6 @@ def chat_endpoint():
     prompt = data.get('prompt', '').strip()
     if not prompt:
         return jsonify({'error': 'prompt is required'}), 400
-
     model_key = data.get('model', 'nvidia-llama')
     symbol = data.get('symbol', 'BTCUSDT')
     interval = data.get('interval', '15m')
@@ -1130,6 +1172,13 @@ def chat_endpoint():
     try:
         indicator_data = get_trading_cached(symbol, interval, market)
         indicator_data['symbol'] = symbol
+        # El agente tambien ve el MISMO activo en TODAS las temporalidades
+        # (snapshots compactos desde la cache) para evaluar alineacion de
+        # tendencias entre marcos: la primera llamada por timeframe puede
+        # hacer un fetch REST, las siguientes son instantaneas.
+        indicator_data['multi_timeframe'] = _build_multi_timeframe_context(
+            symbol, interval, market
+        )
     except Exception as e:
         # If we can't get indicator data, continue without it
         indicator_data = {'symbol': symbol, 'error': str(e)}
@@ -1170,7 +1219,6 @@ init_sockets(socketio, get_trading_cached)
 
 # STREAMING EN TIEMPO REAL DE BINANCE: actualiza la caché y emite a las salas
 # con la vela viva (klines + volumen 24h) sin hacer re-fetch REST.
-# Los stocks no tienen WS gratuito: siguen con polling (REFRESH_MIN_GAP).
 from sockets import subscriber_rooms
 from binance_stream import init_binance_stream
 
@@ -1196,6 +1244,25 @@ init_binance_stream(
         'has_subscribers': lambda room: room in subscriber_rooms,
     },
     sorted(CRYPTO_SYMBOLS),
+    ['1m', '5m', '15m', '1h', '4h', '1d'],
+)
+
+# STREAMING DE STOCKS VIA YAHOO FINANCE WS (wss://streamer.finance.yahoo.com):
+# solo llegan QUOTES (protobuf en base64) cuando hay cambios reales de
+# cotizacion. El WS actualiza el cierre de la vela viva y recalcula el payload;
+# si Yahoo no envia nada (fin de semana, feriado), el polling REST sigue como
+# respaldo sin ningun cambio de comportamiento.
+from yahoo_stream import init_yahoo_stream
+
+init_yahoo_stream(
+    socketio,
+    {
+        'fetch_klines_vol': lambda s, iv, m: _fetch_klines_and_volume(s, iv, m),
+        'build_payload': lambda s, iv, m, k, v: build_payload(s, iv, m, k, v),
+        'store_payload': _store_stream_payload,
+        'has_subscribers': lambda room: room in subscriber_rooms,
+    },
+    sorted(STOCK_SYMBOLS),
     ['1m', '5m', '15m', '1h', '4h', '1d'],
 )
 
