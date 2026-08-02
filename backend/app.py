@@ -203,10 +203,16 @@ def fetch_from_ta(symbol, interval_str='15m'):
         history['closes'] = closes
         history['times'] = timestamps
 
-        # Volumen 24h real (en USDT): sumar las velas que cubren las ultimas 24h
+        # Volumen 24h real (en USDT). Para timeframes sub-horarios (1m/5m/15m)
+        # 300 velas no cubren 24h, asi que se piden velas de 1h (24 velas exactas).
+        # Para 1h o mas, sumar las velas del propio timeframe (300 cubren 300h+).
         secs = interval_seconds(interval_str)
-        bars_24h = max(1, min(len(quote_volumes), 86400 // secs))
-        vol_24h = sum(quote_volumes[-bars_24h:])
+        if secs < 3600:
+            vol_klines = fetch_klines(symbol, interval='1h', limit=24)
+            vol_24h = sum(float(k[7]) for k in vol_klines)
+        else:
+            bars_24h = max(1, min(len(quote_volumes), 86400 // secs))
+            vol_24h = sum(quote_volumes[-bars_24h:])
 
         history['rsi'] = compute_rsi_series(closes, period=14)
         macd_line, macd_signal = compute_macd_series(closes, fast=12, slow=26, signal=9)
