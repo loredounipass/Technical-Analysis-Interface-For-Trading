@@ -24,10 +24,10 @@ AVAILABLE_MODELS = {
         "provider": "NVIDIA",
         "free": True,
     },
-    "nvidia-kimi": {
-        "id": "moonshotai/kimi-k2.6",
-        "name": "Kimi K2.6",
-        "provider": "Moonshot AI",
+    "nvidia-deepseek-flash": {
+        "id": "deepseek-ai/deepseek-v4-flash",
+        "name": "DeepSeek V4 Flash",
+        "provider": "DeepSeek",
         "free": True,
     },
     "nvidia-gpt-oss": {
