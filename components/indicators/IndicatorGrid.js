@@ -13,6 +13,26 @@ function formatVolume(v) {
   return n.toFixed(2)
 }
 
+// Formatea precios de soporte/resistencia de forma segura (nunca crashea con null)
+function formatLevel(v) {
+  if (v === null || v === undefined || !isFinite(Number(v))) return "—"
+  return `$${Number(v).toFixed(2)}`
+}
+
+// Distancia porcentual segura: null -> 0.00
+function levelDistance(a, b) {
+  const na = Number(a)
+  const nb = Number(b)
+  if (!isFinite(na) || !isFinite(nb) || nb === 0) return "0.00"
+  return ((na - nb) / nb * 100).toFixed(2)
+}
+
+// Formatea cualquier valor numerico de forma segura: null/undefined/NaN -> 0.00
+function fmt(v, d = 2) {
+  const n = Number(v)
+  return isFinite(n) ? n.toFixed(d) : (0).toFixed(d)
+}
+
 export default function IndicatorGrid({ datos }) {
   // Prepare chart data
   const rsiData = [{ name: "RSI", value: datos.rsi, threshold: 70, oversold: 30 }]
@@ -102,7 +122,7 @@ export default function IndicatorGrid({ datos }) {
               </div>
               <div className="flex justify-between items-center mb-2">
                 <span className="text-[10px] text-gray-500 font-mono tracking-widest uppercase">Raw</span>
-                <span className="text-[11px] text-white font-mono tabular-nums">{datos.volumen.toLocaleString()}</span>
+                <span className="text-[11px] text-white font-mono tabular-nums">{(datos.volumen ?? 0).toLocaleString()}</span>
               </div>
               <div className="w-full bg-gray-900 rounded-sm h-1.5 overflow-hidden flex">
                 <div
@@ -122,7 +142,7 @@ export default function IndicatorGrid({ datos }) {
             <div className="bg-[#05070a]/50 p-2.5 rounded border border-white/5">
               <div className="flex justify-between items-center mb-2">
                 <span className="text-[10px] text-gray-500 font-mono tracking-widest uppercase">ADX Value</span>
-                <span className="text-lg font-bold text-blue-400 font-mono tabular-nums">{datos.adx.toFixed(2)}</span>
+                <span className="text-lg font-bold text-blue-400 font-mono tabular-nums">{fmt(datos.adx)}</span>
               </div>
               <div className="w-full bg-gray-900 rounded-sm h-1.5 mb-2 overflow-hidden flex relative">
                 {/* Scale markers */}
@@ -153,7 +173,7 @@ export default function IndicatorGrid({ datos }) {
             <div className="bg-[#05070a]/50 p-2.5 rounded border border-white/5">
               <div className="flex justify-between items-center mb-2">
                 <span className="text-[10px] text-gray-500 font-mono tracking-widest uppercase">Value</span>
-                <span className="text-lg font-bold text-emerald-400 font-mono tabular-nums">{datos.rsiStoch.toFixed(2)}</span>
+                <span className="text-lg font-bold text-emerald-400 font-mono tabular-nums">{fmt(datos.rsiStoch)}</span>
               </div>
               <div className="flex justify-between items-center mb-2">
                 <span className="text-[10px] text-gray-500 font-mono tracking-widest uppercase">Status</span>
@@ -208,14 +228,14 @@ export default function IndicatorGrid({ datos }) {
             <div className="grid grid-cols-2 gap-3">
               <div className="bg-[#05070a]/50 p-2.5 rounded border border-white/5">
                 <div className="text-[10px] text-blue-500/70 font-mono tracking-widest uppercase mb-1">%K LINE</div>
-                <div className="text-lg font-bold text-blue-400 font-mono tabular-nums">{datos.stochK.toFixed(2)}</div>
+                <div className="text-lg font-bold text-blue-400 font-mono tabular-nums">{fmt(datos.stochK)}</div>
                 <div className="text-[9px] text-gray-500 font-mono tracking-widest uppercase">
                   {datos.stochK > 80 ? "OB" : datos.stochK < 20 ? "OS" : "NEUT"}
                 </div>
               </div>
               <div className="bg-[#05070a]/50 p-2.5 rounded border border-white/5">
                 <div className="text-[10px] text-emerald-500/70 font-mono tracking-widest uppercase mb-1">%D LINE</div>
-                <div className="text-lg font-bold text-emerald-400 font-mono tabular-nums">{datos.stochD.toFixed(2)}</div>
+                <div className="text-lg font-bold text-emerald-400 font-mono tabular-nums">{fmt(datos.stochD)}</div>
                 <div className="text-[9px] text-gray-500 font-mono tracking-widest uppercase">
                   {datos.stochD > 80 ? "OB" : datos.stochD < 20 ? "OS" : "NEUT"}
                 </div>
@@ -224,7 +244,7 @@ export default function IndicatorGrid({ datos }) {
             <div className="space-y-2 pt-2 border-t border-white/5">
               <div className="flex justify-between text-[10px] font-mono tracking-wider">
                 <span className="text-blue-400">%K</span>
-                <span className="text-white tabular-nums">{datos.stochK.toFixed(2)}</span>
+                <span className="text-white tabular-nums">{fmt(datos.stochK)}</span>
               </div>
               <div className="w-full bg-gray-900 rounded-sm h-1 overflow-hidden relative">
                 <div className="absolute left-[20%] top-0 bottom-0 w-[1px] bg-emerald-500/50" />
@@ -233,7 +253,7 @@ export default function IndicatorGrid({ datos }) {
               </div>
               <div className="flex justify-between text-[10px] font-mono tracking-wider">
                 <span className="text-emerald-400">%D</span>
-                <span className="text-white tabular-nums">{datos.stochD.toFixed(2)}</span>
+                <span className="text-white tabular-nums">{fmt(datos.stochD)}</span>
               </div>
               <div className="w-full bg-gray-900 rounded-sm h-1 overflow-hidden relative">
                 <div className="absolute left-[20%] top-0 bottom-0 w-[1px] bg-emerald-500/50" />
@@ -253,7 +273,7 @@ export default function IndicatorGrid({ datos }) {
                     datos.cci > 100 ? "text-red-400" : 
                     datos.cci < -100 ? "text-emerald-400" : "text-yellow-400"
                   }`}>
-                  {datos.cci.toFixed(2)}
+                  {fmt(datos.cci)}
                 </span>
               </div>
               
@@ -288,9 +308,9 @@ export default function IndicatorGrid({ datos }) {
         <IndicatorCard title="SUPPORT LEVELS" icon={<Shield className="h-3.5 w-3.5 mr-1.5 text-emerald-500" />}>
           <div className="space-y-1">
             {[
-              { level: "S1", value: datos.s1, strength: "STR", distance: ((datos.precio - datos.s1) / datos.precio) * 100 },
-              { level: "S2", value: datos.s2, strength: "MED", distance: ((datos.precio - datos.s2) / datos.precio) * 100 },
-              { level: "S3", value: datos.s3, strength: "WK",  distance: ((datos.precio - datos.s3) / datos.precio) * 100 },
+              { level: "S1", value: datos.s1, strength: "STR", distance: levelDistance(datos.precio, datos.s1) },
+              { level: "S2", value: datos.s2, strength: "MED", distance: levelDistance(datos.precio, datos.s2) },
+              { level: "S3", value: datos.s3, strength: "WK",  distance: levelDistance(datos.precio, datos.s3) },
             ].map((support, index) => (
               <div key={support.level} className="flex items-center justify-between bg-emerald-500/5 hover:bg-emerald-500/10 transition-colors p-2 rounded border border-emerald-500/10">
                 <div className="flex items-center gap-3">
@@ -298,8 +318,8 @@ export default function IndicatorGrid({ datos }) {
                   <span className="text-[9px] text-emerald-500/60 font-mono uppercase">{support.strength}</span>
                 </div>
                 <div className="flex flex-col items-end">
-                  <span className="text-white font-mono tabular-nums text-sm">${support.value.toFixed(2)}</span>
-                  <span className="text-[9px] text-emerald-400/80 font-mono tabular-nums">-{support.distance.toFixed(2)}%</span>
+                  <span className="text-white font-mono tabular-nums text-sm">{formatLevel(support.value)}</span>
+                  <span className="text-[9px] text-emerald-400/80 font-mono tabular-nums">-{support.distance}%</span>
                 </div>
               </div>
             ))}
@@ -309,9 +329,9 @@ export default function IndicatorGrid({ datos }) {
         <IndicatorCard title="RESISTANCE LEVELS" icon={<Target className="h-3.5 w-3.5 mr-1.5 text-red-500" />}>
           <div className="space-y-1">
             {[
-              { level: "R1", value: datos.r1, strength: "STR", distance: ((datos.r1 - datos.precio) / datos.precio) * 100 },
-              { level: "R2", value: datos.r2, strength: "MED", distance: ((datos.r2 - datos.precio) / datos.precio) * 100 },
-              { level: "R3", value: datos.r3, strength: "WK",  distance: ((datos.r3 - datos.precio) / datos.precio) * 100 },
+              { level: "R1", value: datos.r1, strength: "STR", distance: levelDistance(datos.r1, datos.precio) },
+              { level: "R2", value: datos.r2, strength: "MED", distance: levelDistance(datos.r2, datos.precio) },
+              { level: "R3", value: datos.r3, strength: "WK",  distance: levelDistance(datos.r3, datos.precio) },
             ].map((resistance, index) => (
               <div key={resistance.level} className="flex items-center justify-between bg-red-500/5 hover:bg-red-500/10 transition-colors p-2 rounded border border-red-500/10">
                 <div className="flex items-center gap-3">
@@ -319,8 +339,8 @@ export default function IndicatorGrid({ datos }) {
                   <span className="text-[9px] text-red-500/60 font-mono uppercase">{resistance.strength}</span>
                 </div>
                 <div className="flex flex-col items-end">
-                  <span className="text-white font-mono tabular-nums text-sm">${resistance.value.toFixed(2)}</span>
-                  <span className="text-[9px] text-red-400/80 font-mono tabular-nums">+{resistance.distance.toFixed(2)}%</span>
+                  <span className="text-white font-mono tabular-nums text-sm">{formatLevel(resistance.value)}</span>
+                  <span className="text-[9px] text-red-400/80 font-mono tabular-nums">+{resistance.distance}%</span>
                 </div>
               </div>
             ))}
