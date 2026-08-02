@@ -127,7 +127,7 @@ export default function CoinSelector({ monedas, acciones, onSelect }) {
             Professional Technical Analysis Platform
           </p>
 
-          <div className="flex items-center justify-center gap-6 mt-4">
+          <div className="flex items-center justify-center flex-wrap gap-x-4 gap-y-2 mt-4 sm:gap-x-6">
             {[
               { icon: Zap, label: "Real-Time" },
               { icon: BarChart3, label: "Advanced TA" },
@@ -135,8 +135,8 @@ export default function CoinSelector({ monedas, acciones, onSelect }) {
               { icon: Globe, label: "Multi-Market" },
             ].map(({ icon: Icon, label }) => (
               <div key={label} className="flex items-center gap-1.5">
-                <Icon className="w-3 h-3 text-emerald-500/50" />
-                <span className="text-[10px] font-mono text-gray-600 uppercase tracking-wider">{label}</span>
+                <Icon className="w-3 h-3 text-emerald-500/50 flex-shrink-0" />
+                <span className="text-[10px] font-mono text-gray-600 uppercase tracking-wider whitespace-nowrap">{label}</span>
               </div>
             ))}
           </div>
@@ -259,7 +259,7 @@ export default function CoinSelector({ monedas, acciones, onSelect }) {
 
         {/* Bottom info */}
         <div className="mt-8 text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full"
+          <div className="inline-flex items-center justify-center flex-wrap gap-2 px-4 py-2 rounded-full max-w-full text-center"
             style={{
               background: "rgba(16, 185, 129, 0.04)",
               border: "1px solid rgba(16, 185, 129, 0.08)",
