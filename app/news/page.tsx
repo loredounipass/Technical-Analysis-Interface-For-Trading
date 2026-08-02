@@ -11,6 +11,7 @@ const COINS = [
   { symbol: "ETHUSDT", name: "Ethereum", short: "ETH", color: "#627eea", gradient: "from-indigo-500/20 to-blue-600/5" },
   { symbol: "SOLUSDT", name: "Solana", short: "SOL", color: "#9945ff", gradient: "from-purple-500/20 to-violet-600/5" },
   { symbol: "PEPEUSDT", name: "Pepe", short: "PEPE", color: "#3cc68a", gradient: "from-emerald-500/20 to-green-600/5" },
+  { symbol: "USDTUSDT", name: "Tether", short: "USDT", color: "#26a17b", gradient: "from-emerald-400/20 to-green-600/5" },
 ]
 
 const STOCKS = [
