@@ -91,6 +91,18 @@ export default function Dashboard({ moneda, market = "crypto", onCambiarMoneda }
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full opacity-20 pointer-events-none"
           style={{ background: "radial-gradient(circle, rgba(16, 185, 129, 0.15) 0%, transparent 70%)" }} />
         <div className="text-trading-red-400 text-xl font-mono">{error}</div>
+        <button
+          onClick={onCambiarMoneda}
+          className="mt-6 px-5 py-2.5 text-xs font-bold uppercase tracking-widest transition-all duration-200 hover:scale-105"
+          style={{
+            color: "#34d399",
+            background: "rgba(16, 185, 129, 0.08)",
+            border: "1px solid rgba(16, 185, 129, 0.25)",
+            boxShadow: "0 0 20px rgba(16, 185, 129, 0.08)",
+          }}
+        >
+          ⟵ Volver al terminal
+        </button>
       </div>
     )
   }
@@ -105,6 +117,18 @@ export default function Dashboard({ moneda, market = "crypto", onCambiarMoneda }
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full opacity-20 pointer-events-none"
           style={{ background: "radial-gradient(circle, rgba(16, 185, 129, 0.15) 0%, transparent 70%)" }} />
         <div className="text-white text-xl font-mono">NO DATA AVAILABLE</div>
+        <button
+          onClick={onCambiarMoneda}
+          className="mt-6 px-5 py-2.5 text-xs font-bold uppercase tracking-widest transition-all duration-200 hover:scale-105"
+          style={{
+            color: "#34d399",
+            background: "rgba(16, 185, 129, 0.08)",
+            border: "1px solid rgba(16, 185, 129, 0.25)",
+            boxShadow: "0 0 20px rgba(16, 185, 129, 0.08)",
+          }}
+        >
+          ⟵ Volver al terminal
+        </button>
       </div>
     )
   }
