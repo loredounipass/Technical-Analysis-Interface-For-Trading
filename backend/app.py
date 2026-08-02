@@ -95,6 +95,11 @@ STOCK_EXCHANGES = {
     "LMT": "NYSE",
 }
 
+# Whitelist de activos soportados: evita que simbolos invalidos lleguen a
+# TradingView (p.ej. USDTUSDT) y quemen el rate limit del IP para todos
+CRYPTO_SYMBOLS = {"BTCUSDT", "ETHUSDT", "SOLUSDT", "PEPEUSDT", "BNBUSDT", "MATICUSDT", "XRPUSDT"}
+STOCK_SYMBOLS = {"AAPL", "MSFT", "NVDA", "TSLA", "AMZN", "GOOGL", "META", "NFLX", "AMD", "INTC", "LMT"}
+
 RATE_WINDOW = 60
 RATE_LIMIT = 60
 ip_requests = {}
@@ -527,6 +532,12 @@ def get_trading_cached(symbol, interval_str='15m', market='crypto'):
     now = time.time()
     entry = cache.get(cache_key)
 
+    # Validar simbolo ANTES de tocar TradingView: un par invalido (p.ej.
+    # USDTUSDT) quema rate limit y puede tumbar los demas pares
+    allowed = STOCK_SYMBOLS if market == 'stock' else CRYPTO_SYMBOLS
+    if symbol not in allowed:
+        raise ValueError(f"Simbolo no soportado: {symbol}")
+
     # Si el simbolo esta en backoff por rate limit previo, devolver stale data sin preguntar
     if is_symbol_backoff(cache_key):
         if entry and 'data' in entry:
@@ -629,6 +640,8 @@ def get_trading_data(symbol):
     try:
         data = get_trading_cached(symbol, interval, market)
         return jsonify(data)
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
     except Exception as e:
         if '429' in str(e):
             return jsonify({'error': 'TradingView Rate Limit Exceeded'}), 429
