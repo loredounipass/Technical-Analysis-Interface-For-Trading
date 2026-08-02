@@ -61,12 +61,19 @@ def log_request_info():
 CACHE_TTL = 120
 STALE_TTL = 600
 # Espacio minimo entre refrescos en background de UN MISMO cache_key.
-# Evita que el polling del socket (cada ~20-30s por sala) dispare la API
-# en cada ciclo cuando los datos no cambiaron (ej. vela de 15m aun sin cerrar).
-REFRESH_MIN_GAP = 60
+# Los indicadores se recalculan con la vela en curso, asi que a menor gap,
+# mas cerca quedan los numeros de la app de Binance (que actualiza cada
+# segundo). Las llamadas son baratas (2 klines paginadas = 4 weight).
+REFRESH_MIN_GAP = 25
 cache = {}
 locks = {}
 cache_lock = threading.Lock()
+
+# Sub-cache del volumen 24h (ticker de Binance pesa 40 weight): el volumen
+# cambia lento y no necesita refrescarse con cada ciclo de indicadores.
+TICKER_TTL = 120
+_ticker_cache = {}
+_ticker_lock = threading.Lock()
 
 in_flight = {}
 in_flight_lock = threading.Lock()
@@ -136,6 +143,26 @@ def clear_in_flight(cache_key, result_container=None):
                 container['data'] = result_container.get('data')
             evt.set()
             del in_flight[cache_key]
+# VOLUMEN 24H EXACTO AL DE BINANCE (quoteVolume del ticker oficial), con
+# sub-cache propia: el ticker pesa 40 weight y el volumen cambia lento.
+def fetch_quote_volume_24h(symbol):
+    now = time.time()
+    with _ticker_lock:
+        cached = _ticker_cache.get(symbol)
+        if cached and now - cached[0] <= TICKER_TTL:
+            return cached[1]
+    resp = requests.get(
+        'https://data-api.binance.vision/api/v3/ticker/24hr',
+        params={'symbol': symbol},
+        timeout=8,
+    )
+    resp.raise_for_status()
+    quote_volume = float(resp.json()['quoteVolume'])
+    with _ticker_lock:
+        _ticker_cache[symbol] = (time.time(), quote_volume)
+    return quote_volume
+
+
 # OBTIENE EL ULTIMO PRECIO DISPONIBLE COMO FALLBACK SI FALLAN LAS KLINES
 def fetch_last_price(symbol, market):
     if market == 'stock':
