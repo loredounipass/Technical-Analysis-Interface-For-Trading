@@ -90,6 +90,11 @@ INTERVAL_MAP = {
     "1w": Interval.INTERVAL_1_WEEK,
 }
 
+# Exchange por simbolo para stocks que no cotizan en NASDAQ
+STOCK_EXCHANGES = {
+    "LMT": "NYSE",
+}
+
 RATE_WINDOW = 60
 RATE_LIMIT = 60
 ip_requests = {}
@@ -183,7 +188,7 @@ def fetch_from_ta(symbol, interval_str='15m', market='crypto'):
 
     if market == 'stock':
         screener = 'america'
-        exchange = 'NASDAQ'
+        exchange = STOCK_EXCHANGES.get(symbol, 'NASDAQ')
     else:
         screener = 'crypto'
         exchange = 'BINANCE'

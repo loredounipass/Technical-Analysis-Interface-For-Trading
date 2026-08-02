@@ -24,6 +24,7 @@ const STOCKS = [
   { symbol: "NFLX", name: "Netflix", short: "NFLX", color: "#e50914", gradient: "from-red-600/20 to-red-800/5" },
   { symbol: "AMD", name: "AMD", short: "AMD", color: "#ed1c24", gradient: "from-red-500/20 to-red-700/5" },
   { symbol: "INTC", name: "Intel", short: "INTC", color: "#0071c5", gradient: "from-blue-500/20 to-cyan-600/5" },
+  { symbol: "LMT", name: "Lockheed Martin", short: "LMT", color: "#00a0df", gradient: "from-sky-400/20 to-cyan-600/5" },
 ]
 
 export default function NewsPage() {

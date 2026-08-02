@@ -34,6 +34,7 @@ const ACCIONES: Record<string, Moneda> = {
   12: { nombre: "Netflix Inc.", symbol: "NFLX", icon: "🎬", badge: "NASDAQ", market: "stock" },
   13: { nombre: "AMD", symbol: "AMD", icon: "💾", badge: "NASDAQ", market: "stock" },
   14: { nombre: "Intel Corp.", symbol: "INTC", icon: "🖥️", badge: "NASDAQ", market: "stock" },
+  18: { nombre: "Lockheed Martin", symbol: "LMT", icon: "✈️", badge: "NYSE", market: "stock" },
 }
 
 const STORAGE_KEY = "woody-terminal-asset"

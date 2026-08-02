@@ -41,6 +41,7 @@ export default function CoinSelector({ monedas, acciones, onSelect }) {
     "NFLX": { from: "#e50914", to: "#8f070d", glow: "rgba(229, 9, 20, 0.3)" },
     "AMD": { from: "#ed1c24", to: "#96121a", glow: "rgba(237, 28, 36, 0.3)" },
     "INTC": { from: "#0071c5", to: "#00518c", glow: "rgba(0, 113, 197, 0.3)" },
+    "LMT": { from: "#00a0df", to: "#00658f", glow: "rgba(0, 160, 223, 0.3)" },
   }
 
   return (
