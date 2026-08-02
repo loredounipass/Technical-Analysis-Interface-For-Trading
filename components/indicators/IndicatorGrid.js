@@ -92,7 +92,7 @@ export default function IndicatorGrid({ datos }) {
       {/* Main Indicators with Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
         <ChartCard
-          title="RSI OSCILLATOR"
+          title="RSI OSCILLATOR (14)"
           icon={<Gauge className="h-5 w-5 mr-2 text-trading-blue-500" />}
           data={rsiData}
           type="rsi"
@@ -100,7 +100,7 @@ export default function IndicatorGrid({ datos }) {
           datos={datos}
         />
         <ChartCard
-          title="MACD INDICATOR"
+          title="MACD INDICATOR (12, 26, 9)"
           icon={<Crosshair className="h-5 w-5 mr-2 text-trading-green-500" />}
           data={macdData}
           type="macd"
@@ -111,7 +111,7 @@ export default function IndicatorGrid({ datos }) {
 
       {/* Volume and ADX with detailed numbers */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-        <IndicatorCard title="VOLUME ANALYSIS" icon={<BarChart4 className="h-3.5 w-3.5 mr-1.5 text-yellow-500" />}>
+        <IndicatorCard title="VOLUME ANALYSIS (24H)" icon={<BarChart4 className="h-3.5 w-3.5 mr-1.5 text-yellow-500" />}>
           <div className="space-y-3">
             <div className="bg-[#05070a]/50 p-2.5 rounded border border-white/5">
               <div className="flex justify-between items-center mb-2">
@@ -137,7 +137,7 @@ export default function IndicatorGrid({ datos }) {
           </div>
         </IndicatorCard>
 
-        <IndicatorCard title="ADX TREND STRENGTH" icon={<ArrowUpDown className="h-3.5 w-3.5 mr-1.5 text-blue-500" />}>
+        <IndicatorCard title="ADX TREND STRENGTH (14)" icon={<ArrowUpDown className="h-3.5 w-3.5 mr-1.5 text-blue-500" />}>
           <div className="space-y-3">
             <div className="bg-[#05070a]/50 p-2.5 rounded border border-white/5">
               <div className="flex justify-between items-center mb-2">
@@ -168,7 +168,7 @@ export default function IndicatorGrid({ datos }) {
           </div>
         </IndicatorCard>
 
-        <IndicatorCard title="STOCHASTIC RSI" icon={<Percent className="h-3.5 w-3.5 mr-1.5 text-emerald-500" />}>
+        <IndicatorCard title="STOCHASTIC RSI (14, 3, 3)" icon={<Percent className="h-3.5 w-3.5 mr-1.5 text-emerald-500" />}>
           <div className="space-y-3">
             <div className="bg-[#05070a]/50 p-2.5 rounded border border-white/5">
               <div className="flex justify-between items-center mb-2">
@@ -204,7 +204,7 @@ export default function IndicatorGrid({ datos }) {
       {/* Bollinger Bands and EMAs */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
         <ChartCard
-          title="BOLLINGER BANDS"
+          title="BOLLINGER BANDS (20, 2σ)"
           icon={<Waves className="h-5 w-5 mr-2 text-trading-blue-500" />}
           data={bollingerData}
           type="bollinger"
@@ -212,7 +212,7 @@ export default function IndicatorGrid({ datos }) {
           datos={datos}
         />
         <ChartCard
-          title="MOVING AVERAGES"
+          title="MOVING AVERAGES (50/100/200)"
           icon={<GitCompare className="h-5 w-5 mr-2 text-trading-green-500" />}
           data={emaData}
           type="ema"
@@ -223,7 +223,7 @@ export default function IndicatorGrid({ datos }) {
 
       {/* Oscillators with detailed values */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
-        <IndicatorCard title="STOCHASTIC OSCILLATOR" icon={<Activity className="h-3.5 w-3.5 mr-1.5 text-blue-500" />}>
+        <IndicatorCard title="STOCHASTIC OSCILLATOR (14, 3, 3)" icon={<Activity className="h-3.5 w-3.5 mr-1.5 text-blue-500" />}>
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div className="bg-[#05070a]/50 p-2.5 rounded border border-white/5">
@@ -264,7 +264,7 @@ export default function IndicatorGrid({ datos }) {
           </div>
         </IndicatorCard>
 
-        <IndicatorCard title="CCI INDICATOR" icon={<Compass className="h-3.5 w-3.5 mr-1.5 text-yellow-500" />}>
+        <IndicatorCard title="CCI (20)" icon={<Compass className="h-3.5 w-3.5 mr-1.5 text-yellow-500" />}>
           <div className="space-y-3">
             <div className="bg-[#05070a]/50 p-3 rounded border border-white/5 h-full">
               <div className="flex justify-between items-center mb-3">

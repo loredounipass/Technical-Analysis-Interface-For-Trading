@@ -149,7 +149,7 @@ export default function ChartCard({ title, icon, type, datos = {} }) {
                 </div>
               </div>
               <div className="bg-trading-dark-700 p-2.5 rounded border border-trading-dark-600">
-                <div className="text-xs text-trading-dark-300 font-mono mb-1">Stoch RSI</div>
+                <div className="text-xs text-trading-dark-300 font-mono mb-1">Stoch RSI (14, 3, 3)</div>
                 <div
                   className={`text-lg font-bold font-mono ${
                     datos.rsiStoch > 80
@@ -245,7 +245,7 @@ export default function ChartCard({ title, icon, type, datos = {} }) {
             {/* Numerical Values */}
             <div className="grid grid-cols-2 gap-3">
               <div className="bg-trading-dark-700 p-2.5 rounded border border-trading-dark-600">
-                <div className="text-xs text-trading-dark-300 font-mono mb-1">MACD Line</div>
+                <div className="text-xs text-trading-dark-300 font-mono mb-1">MACD Line (12, 26, 9)</div>
                 <div
                   className={`text-lg font-bold font-mono ${
                     datos.macdValue > 0 ? "text-trading-green-400" : "text-trading-red-400"
@@ -258,7 +258,7 @@ export default function ChartCard({ title, icon, type, datos = {} }) {
                 </div>
               </div>
               <div className="bg-trading-dark-700 p-2.5 rounded border border-trading-dark-600">
-                <div className="text-xs text-trading-dark-300 font-mono mb-1">Signal Line</div>
+                <div className="text-xs text-trading-dark-300 font-mono mb-1">Signal Line (12, 26, 9)</div>
                 <div
                   className={`text-lg font-bold font-mono ${
                     datos.macdSignal > 0 ? "text-trading-green-400" : "text-trading-red-400"
