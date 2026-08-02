@@ -136,7 +136,7 @@ function renderMarkdown(text) {
   return elements
 }
 
-export default function AiChat({ symbol, datos, interval = "15m", onAnalysisChange }) {
+export default function AiChat({ symbol, datos, interval = "15m", market = "crypto", onAnalysisChange }) {
   const [sessions, setSessions] = useState([])
   const [activeSessionId, setActiveSessionId] = useState(null)
   const [messages, setMessages] = useState([])
@@ -345,6 +345,7 @@ export default function AiChat({ symbol, datos, interval = "15m", onAnalysisChan
           model: selectedModel,
           symbol: symbol,
           interval: interval,
+          market: market,
           history: messages.map(m => ({ role: m.role, content: m.content })),
           global_context: globalContext,
           temperature: 0.3,

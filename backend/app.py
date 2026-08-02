@@ -174,13 +174,20 @@ def clear_in_flight(cache_key, result_container=None):
             evt.set()
             del in_flight[cache_key]
 # OBTIENE ANALISIS DE TRADINGVIEW Y CALCULA SERIES TECNICAS ADICIONALES (RSI, MACD, BB, EMAs)
-def fetch_from_ta(symbol, interval_str='15m'):
+def fetch_from_ta(symbol, interval_str='15m', market='crypto'):
     tv_interval = INTERVAL_MAP.get(interval_str, Interval.INTERVAL_15_MINUTES)
-    
+
+    if market == 'stock':
+        screener = 'america'
+        exchange = 'NASDAQ'
+    else:
+        screener = 'crypto'
+        exchange = 'BINANCE'
+
     handler = TA_Handler(
         symbol=symbol,
-        screener="crypto",
-        exchange="BINANCE",
+        screener=screener,
+        exchange=exchange,
         interval=tv_interval
     )
     analysis = handler.get_analysis()
@@ -189,7 +196,10 @@ def fetch_from_ta(symbol, interval_str='15m'):
 
     # Intentar obtener klines y calcular series históricas
     try:
-        klines = fetch_klines(symbol, interval=interval_str, limit=300)
+        if market == 'stock':
+            klines = fetch_yahoo_chart(symbol, interval_str)
+        else:
+            klines = fetch_klines(symbol, interval=interval_str, limit=300)
         opens = [float(k[1]) for k in klines]
         highs = [float(k[2]) for k in klines]
         lows = [float(k[3]) for k in klines]
@@ -203,11 +213,16 @@ def fetch_from_ta(symbol, interval_str='15m'):
         history['closes'] = closes
         history['times'] = timestamps
 
-        # Volumen 24h real (en USDT). Para timeframes sub-horarios (1m/5m/15m)
-        # 300 velas no cubren 24h, asi que se piden velas de 1h (24 velas exactas).
-        # Para 1h o mas, sumar las velas del propio timeframe (300 cubren 300h+).
+        # Volumen 24h real. Para crypto (USDT): timeframes sub-horarios (1m/5m/15m)
+        # no cubren 24h con 300 velas, asi que se piden velas de 1h (24 exactas).
+        # Para stocks, Yahoo devuelve la vela actual y la suma de velas del dia.
         secs = interval_seconds(interval_str)
-        if secs < 3600:
+        if market == 'stock':
+            end_ts = klines[-1][0] if klines else int(time.time() * 1000)
+            vol_24h = sum(k[5] for k in klines if end_ts - k[0] <= 86400000)
+            if not klines:
+                raise ValueError('sin klines de yahoo')
+        elif secs < 3600:
             vol_klines = fetch_klines(symbol, interval='1h', limit=24)
             vol_24h = sum(float(k[7]) for k in vol_klines)
         else:
@@ -281,6 +296,7 @@ def fetch_from_ta(symbol, interval_str='15m'):
 
     return {
         'symbol': symbol,
+        'market': market,
         'precio': indicators.get('close'),
         'decimales': 8 if 'PEPE' in symbol else 2,
         'rsi': indicators.get('RSI'),
@@ -338,6 +354,68 @@ def interval_seconds(interval_str):
     value = int(interval_str[:-1] or 1)
     mult = {'m': 60, 'h': 3600, 'd': 86400, 'w': 604800}.get(unit, 900)
     return value * mult
+
+
+# OBTIENE VELAS OHLCV DE STOCKS DESDE YAHOO FINANCE (gratis, sin API key).
+# Devuelve el mismo formato que las klines de Binance:
+#   [timestamp_ms, open, high, low, close, volume, close, quote_volume]
+# Yahoo no tiene intervalo de 4h: se piden velas de 1h y se agrupan de a 4.
+def fetch_yahoo_chart(symbol, interval_str='15m'):
+    mapping = {
+        '1m': ('1m', '7d'),
+        '5m': ('5m', '30d'),
+        '15m': ('15m', '1mo'),
+        '1h': ('1h', '3mo'),
+        '4h': ('1h', '1mo'),
+        '1d': ('1d', '1y'),
+    }
+    y_interval, y_range = mapping.get(interval_str, ('15m', '1mo'))
+    url = 'https://query1.finance.yahoo.com/v8/finance/chart/' + symbol
+    params = {'interval': y_interval, 'range': y_range, 'includePrePost': 'false'}
+    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36'}
+    resp = requests.get(url, params=params, headers=headers, timeout=10)
+    resp.raise_for_status()
+    payload = resp.json()
+    result = payload['chart']['result'][0]
+    timestamps = result.get('timestamp') or []
+    quote = result['indicators']['quote'][0]
+    opens = quote.get('open') or []
+    highs = quote.get('high') or []
+    lows = quote.get('low') or []
+    closes = quote.get('close') or []
+    volumes = quote.get('volume') or []
+
+    bars = []
+    for i in range(len(timestamps)):
+        if closes[i] is None:
+            continue
+        ts = int(timestamps[i] * 1000)
+        open_ = float(opens[i]) if opens[i] is not None else float(closes[i])
+        high = float(highs[i]) if highs[i] is not None else float(closes[i])
+        low = float(lows[i]) if lows[i] is not None else float(closes[i])
+        close = float(closes[i])
+        volume = float(volumes[i]) if volumes[i] is not None else 0.0
+        bars.append([ts, open_, high, low, close, volume, close, volume])
+
+    if interval_str == '4h' and len(bars) > 1:
+        grouped = []
+        for i in range(0, len(bars) - len(bars) % 4, 4):
+            chunk = bars[i:i + 4]
+            grouped.append([
+                chunk[0][0],
+                chunk[0][1],
+                max(b[2] for b in chunk),
+                min(b[3] for b in chunk),
+                chunk[-1][4],
+                sum(b[5] for b in chunk),
+                chunk[-1][4],
+                sum(b[5] for b in chunk),
+            ])
+        bars = grouped
+
+    if not bars:
+        raise ValueError(f'Yahoo Finance sin datos para {symbol}')
+    return bars
 
 
 # CALCULA LA MEDIA MOVIL SIMPLE (SMA) DE UNA SERIE SOBRE UN PERIODO DADO
@@ -435,8 +513,8 @@ def compute_bollinger_series(prices, period=20, mult=2):
     return upper, middle, lower
 
 # RETORNA DATOS DE TRADING CACHEADOS CON STALE-WHILE-REVALIDATE + RATE GOVERNOR + BACKOFF
-def get_trading_cached(symbol, interval_str='15m'):
-    cache_key = f"{symbol}_{interval_str}"
+def get_trading_cached(symbol, interval_str='15m', market='crypto'):
+    cache_key = f"{market}:{symbol}_{interval_str}"
     now = time.time()
     entry = cache.get(cache_key)
 
@@ -463,7 +541,7 @@ def get_trading_cached(symbol, interval_str='15m'):
         if tv_rate_governor():
             def refresh():
                 try:
-                    data = fetch_from_ta(symbol, interval_str)
+                    data = fetch_from_ta(symbol, interval_str, market)
                     with cache_lock:
                         cache[cache_key] = {'data': data, 'ts': time.time()}
                     logger.info(f"[StaleRefresh] {cache_key} refrescado en background")
@@ -504,7 +582,7 @@ def get_trading_cached(symbol, interval_str='15m'):
 
         event, result_container = set_in_flight(cache_key)
         try:
-            data = fetch_from_ta(symbol, interval_str)
+            data = fetch_from_ta(symbol, interval_str, market)
             cache[cache_key] = {'data': data, 'ts': time.time()}
             clear_in_flight(cache_key, {'data': data})
             return data
@@ -529,8 +607,11 @@ def get_trading_data(symbol):
         return jsonify({'error': 'Too many requests'}), 429
 
     interval = request.args.get('interval', '15m')
+    market = request.args.get('market', 'crypto')
+    if market not in ('crypto', 'stock'):
+        market = 'crypto'
     try:
-        data = get_trading_cached(symbol, interval)
+        data = get_trading_cached(symbol, interval, market)
         return jsonify(data)
     except Exception as e:
         if '429' in str(e):
@@ -553,6 +634,10 @@ CRYPTOCOMPARE_API_KEY = os.getenv('CRYPTOCOMPARE_API_KEY')
 
 @app.route('/api/news/<symbol>')
 def get_news(symbol):
+    market = request.args.get('market', 'crypto')
+    if market == 'stock':
+        return jsonify([])
+
     now = time.time()
     cached = NEWS_CACHE.get(symbol)
     if cached and now - cached['ts'] <= NEWS_CACHE_TTL:
@@ -636,6 +721,9 @@ def chat_endpoint():
     model_key = data.get('model', 'nvidia-llama')
     symbol = data.get('symbol', 'BTCUSDT')
     interval = data.get('interval', '15m')
+    market = data.get('market', 'crypto')
+    if market not in ('crypto', 'stock'):
+        market = 'crypto'
     history = data.get('history', [])
     global_context = data.get('global_context', '')
     temperature = data.get('temperature', 0.3)
@@ -643,7 +731,7 @@ def chat_endpoint():
     # Fetch the latest indicator data for the current symbol
     indicator_data = None
     try:
-        indicator_data = get_trading_cached(symbol, interval)
+        indicator_data = get_trading_cached(symbol, interval, market)
         indicator_data['symbol'] = symbol
     except Exception as e:
         # If we can't get indicator data, continue without it

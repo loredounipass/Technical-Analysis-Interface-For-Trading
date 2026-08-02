@@ -47,9 +47,10 @@ def init_sockets(socketio, fetch_data_func):
         room = data.get('room')
         if not room: return
         try:
-            if ":" not in room: return
-            symbol, interval = room.split(':')
-            data = fetch_data_func(symbol, interval)
+            parts = room.split(':')
+            if len(parts) < 3: return
+            market, symbol, interval = parts[0], parts[1], parts[2]
+            data = fetch_data_func(symbol, interval, market)
             socketio.emit('trading_data_update', data, room=room)
         except Exception as e:
             logger.error(f"[Socket] Manual refresh error for {room}: {e}")
@@ -99,8 +100,10 @@ def init_sockets(socketio, fetch_data_func):
                             socketio.sleep(BASE_STAGGER)
                             continue
 
-                        symbol, interval = room_id.split(':')
-                        data = fetch_data_func(symbol, interval)
+                        parts = room_id.split(':')
+                        if len(parts) < 3: continue
+                        market, symbol, interval = parts[0], parts[1], parts[2]
+                        data = fetch_data_func(symbol, interval, market)
                         socketio.emit('trading_data_update', data, room=room_id)
                         reset_room_errors(room_id)
                     except Exception as e:

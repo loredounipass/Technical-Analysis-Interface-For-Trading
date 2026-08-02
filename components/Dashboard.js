@@ -11,7 +11,7 @@ import { useState, useEffect } from "react"
 import useTradingSocket from "@/hooks/useTradingSocket"
 import { Radio, Activity } from "lucide-react"
 
-export default function Dashboard({ moneda, onCambiarMoneda }) {
+export default function Dashboard({ moneda, market = "crypto", onCambiarMoneda }) {
   const [datos, setDatos] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -21,7 +21,7 @@ export default function Dashboard({ moneda, onCambiarMoneda }) {
   const [mounted, setMounted] = useState(false)
   const [woodyScanning, setWoodyScanning] = useState(false)
 
-  const { liveData, isConnected } = useTradingSocket(moneda.symbol, timeframe)
+  const { liveData, isConnected } = useTradingSocket(moneda.symbol, timeframe, market)
 
   useEffect(() => {
     setMounted(true)
@@ -36,7 +36,7 @@ export default function Dashboard({ moneda, onCambiarMoneda }) {
 
   const fetchData = async (selectedTimeframe = timeframe) => {
     try {
-      const nuevoDatos = await fetchTradingData(moneda.symbol, selectedTimeframe)
+      const nuevoDatos = await fetchTradingData(moneda.symbol, selectedTimeframe, market)
       setDatos(nuevoDatos)
       setUltimaActualizacion(new Date().toLocaleString())
       setError(null)
@@ -57,7 +57,7 @@ export default function Dashboard({ moneda, onCambiarMoneda }) {
   useEffect(() => {
     setLoading(true)
     fetchData()
-  }, [moneda.symbol])
+  }, [moneda.symbol, market])
 
   useEffect(() => {
     if (liveData) {
@@ -232,7 +232,7 @@ export default function Dashboard({ moneda, onCambiarMoneda }) {
         </div>
       )}
 
-      <AiChat symbol={moneda.symbol} datos={datos} interval={timeframe} onAnalysisChange={setWoodyScanning} />
+      <AiChat symbol={moneda.symbol} datos={datos} interval={timeframe} market={market} onAnalysisChange={setWoodyScanning} />
     </div>
   )
 }

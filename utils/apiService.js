@@ -56,15 +56,15 @@ async function request(path, { method = 'GET', headers = {}, body = null, timeou
   }
 }
 
-export const fetchTradingData = async (symbol, interval = '15m') => {
+export const fetchTradingData = async (symbol, interval = '15m', market = 'crypto') => {
   if (!symbol) throw new Error('symbol is required');
-  return request(`/trading/${symbol}?interval=${interval}`, { retries: 4 });
+  return request(`/trading/${symbol}?interval=${interval}&market=${market}`, { retries: 4 });
 };
 
-export const fetchNews = async (symbol) => {
+export const fetchNews = async (symbol, market = 'crypto') => {
   if (!symbol) return [];
   try {
-    return await request(`/news/${symbol}`, { retries: 2, timeout: 8000 });
+    return await request(`/news/${symbol}?market=${market}`, { retries: 2, timeout: 8000 });
   } catch {
     return [];
   }

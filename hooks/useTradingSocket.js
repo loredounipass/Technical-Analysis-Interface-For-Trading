@@ -11,9 +11,10 @@ const SOCKET_URL =
  * Custom hook to handle real-time trading data via WebSockets.
  * @param {string} symbol - The trading pair (e.g., 'BTC').
  * @param {string} interval - The timeframe (e.g., '15m').
+ * @param {string} market - The market type ('crypto' | 'stock').
  * @returns {Object} - The latest market data and connection status.
  */
-export default function useTradingSocket(symbol, interval) {
+export default function useTradingSocket(symbol, interval, market = "crypto") {
   const [liveData, setLiveData] = useState(null)
   const [isConnected, setIsConnected] = useState(false)
   const [error, setError] = useState(null)
@@ -26,7 +27,7 @@ export default function useTradingSocket(symbol, interval) {
       timeout: 10000,
     })
 
-    const room = `${symbol}:${interval}`
+    const room = `${market}:${symbol}:${interval}`
 
     socket.on("connect", () => {
       console.log(`[Socket] Connected. Joining room: ${room}`)
@@ -56,7 +57,7 @@ export default function useTradingSocket(symbol, interval) {
       socket.emit("leave", { room })
       socket.disconnect()
     }
-  }, [symbol, interval])
+  }, [symbol, interval, market])
 
   return { liveData, isConnected, error }
 }

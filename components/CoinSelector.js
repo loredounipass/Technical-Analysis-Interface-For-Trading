@@ -3,10 +3,11 @@
 import { useState, useEffect } from "react"
 import { TrendingUp, BarChart3, Activity, Zap, Shield, Globe, ChevronRight, Radio } from "lucide-react"
 
-export default function CoinSelector({ monedas, onSelect }) {
+export default function CoinSelector({ monedas, acciones, onSelect }) {
   const [hoveredKey, setHoveredKey] = useState(null)
   const [mounted, setMounted] = useState(false)
   const [time, setTime] = useState("")
+  const [market, setMarket] = useState("crypto")
 
   useEffect(() => {
     setMounted(true)
@@ -19,11 +20,23 @@ export default function CoinSelector({ monedas, onSelect }) {
     return () => clearInterval(interval)
   }, [])
 
+  const activeList = market === "stock" ? acciones : monedas
+
   const coinColors = {
     "ETHUSDT": { from: "#627eea", to: "#3b5998", glow: "rgba(98, 126, 234, 0.3)" },
     "PEPEUSDT": { from: "#3cc68a", to: "#1a8f5c", glow: "rgba(60, 198, 138, 0.3)" },
     "SOLUSDT": { from: "#9945ff", to: "#14f195", glow: "rgba(153, 69, 255, 0.3)" },
     "BTCUSDT": { from: "#f7931a", to: "#e2820a", glow: "rgba(247, 147, 26, 0.3)" },
+    "AAPL": { from: "#a2aaad", to: "#6e7679", glow: "rgba(162, 170, 173, 0.3)" },
+    "MSFT": { from: "#00a4ef", to: "#0d5b8c", glow: "rgba(0, 164, 239, 0.3)" },
+    "NVDA": { from: "#76b900", to: "#4a7a00", glow: "rgba(118, 185, 0, 0.3)" },
+    "TSLA": { from: "#e82127", to: "#8f1216", glow: "rgba(232, 33, 39, 0.3)" },
+    "AMZN": { from: "#ff9900", to: "#b36a00", glow: "rgba(255, 153, 0, 0.3)" },
+    "GOOGL": { from: "#4285f4", to: "#1a56c4", glow: "rgba(66, 133, 244, 0.3)" },
+    "META": { from: "#0866ff", to: "#0550b8", glow: "rgba(8, 102, 255, 0.3)" },
+    "NFLX": { from: "#e50914", to: "#8f070d", glow: "rgba(229, 9, 20, 0.3)" },
+    "AMD": { from: "#ed1c24", to: "#96121a", glow: "rgba(237, 28, 36, 0.3)" },
+    "INTC": { from: "#0071c5", to: "#00518c", glow: "rgba(0, 113, 197, 0.3)" },
   }
 
   return (
@@ -132,9 +145,32 @@ export default function CoinSelector({ monedas, onSelect }) {
           <div className="h-px flex-1 bg-gradient-to-r from-transparent via-gray-800 to-transparent" />
         </div>
 
-        {/* Coin cards */}
+        {/* Market toggle */}
+        <div className="flex items-center justify-center mb-5">
+          <div className="flex items-center gap-1 bg-[#0a0e14]/80 p-1 rounded-lg border border-white/5">
+            {[
+              { key: "crypto", label: "CRYPTO", icon: "₿" },
+              { key: "stock", label: "STOCKS", icon: "📈" },
+            ].map(({ key, label, icon }) => (
+              <button
+                key={key}
+                onClick={() => setMarket(key)}
+                className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-[11px] font-bold tracking-widest transition-all duration-150 ${
+                  market === key
+                    ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shadow-[0_0_10px_rgba(16,185,129,0.15)]"
+                    : "text-gray-500 hover:text-gray-300 hover:bg-white/5 border border-transparent"
+                }`}
+              >
+                <span className="text-sm">{icon}</span>
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Asset cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {Object.entries(monedas).map(([key, moneda], index) => {
+          {Object.entries(activeList).map(([key, moneda], index) => {
             const colors = coinColors[moneda.symbol] || { from: "#10b981", to: "#059669", glow: "rgba(16,185,129,0.3)" }
             const isHovered = hoveredKey === key
 
@@ -197,7 +233,7 @@ export default function CoinSelector({ monedas, onSelect }) {
                           border: `1px solid ${isHovered ? `${colors.from}20` : "transparent"}`,
                         }}
                       >
-                        USDT
+                        {moneda.badge || "USDT"}
                       </div>
                     </div>
                     <span className="text-xs text-gray-500 font-mono">{moneda.nombre}</span>
@@ -227,7 +263,7 @@ export default function CoinSelector({ monedas, onSelect }) {
           >
             <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
             <span className="text-[10px] font-mono text-gray-500 tracking-wider">
-              WOODY AGENT • Real-Time Crypto Technical Analysis • AI-Powered
+              WOODY AGENT • Real-Time {market === "stock" ? "Stock" : "Crypto"} Technical Analysis • AI-Powered
             </span>
           </div>
         </div>

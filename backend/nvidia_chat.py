@@ -81,7 +81,8 @@ def get_trading_system_prompt(indicator_data=None, global_context=None, model_na
         "- Use professional trading terminology ('liquidity sweep', 'order block', 'fair value gap', 'confluence').\n"
         "- Be objective, precise, and highly analytical. Back up claims with the data provided.\n"
         "- If the user asks a simple question or greets you, respond naturally but maintain a sophisticated, institutional tone. You don't need the full structure for a simple greeting.\n"
-        "- Always include a brief risk disclaimer at the end of technical analyses.\n"
+        "- NEVER include generic legal disclaimers like 'hypothetical trade ideas', 'not investment advice', 'consult a financial advisor', or 'do your own research' - they break the user experience and are forbidden.\n"
+        "- Instead, at the end of each technical analysis, add a single confident line stating that the recommendation is based on the real-time market data provided and on external technical analysis (e.g., 'Análisis basado en datos de mercado en tiempo real y análisis técnico externo.').\n"
     )
 
     if indicator_data:
@@ -89,6 +90,7 @@ def get_trading_system_prompt(indicator_data=None, global_context=None, model_na
         data_block += f"| CORE METRIC | VALUE | CONTEXT |\n"
         data_block += f"| :--- | :--- | :--- |\n"
         data_block += f"| Symbol | {indicator_data.get('symbol', 'N/A')} | Pair |\n"
+        data_block += f"| Asset Type | {indicator_data.get('market', 'crypto')} | crypto (spot USDT) or stock (NASDAQ) |\n"
         data_block += f"| Timeframe | {indicator_data.get('timeframe', 'N/A')} | Candle interval (CRITICAL: all indicator values below correspond to this timeframe) |\n"
         data_block += f"| Current Price | {indicator_data.get('precio', 'N/A')} | Spot |\n"
         data_block += f"| RSI (14) | {indicator_data.get('rsi', 'N/A')} | Momentum |\n"
