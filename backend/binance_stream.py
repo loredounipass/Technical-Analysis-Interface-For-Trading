@@ -48,11 +48,18 @@ class BinanceStreamThread:
         try:
             klines, vol_24h = self.hooks['fetch_klines_vol'](symbol, interval, 'crypto')
             if klines and len(klines) > 0:
+                # Las klines de la API REST traen OHLCV como strings: normalizar
+                # a float para poder actualizarlas con los ticks del WS.
+                bars = [
+                    [int(k[0]), float(k[1]), float(k[2]), float(k[3]),
+                     float(k[4]), float(k[5]), int(k[0]), float(k[7])]
+                    for k in klines
+                ]
                 with self.store_lock:
-                    self.store.setdefault(symbol, {})[interval] = list(klines)
+                    self.store.setdefault(symbol, {})[interval] = bars
                 if vol_24h is not None:
                     self.hooks['update_ticker'](symbol, vol_24h)
-                return self.store[symbol][interval]
+                return bars
         except Exception as e:
             logger.warning(f"[Stream] seed fallo para {symbol} {interval}: {e}")
         return None
