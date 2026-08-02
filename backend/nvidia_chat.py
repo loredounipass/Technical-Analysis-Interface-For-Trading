@@ -112,19 +112,95 @@ def get_trading_system_prompt(indicator_data=None, global_context=None, model_na
         data_block += f"| Volume | {indicator_data.get('volumen', 'N/A')} | Market Participation |\n"
         data_block += f"| MACD Line | {indicator_data.get('macdValue', 'N/A')} | Trend Direction |\n"
         data_block += f"| MACD Signal | {indicator_data.get('macdSignal', 'N/A')} | Trigger Line |\n"
+        data_block += f"| MACD Histogram | {indicator_data.get('macdHistogram', 'N/A')} | Momentum Acceleration |\n"
         data_block += f"| ADX | {indicator_data.get('adx', 'N/A')} | Trend Strength |\n"
+        data_block += f"| ADX +DI / -DI | {indicator_data.get('plusDi', 'N/A')} / {indicator_data.get('minusDi', 'N/A')} | Bullish / Bearish Directional Force |\n"
         data_block += f"| Bollinger Upper | {indicator_data.get('bbUpper', 'N/A')} | Resistance Ceiling |\n"
         data_block += f"| Bollinger Middle | {indicator_data.get('bbMiddle', 'N/A')} | Mean Reversion |\n"
         data_block += f"| Bollinger Lower | {indicator_data.get('bbLower', 'N/A')} | Support Floor |\n"
         data_block += f"| EMA 50 / 100 / 200 | {indicator_data.get('ema50', 'N/A')} / {indicator_data.get('ema100', 'N/A')} / {indicator_data.get('ema200', 'N/A')} | Moving Averages |\n"
-        data_block += f"| Pivot Points (R) | R1: {indicator_data.get('r1')} | R2: {indicator_data.get('r2')} | R3: {indicator_data.get('r3')} |\n"
-        data_block += f"| Pivot Points (S) | S1: {indicator_data.get('s1')} | S2: {indicator_data.get('s2')} | S3: {indicator_data.get('s3')} |\n"
+        data_block += f"| Pivot Points (R) | R1: {_val(indicator_data, 'r1')} | R2: {_val(indicator_data, 'r2')} | R3: {_val(indicator_data, 'r3')} |\n"
+        data_block += f"| Pivot Points (S) | S1: {_val(indicator_data, 's1')} | S2: {_val(indicator_data, 's2')} | S3: {_val(indicator_data, 's3')} |\n"
         data_block += f"| Summary Signals | BUY: {indicator_data.get('buySignals')} | SELL: {indicator_data.get('sellSignals')} | NEUTRAL: {indicator_data.get('neutralSignals')} |\n"
         
         data_block += "\nUse THESE EXACT VALUES for your analysis. If the user asks for a specific indicator (like CCI or Stochastics), reference these values from the table.\n"
         base += data_block
 
+        # Series historicas recientes: el agente ve la EVOLUCION de cada
+        # indicador (ultimos 30 candles, del mas antiguo al mas nuevo) para
+        # detectar divergencias, cruces y direccion real del movimiento.
+        hist = indicator_data.get('history') or {}
+        if hist.get('closes'):
+            base += "\n=== RECENT INDICATOR SERIES (last 30 candles, oldest → newest) ===\n"
+            base += f"PRICE: {_format_recent(hist, 'closes')}\n"
+            base += f"VOLUME (USDT per candle): {_format_recent_volume(hist)}\n"
+            base += f"RSI(14): {_format_recent(hist, 'rsi')}\n"
+            base += f"MACD: {_format_recent(hist, 'macd')} | SIGNAL: {_format_recent(hist, 'macd_signal')}\n"
+            base += f"STOCH K: {_format_recent(hist, 'stochK')} | STOCH D: {_format_recent(hist, 'stochD')}\n"
+            base += f"STOCH RSI K: {_format_recent(hist, 'rsiStoch')}\n"
+            base += f"CCI(20): {_format_recent(hist, 'cci')}\n"
+            base += f"ADX: {_format_recent(hist, 'adx')}\n"
+            base += f"BB UPPER: {_format_recent(hist, 'bb_upper')} | MIDDLE: {_format_recent(hist, 'bb_middle')} | LOWER: {_format_recent(hist, 'bb_lower')}\n"
+            base += f"EMA 50: {_format_recent(hist, 'ema50')} | EMA 100: {_format_recent(hist, 'ema100')} | EMA 200: {_format_recent(hist, 'ema200')}\n"
+            base += "\nUse these series to confirm trends, spot crossovers, divergences, and momentum shifts. They are the source of truth for the exact numbers above.\n"
+
     return base
+
+
+def _format_recent(history, key, decimals=2):
+    vals = history.get(key)
+    if not vals:
+        return 'N/A'
+    # Escala de decimales segun la magnitud: PEPE (~0.00001) necesita 8
+    # decimales para no redondearse a 0.00 y perder sentido para el agente.
+    sample = [v for v in vals if v is not None]
+    if sample:
+        max_abs = max(abs(float(v)) for v in sample)
+        if max_abs < 0.0001:
+            decimals = 8
+        elif max_abs < 0.01:
+            decimals = 6
+        elif max_abs < 1:
+            decimals = 4
+        elif max_abs < 100:
+            decimals = 3
+    out = []
+    for v in vals[-30:]:
+        if v is None:
+            out.append('N/A')
+        else:
+            try:
+                out.append(f"{float(v):.{decimals}f}")
+            except (TypeError, ValueError):
+                out.append(str(v))
+    return ', '.join(out)
+
+
+def _format_compact(value):
+    try:
+        f = float(value)
+    except (TypeError, ValueError):
+        return 'N/A'
+    if f >= 1e9:
+        return f"{f / 1e9:.2f}B"
+    if f >= 1e6:
+        return f"{f / 1e6:.2f}M"
+    if f >= 1e3:
+        return f"{f / 1e3:.2f}K"
+    return f"{f:.0f}"
+
+
+def _format_recent_volume(history):
+    vals = history.get('volumes')
+    if not vals:
+        return 'N/A'
+    return ', '.join(_format_compact(v) for v in vals[-30:])
+
+
+# Valor None-safe para la tabla: 'N/A' en vez de 'None'
+def _val(data, key):
+    v = data.get(key)
+    return 'N/A' if v is None else v
 
 
 

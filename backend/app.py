@@ -273,6 +273,8 @@ def build_payload(symbol, interval_str, market, klines, vol_24h=None):
         history['lows'] = lows
         history['closes'] = closes
         history['times'] = timestamps
+        # Volumen por vela en USDT (quote volume) para el agente y graficos
+        history['volumes'] = [float(k[7]) for k in klines]
 
     # Series tecnicas (valores actuales + historial para graficos)
     rsi_series = []
@@ -315,6 +317,10 @@ def build_payload(symbol, interval_str, market, klines, vol_24h=None):
         history['ema100'] = ema100
         history['ema200'] = ema200
         history['rsiStoch'] = stoch_rsi_k
+        history['stochK'] = stoch_k
+        history['stochD'] = stoch_d
+        history['cci'] = cci_series
+        history['adx'] = adx
     except Exception as e:
         logger.error(f"[TradingData] calculo de indicadores fallo para {symbol}: {e}")
 
@@ -370,6 +376,10 @@ def build_payload(symbol, interval_str, market, klines, vol_24h=None):
             history['ema100'] = ema100
             history['ema200'] = ema200
             history['rsiStoch'] = stoch_rsi_k
+            history['stochK'] = stoch_k
+            history['stochD'] = stoch_d
+            history['cci'] = cci_series
+            history['adx'] = adx
 
             if vol_24h is None:
                 vol_24h = precio * max(1, 86400 // secs)
@@ -398,6 +408,9 @@ def build_payload(symbol, interval_str, market, klines, vol_24h=None):
         precio,
     )
     r1, r2, r3, s1, s2, s3 = pivots
+    macd_curr = last_non_none(macd_line)
+    macd_sig_curr = last_non_none(macd_signal)
+    macd_hist = (macd_curr - macd_sig_curr) if (macd_curr is not None and macd_sig_curr is not None) else None
 
     return {
         'symbol': symbol,
@@ -412,7 +425,10 @@ def build_payload(symbol, interval_str, market, klines, vol_24h=None):
         'bbLower': last_non_none(bb_lower),
         'macdValue': last_non_none(macd_line),
         'macdSignal': last_non_none(macd_signal),
+        'macdHistogram': macd_hist,
         'adx': last_non_none(adx),
+        'plusDi': last_non_none(plus_di),
+        'minusDi': last_non_none(minus_di),
         'stochK': last_non_none(stoch_k),
         'stochD': last_non_none(stoch_d),
         'cci': last_non_none(cci_series),
