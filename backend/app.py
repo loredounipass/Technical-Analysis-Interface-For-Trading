@@ -157,7 +157,22 @@ def fetch_trading_data(symbol, interval_str='15m', market='crypto'):
         if market == 'stock':
             klines = fetch_yahoo_chart(symbol, interval_str)
         else:
-            klines = fetch_klines(symbol, interval=interval_str, limit=300)
+            # Binance permite hasta 1000 velas por llamada. Se pide una pagina
+            # adicional mas antigua (2000 total) para que EMA(200)/MACD/ADX
+            # converjan a los mismos valores que TradingView/Binance.
+            klines = fetch_klines(symbol, interval=interval_str, limit=1000)
+            if klines and len(klines) >= 1000:
+                try:
+                    older = fetch_klines(
+                        symbol,
+                        interval=interval_str,
+                        limit=1000,
+                        end_time=int(klines[0][0]) - 1,
+                    )
+                    if older:
+                        klines = older + klines
+                except Exception as e:
+                    logger.warning(f"[TradingData] pagina extra fallo para {symbol}: {e}")
     except Exception as e:
         logger.warning(f"[TradingData] klines fallo para {symbol} ({market}): {e}")
 
@@ -304,6 +319,11 @@ def fetch_trading_data(symbol, interval_str='15m', market='crypto'):
         except Exception as e:
             logger.error(f"[TradingData] historia sintetica fallo para {symbol}: {e}")
 
+    # Los indicadores se calculan con toda la historia (convergencia exacta);
+    # el historial que se envia al frontend se recorta para no inflar el payload
+    if history:
+        history = {k: v[-300:] for k, v in history.items()}
+
     buy, sell, neutral = compute_signal_summary(
         last_non_none(rsi_series),
         last_non_none(stoch_k),
@@ -360,9 +380,11 @@ def fetch_trading_data(symbol, interval_str='15m', market='crypto'):
 # data-api.binance.vision es el endpoint publico de market data y NO esta
 # bloqueado geograficamente (api.binance.com da 403 desde IPs de EE.UU.,
 # por lo que en Render/Railway/Fly fallaba)
-def fetch_klines(symbol, interval='15m', limit=100):
+def fetch_klines(symbol, interval='15m', limit=100, end_time=None):
     url = 'https://data-api.binance.vision/api/v3/klines'
     params = {'symbol': symbol, 'interval': interval, 'limit': limit}
+    if end_time:
+        params['endTime'] = end_time
     attempts = 3
     for attempt in range(attempts):
         try:
@@ -391,11 +413,11 @@ def interval_seconds(interval_str):
 def fetch_yahoo_chart(symbol, interval_str='15m'):
     mapping = {
         '1m': ('1m', '7d'),
-        '5m': ('5m', '30d'),
+        '5m': ('5m', '1mo'),
         '15m': ('15m', '1mo'),
-        '1h': ('1h', '3mo'),
-        '4h': ('1h', '1mo'),
-        '1d': ('1d', '1y'),
+        '1h': ('1h', '6mo'),
+        '4h': ('1h', '1y'),
+        '1d': ('1d', '5y'),
     }
     y_interval, y_range = mapping.get(interval_str, ('15m', '1mo'))
     url = 'https://query1.finance.yahoo.com/v8/finance/chart/' + symbol
@@ -653,17 +675,27 @@ def compute_adx_series(highs, lows, closes, period=14):
     return adx, plus_di, minus_di
 
 
-# CALCULA PIVOT POINTS CLASICOS SOBRE LAS VELAS COMPLETAS DE LAS ULTIMAS 24H
+# CALCULA PIVOT POINTS CLASICOS (estilo TradingView/Binance): se toman el
+# maximo, el minimo y el cierre del ULTIMO DIA COMPLETADO (UTC). Si no hay
+# un dia completo, cae a la ventana movil de las ultimas 24h
 def compute_pivots(highs, lows, closes, times):
     if not times:
         return (None, None, None, None, None, None)
     now_ms = times[-1]
+    day_ms = 86400000
+    prev_day_start = (now_ms // day_ms) * day_ms - day_ms
     bars = [
         (t, h, l, c)
         for t, h, l, c in zip(times, highs, lows, closes)
-        if t <= now_ms and now_ms - t <= 86400000
+        if prev_day_start <= t < prev_day_start + day_ms
     ]
-    bars = bars[:-1] if len(bars) > 1 else bars
+    if len(bars) < 2:
+        bars = [
+            (t, h, l, c)
+            for t, h, l, c in zip(times, highs, lows, closes)
+            if t <= now_ms and now_ms - t <= day_ms
+        ]
+        bars = bars[:-1] if len(bars) > 1 else bars
     if len(bars) < 2:
         return (None, None, None, None, None, None)
     h = max(b[1] for b in bars)
