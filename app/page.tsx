@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import CoinSelector from "@/components/CoinSelector"
 import Dashboard from "@/components/Dashboard"
 
@@ -36,16 +36,53 @@ const ACCIONES: Record<string, Moneda> = {
   14: { nombre: "Intel Corp.", symbol: "INTC", icon: "🖥️", badge: "NASDAQ", market: "stock" },
 }
 
+const STORAGE_KEY = "woody-terminal-asset"
+
+function loadSavedMoneda(): Moneda | null {
+  if (typeof window === "undefined") return null
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY)
+    if (!raw) return null
+    const saved = JSON.parse(raw)
+    if (saved && saved.symbol) return saved as Moneda
+  } catch (e) {
+    // ignore corrupt storage
+  }
+  return null
+}
+
 export default function CryptoTradingApp() {
   const [monedaSeleccionada, setMonedaSeleccionada] = useState<Moneda | null>(null)
+  const [hydrated, setHydrated] = useState(false)
+
+  // Restaurar el activo guardado (recargar la pagina no saca del dashboard)
+  useEffect(() => {
+    setMonedaSeleccionada(loadSavedMoneda())
+    setHydrated(true)
+  }, [])
 
   const seleccionarMoneda = (key: string) => {
     const moneda = MONEDAS[key] || ACCIONES[key]
-    setMonedaSeleccionada(moneda ?? null)
+    if (moneda) {
+      try {
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(moneda))
+      } catch (e) {
+        // ignore storage errors
+      }
+      setMonedaSeleccionada(moneda)
+    }
   }
   const cambiarMoneda = () => {
+    try {
+      window.localStorage.removeItem(STORAGE_KEY)
+    } catch (e) {
+      // ignore storage errors
+    }
     setMonedaSeleccionada(null)
   }
+
+  // Evitar flash del selector mientras se restaura el activo guardado
+  if (!hydrated) return null
 
   // Renderizado condicional basado en el estado
   if (!monedaSeleccionada) {
