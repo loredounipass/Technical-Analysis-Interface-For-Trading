@@ -21,7 +21,6 @@ const MONEDAS: Record<string, Moneda> = {
   15: { nombre: "BNB", symbol: "BNBUSDT", icon: "🟡", badge: "USDT", market: "crypto" },
   16: { nombre: "Polygon", symbol: "MATICUSDT", icon: "🔷", badge: "USDT", market: "crypto" },
   17: { nombre: "XRP", symbol: "XRPUSDT", icon: "✖️", badge: "USDT", market: "crypto" },
-  19: { nombre: "Tether", symbol: "USDTUSDT", icon: "₮", badge: "USDT", market: "crypto" },
 }
 
 const ACCIONES: Record<string, Moneda> = {

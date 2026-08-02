@@ -31,7 +31,6 @@ export default function CoinSelector({ monedas, acciones, onSelect }) {
     "BNBUSDT": { from: "#f3ba2f", to: "#c98f10", glow: "rgba(243, 186, 47, 0.3)" },
     "MATICUSDT": { from: "#8247e5", to: "#5a2bb3", glow: "rgba(130, 71, 229, 0.3)" },
     "XRPUSDT": { from: "#23292f", to: "#0f1216", glow: "rgba(35, 41, 47, 0.4)" },
-    "USDTUSDT": { from: "#26a17b", to: "#14795c", glow: "rgba(38, 161, 123, 0.3)" },
     "AAPL": { from: "#a2aaad", to: "#6e7679", glow: "rgba(162, 170, 173, 0.3)" },
     "MSFT": { from: "#00a4ef", to: "#0d5b8c", glow: "rgba(0, 164, 239, 0.3)" },
     "NVDA": { from: "#76b900", to: "#4a7a00", glow: "rgba(118, 185, 0, 0.3)" },
