@@ -463,13 +463,13 @@ export default function AiChat({ symbol, datos, interval = "15m", market = "cryp
   }
 
   return (
-    <div className="fixed top-0 right-0 bottom-0 z-50 flex flex-col w-full sm:w-[480px] max-w-[100vw] h-screen h-[100dvh] overflow-hidden"
+    <div className="fixed top-3 right-0 bottom-3 z-50 flex flex-col w-full sm:w-[480px] max-w-[100vw] overflow-hidden"
       style={{
         background: "#080b11",
         border: "1px solid rgba(16, 185, 129, 0.2)",
         boxShadow: "0 0 30px rgba(16, 185, 129, 0.08), 0 0 60px rgba(6, 182, 212, 0.04), inset 0 0 80px rgba(16, 185, 129, 0.02)",
         fontFamily: "var(--font-inter), 'Segoe UI', system-ui, -apple-system, sans-serif",
-        height: panelHeight || undefined,
+        height: panelHeight ? `calc(${panelHeight} - 24px)` : undefined,
       }}
     >
       {/* Scanline overlay */}
