@@ -274,6 +274,7 @@ def fetch_from_ta(symbol, interval_str='15m'):
             history = {}
 
     return {
+        'symbol': symbol,
         'precio': indicators.get('close'),
         'decimales': 8 if 'PEPE' in symbol else 2,
         'rsi': indicators.get('RSI'),

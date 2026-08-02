@@ -107,7 +107,7 @@ export default function IndicatorGrid({ datos }) {
               <div className="w-full bg-gray-900 rounded-sm h-1.5 overflow-hidden flex">
                 <div
                   className="bg-yellow-500 h-1.5 transition-all duration-500 shadow-[0_0_8px_rgba(234,179,8,0.5)]"
-                  style={{ width: `${Math.min((datos.volumen / 2000000) * 100, 100)}%` }}
+                  style={{ width: `${Math.min(100, Math.max(4, (Math.log10(datos.volumen + 1) - 4) * 16))}%` }}
                 ></div>
               </div>
               <div className="text-[9px] text-gray-500 font-mono mt-1 text-right tracking-widest uppercase">
