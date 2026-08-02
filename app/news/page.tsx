@@ -13,23 +13,42 @@ const COINS = [
   { symbol: "PEPEUSDT", name: "Pepe", short: "PEPE", color: "#3cc68a", gradient: "from-emerald-500/20 to-green-600/5" },
 ]
 
+const STOCKS = [
+  { symbol: "AAPL", name: "Apple", short: "AAPL", color: "#a2aaad", gradient: "from-gray-400/20 to-gray-600/5" },
+  { symbol: "MSFT", name: "Microsoft", short: "MSFT", color: "#00a4ef", gradient: "from-sky-500/20 to-blue-600/5" },
+  { symbol: "NVDA", name: "NVIDIA", short: "NVDA", color: "#76b900", gradient: "from-lime-500/20 to-green-600/5" },
+  { symbol: "TSLA", name: "Tesla", short: "TSLA", color: "#e82127", gradient: "from-red-500/20 to-red-700/5" },
+  { symbol: "AMZN", name: "Amazon", short: "AMZN", color: "#ff9900", gradient: "from-amber-500/20 to-orange-600/5" },
+  { symbol: "GOOGL", name: "Alphabet", short: "GOOGL", color: "#4285f4", gradient: "from-blue-500/20 to-indigo-600/5" },
+  { symbol: "META", name: "Meta", short: "META", color: "#0866ff", gradient: "from-blue-600/20 to-blue-800/5" },
+  { symbol: "NFLX", name: "Netflix", short: "NFLX", color: "#e50914", gradient: "from-red-600/20 to-red-800/5" },
+  { symbol: "AMD", name: "AMD", short: "AMD", color: "#ed1c24", gradient: "from-red-500/20 to-red-700/5" },
+  { symbol: "INTC", name: "Intel", short: "INTC", color: "#0071c5", gradient: "from-blue-500/20 to-cyan-600/5" },
+]
+
 export default function NewsPage() {
   const [newsByCoin, setNewsByCoin] = useState({})
   const [loading, setLoading] = useState(true)
   const [activeCoin, setActiveCoin] = useState("ALL")
+  const [market, setMarket] = useState("crypto")
   const [imgErrors, setImgErrors] = useState({})
   const [visibleCards, setVisibleCards] = useState(new Set())
   const gridRef = useRef(null)
 
+  const marketList = market === "stock" ? STOCKS : COINS
+
   useEffect(() => {
     let cancelled = false
+    setLoading(true)
+    setNewsByCoin({})
+    setActiveCoin("ALL")
 
     Promise.all(
-      COINS.map(coin =>
-        fetch(`${API_BASE_URL}/news/${coin.symbol}`)
+      marketList.map(item =>
+        fetch(`${API_BASE_URL}/news/${item.symbol}?market=${market}`)
           .then(r => r.json())
-          .then(articles => ({ symbol: coin.symbol, articles: Array.isArray(articles) ? articles : [] }))
-          .catch(() => ({ symbol: coin.symbol, articles: [] }))
+          .then(articles => ({ symbol: item.symbol, articles: Array.isArray(articles) ? articles : [] }))
+          .catch(() => ({ symbol: item.symbol, articles: [] }))
       )
     ).then(results => {
       if (!cancelled) {
@@ -43,7 +62,7 @@ export default function NewsPage() {
     })
 
     return () => { cancelled = true }
-  }, [])
+  }, [market])
 
   // Intersection observer for card reveal animations
   useEffect(() => {
@@ -64,8 +83,8 @@ export default function NewsPage() {
     return () => observer.disconnect()
   }, [loading, activeCoin])
 
-  const allNews = COINS.flatMap(coin =>
-    (newsByCoin[coin.symbol] || []).map(a => ({ ...a, coin: coin.symbol }))
+  const allNews = marketList.flatMap(item =>
+    (newsByCoin[item.symbol] || []).map(a => ({ ...a, coin: item.symbol }))
   ).sort((a, b) => (b.published || 0) - (a.published || 0))
 
   const filteredNews = activeCoin === "ALL"
@@ -87,7 +106,7 @@ export default function NewsPage() {
   const featured = filteredNews[0]
   const rest = filteredNews.slice(1)
 
-  const getCoinMeta = (symbol) => COINS.find(c => c.symbol === symbol)
+  const getCoinMeta = (symbol) => marketList.find(c => c.symbol === symbol)
 
   return (
     <div className="min-h-screen" style={{ background: "#05070a" }}>
@@ -132,7 +151,7 @@ export default function NewsPage() {
               </div>
               <div>
                 <h1 className="text-lg font-semibold text-gray-100 tracking-tight">Market News</h1>
-                <p className="text-[10px] font-mono text-gray-600 tracking-wider">REAL-TIME CRYPTO FEED</p>
+                <p className="text-[10px] font-mono text-gray-600 tracking-wider">REAL-TIME {market === "stock" ? "STOCK" : "CRYPTO"} FEED</p>
               </div>
             </div>
           </div>
@@ -153,7 +172,41 @@ export default function NewsPage() {
           </div>
         </header>
 
-        {/* === Coin Filter Tabs === */}
+        {/* === Market Toggle === */}
+        <div className="flex items-center justify-center mb-6">
+          <div className="flex items-center gap-1 p-1 rounded-xl"
+            style={{
+              background: "rgba(17, 17, 17, 0.4)",
+              border: "1px solid rgba(255,255,255,0.03)",
+            }}
+          >
+            {[
+              { key: "crypto", label: "CRYPTO", icon: "₿" },
+              { key: "stock", label: "STOCKS", icon: "📈" },
+            ].map(({ key, label, icon }) => {
+              const isActive = market === key
+              return (
+                <button
+                  key={key}
+                  onClick={() => { setMarket(key); setVisibleCards(new Set()) }}
+                  className={`flex items-center gap-2 px-5 py-2 rounded-lg text-xs font-bold tracking-widest transition-all duration-300 flex-shrink-0 ${
+                    isActive ? "text-emerald-400" : "text-gray-500 hover:text-gray-300"
+                  }`}
+                  style={{
+                    background: isActive ? "rgba(16, 185, 129, 0.08)" : "transparent",
+                    border: `1px solid ${isActive ? "rgba(16, 185, 129, 0.25)" : "transparent"}`,
+                    boxShadow: isActive ? "0 0 16px rgba(16, 185, 129, 0.08)" : "none",
+                  }}
+                >
+                  <span className="text-sm">{icon}</span>
+                  {label}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* === Filter Tabs === */}
         <nav className="mb-8">
           <div className="flex items-center gap-2 p-1 rounded-2xl overflow-x-auto hide-scrollbar"
             style={{
@@ -161,7 +214,7 @@ export default function NewsPage() {
               border: "1px solid rgba(255,255,255,0.03)",
             }}
           >
-            {[{ symbol: "ALL", name: "All News", short: "ALL", color: "#10b981" }, ...COINS].map(coin => {
+            {[{ symbol: "ALL", name: "All News", short: "ALL", color: "#10b981" }, ...marketList].map(coin => {
               const isActive = activeCoin === coin.symbol
               const count = coin.symbol === "ALL"
                 ? allNews.length
@@ -465,7 +518,7 @@ export default function NewsPage() {
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
                 </span>
-                <span className="text-[10px] font-mono text-gray-600 tracking-wider">POWERED BY CRYPTOCOMPARE</span>
+                <span className="text-[10px] font-mono text-gray-600 tracking-wider">POWERED BY {market === "stock" ? "YAHOO FINANCE" : "CRYPTOCOMPARE"}</span>
               </div>
             </div>
             <p className="text-[10px] font-mono text-gray-800 tracking-wider">

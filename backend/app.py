@@ -635,13 +635,48 @@ CRYPTOCOMPARE_API_KEY = os.getenv('CRYPTOCOMPARE_API_KEY')
 @app.route('/api/news/<symbol>')
 def get_news(symbol):
     market = request.args.get('market', 'crypto')
-    if market == 'stock':
-        return jsonify([])
-
     now = time.time()
     cached = NEWS_CACHE.get(symbol)
     if cached and now - cached['ts'] <= NEWS_CACHE_TTL:
         return jsonify(cached['articles'])
+
+    # STOCKS: noticias de Yahoo Finance (gratis, sin API key, mismo host que los charts)
+    if market == 'stock':
+        try:
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36'
+            }
+            resp = requests.get(
+                'https://query1.finance.yahoo.com/v1/finance/search',
+                params={'q': symbol, 'newsCount': 6},
+                headers=headers,
+                timeout=6
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            articles = []
+            for item in (data.get('news') or [])[:6]:
+                thumb = None
+                try:
+                    thumb = item['thumbnail']['resolutions'][0]['url']
+                except Exception:
+                    pass
+                articles.append({
+                    'title': item.get('title', ''),
+                    'url': item.get('link', ''),
+                    'source': item.get('publisher', ''),
+                    'published': item.get('providerPublishTime'),
+                    'body': '',
+                    'imageurl': thumb,
+                    'categories': 'Stocks',
+                })
+            NEWS_CACHE[symbol] = {'articles': articles, 'ts': now}
+            return jsonify(articles)
+        except Exception as e:
+            logger.warning(f"[News] Yahoo stock news fallo para {symbol}: {e}")
+            if cached:
+                return jsonify(cached['articles'])
+            return jsonify([])
 
     category = NEWS_CATEGORIES.get(symbol, symbol.replace('USDT', ''))
     try:
