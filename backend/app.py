@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 
 from nvidia_chat import nvidia_chat, AVAILABLE_MODELS
+from tts_nvidia import synthesize_speech
 
 app = Flask(__name__)
 
@@ -1198,6 +1199,27 @@ def chat_endpoint():
         return jsonify({'response': response, 'model': model_key})
     except Exception as e:
         return jsonify({'error': f'Chat error: {str(e)}'}), 500
+
+
+@app.route('/api/tts', methods=['POST'])
+def tts_endpoint():
+    """Text-to-speech synthesis using NVIDIA magpie-tts-zeroshot."""
+    ip = request.remote_addr or 'unknown'
+    if rate_limited(ip):
+        return jsonify({'error': 'Too many requests'}), 429
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'JSON body required'}), 400
+    text = (data.get('text') or '').strip()
+    if not text:
+        return jsonify({'error': 'text is required'}), 400
+    try:
+        wav_bytes = synthesize_speech(text)
+        return wav_bytes, 200, {'Content-Type': 'audio/wav'}
+    except RuntimeError as e:
+        return jsonify({'error': str(e)}), 502
+    except Exception as e:
+        return jsonify({'error': f'TTS error: {str(e)}'}), 500
 
 
 @app.route('/api/models')

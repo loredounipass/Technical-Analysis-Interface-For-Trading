@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import { Send, Bot, User, Trash2, ChevronDown, Cpu, Sparkles, MessageSquare, X, Loader2, Plus, History, Menu, Terminal, Square } from "lucide-react"
+import { useVoiceTTS, MicIcon } from "./VoiceTTS"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000/api"
 
@@ -160,6 +161,7 @@ export default function AiChat({ symbol, datos, interval = "15m", market = "cryp
   const activeModelRef = useRef(null)
   const inputRef = useRef(null)
   const chatContainerRef = useRef(null)
+  const { ttsEnabled, toggle: toggleTTS, playResponse } = useVoiceTTS()
 
   // Ajusta la altura del panel al area realmente visible en movil
   // (teclado abierto, barra de navegacion del sistema, etc.)
@@ -341,6 +343,7 @@ export default function AiChat({ symbol, datos, interval = "15m", market = "cryp
           ...prev,
           { role: "assistant", content: fullText, timestamp: Date.now(), model },
         ])
+        playResponse(fullText)
       }
     }, speed)
   }
@@ -935,20 +938,36 @@ export default function AiChat({ symbol, datos, interval = "15m", market = "cryp
               <Square className="w-3 h-3 text-white" fill="currentColor" />
             </button>
           ) : (
-            <button
-              id="ai-chat-send"
-              onClick={sendMessage}
-              disabled={!input.trim() || loading}
-              className="flex-shrink-0 w-7 h-7 flex items-center justify-center transition-all duration-200 disabled:opacity-20 disabled:cursor-not-allowed"
-              style={{
-                background: input.trim() && !loading
-                  ? "linear-gradient(135deg, #059669, #0d9488)"
-                  : "rgba(16, 185, 129, 0.06)",
-                clipPath: "polygon(0 0, 100% 0, 100% calc(100% - 4px), calc(100% - 4px) 100%, 0 100%)",
-              }}
-            >
-              <Send className="w-3 h-3 text-white" />
-            </button>
+            <>
+              <button
+                id="ai-chat-send"
+                onClick={sendMessage}
+                disabled={!input.trim() || loading}
+                className="flex-shrink-0 w-7 h-7 flex items-center justify-center transition-all duration-200 disabled:opacity-20 disabled:cursor-not-allowed"
+                style={{
+                  background: input.trim() && !loading
+                    ? "linear-gradient(135deg, #059669, #0d9488)"
+                    : "rgba(16, 185, 129, 0.06)",
+                  clipPath: "polygon(0 0, 100% 0, 100% calc(100% - 4px), calc(100% - 4px) 100%, 0 100%)",
+                }}
+              >
+                <Send className="w-3 h-3 text-white" />
+              </button>
+              <button
+                type="button"
+                onClick={toggleTTS}
+                title={ttsEnabled ? "TTS ON" : "TTS OFF"}
+                className={`flex-shrink-0 w-7 h-7 flex items-center justify-center transition-all duration-200 hover:scale-110 hover:brightness-125`}
+                style={{
+                  background: ttsEnabled
+                    ? "linear-gradient(135deg, #059669, #0d9488)"
+                    : "rgba(16, 185, 129, 0.06)",
+                  clipPath: "polygon(0 0, 100% 0, 100% calc(100% - 4px), calc(100% - 4px) 100%, 0 100%)",
+                }}
+              >
+                <MicIcon active={ttsEnabled} />
+              </button>
+            </>
           )}
         </div>
         <div className="flex items-center justify-between mt-1.5 px-1">
