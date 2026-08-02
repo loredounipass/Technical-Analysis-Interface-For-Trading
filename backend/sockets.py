@@ -3,12 +3,17 @@ import logging
 import random
 import time
 import json
+from flask import request
 from flask_socketio import emit, join_room, leave_room
 
 logger = logging.getLogger(__name__)
 
 subscriber_rooms = {}
 subscriber_lock = threading.Lock()
+
+# Rooms activos por conexion (sid) para limpiarlos si el cliente se desconecta
+sid_rooms = {}
+sid_rooms_lock = threading.Lock()
 
 room_errors = {}
 room_errors_lock = threading.Lock()
@@ -34,11 +39,31 @@ def data_signature(data):
         return str(time.time())
 
 def init_sockets(socketio, fetch_data_func):
+    def remove_room_subscriber(room):
+        """Decrementa el contador de un room y lo destruye si queda vacio."""
+        with subscriber_lock:
+            if room not in subscriber_rooms:
+                return
+            subscriber_rooms[room] = max(0, subscriber_rooms[room] - 1)
+            if subscriber_rooms[room] == 0:
+                del subscriber_rooms[room]
+                with last_emitted_lock:
+                    last_emitted.pop(room, None)
+                with room_errors_lock:
+                    room_errors.pop(room, None)
+                logger.info(f"[Socket] Room destroyed (no subscribers): {room}")
+
     @socketio.on('join')
     def on_join(data):
         room = data.get('room')
         if not room: return
         join_room(room)
+        sid = request.sid
+        with sid_rooms_lock:
+            rooms = sid_rooms.setdefault(sid, set())
+            if room in rooms:
+                return
+            rooms.add(room)
         with subscriber_lock:
             subscriber_rooms[room] = subscriber_rooms.get(room, 0) + 1
         logger.info(f"[Socket] Client joined room: {room} (Total subscribers: {subscriber_rooms[room]})")
@@ -48,14 +73,27 @@ def init_sockets(socketio, fetch_data_func):
         room = data.get('room')
         if not room: return
         leave_room(room)
-        with subscriber_lock:
-            if room in subscriber_rooms:
-                subscriber_rooms[room] = max(0, subscriber_rooms[room] - 1)
-                if subscriber_rooms[room] == 0:
-                    del subscriber_rooms[room]
-                    with last_emitted_lock:
-                        last_emitted.pop(room, None)
+        sid = request.sid
+        with sid_rooms_lock:
+            rooms = sid_rooms.get(sid)
+            if rooms:
+                rooms.discard(room)
+                if not rooms:
+                    del sid_rooms[sid]
+        remove_room_subscriber(room)
         logger.info(f"[Socket] Client left room: {room} (Remaining: {subscriber_rooms.get(room, 0)})")
+
+    @socketio.on('disconnect')
+    def on_disconnect():
+        sid = request.sid
+        with sid_rooms_lock:
+            rooms = list(sid_rooms.pop(sid, set()))
+        for room in rooms:
+            remove_room_subscriber(room)
+        if rooms:
+            logger.info(f"[Socket] Client disconnected: {sid} (cleaned {len(rooms)} rooms)")
+        else:
+            logger.info(f"[Socket] Client disconnected: {sid} (no subscribed rooms)")
 
     @socketio.on('request_refresh')
     def on_request_refresh(data):
