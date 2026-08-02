@@ -203,6 +203,14 @@ export default function AiChat({ symbol, datos, interval = "15m", market = "cryp
     fetchModels()
   }, [])
 
+  // Scroll SOLO el contenedor del chat (no la pagina): scrollIntoView
+  // desplazaria tambien todos los ancestros con scroll (body/window).
+  const scrollChatToBottom = (behavior = "smooth") => {
+    const container = chatContainerRef.current
+    if (!container) return
+    container.scrollTo({ top: container.scrollHeight, behavior })
+  }
+
   useEffect(() => {
     const container = chatContainerRef.current
     if (!container) return
@@ -211,9 +219,7 @@ export default function AiChat({ symbol, datos, interval = "15m", market = "cryp
     const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 150
 
     if (isNearBottom) {
-      // Scroll SOLO el contenedor del chat (no la pagina): scrollIntoView
-      // desplazaria tambien todos los ancestros con scroll (body/window).
-      container.scrollTo({ top: container.scrollHeight, behavior: "smooth" })
+      scrollChatToBottom()
     }
   }, [messages, typingText])
 
@@ -347,6 +353,9 @@ export default function AiChat({ symbol, datos, interval = "15m", market = "cryp
     setMessages((prev) => [...prev, userMsg])
     setInput("")
     setLoading(true)
+    // Al enviar SIEMPRE auto-scroll al ultimo mensaje (aunque el usuario
+    // este scrolleado hacia arriba).
+    setTimeout(() => scrollChatToBottom(), 50)
 
     const otherSessions = sessions.filter(s => s.id !== activeSessionId)
     const globalContext = otherSessions.map(s => {
