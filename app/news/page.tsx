@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { Newspaper, ExternalLink, Loader2, Globe, Clock, TrendingUp, Zap, ArrowUpRight, Bitcoin, LineChart } from "lucide-react"
+import { Newspaper, ExternalLink, Loader2, Globe, Clock, TrendingUp, Zap, ArrowUpRight, Bitcoin, LineChart, ChevronLeft, ChevronRight } from "lucide-react"
 import Link from "next/link"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000/api"
@@ -34,6 +34,7 @@ export default function NewsPage() {
   const [imgErrors, setImgErrors] = useState({})
   const [visibleCards, setVisibleCards] = useState(new Set())
   const gridRef = useRef(null)
+  const tabsRef = useRef(null)
 
   const marketList = market === "stock" ? STOCKS : COINS
 
@@ -207,8 +208,22 @@ export default function NewsPage() {
         </div>
 
         {/* === Filter Tabs === */}
-        <nav className="mb-8">
-          <div className="flex items-center gap-2 p-1 rounded-2xl overflow-x-auto hide-scrollbar"
+        <nav className="mb-8 flex items-center gap-2">
+          <button
+            onClick={() => tabsRef.current?.scrollBy({ left: -320, behavior: "smooth" })}
+            aria-label="Scroll tabs left"
+            className="flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-200 text-gray-600 hover:text-emerald-400 hover:bg-emerald-400/5"
+            style={{ border: "1px solid rgba(255,255,255,0.04)", background: "rgba(17, 17, 17, 0.4)" }}
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <div className="flex-1 flex items-center gap-2 p-1 rounded-2xl overflow-x-auto hide-scrollbar"
+            ref={tabsRef}
+            onWheel={(e) => {
+              if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+                e.currentTarget.scrollLeft += e.deltaY
+              }
+            }}
             style={{
               background: "rgba(17, 17, 17, 0.4)",
               border: "1px solid rgba(255,255,255,0.03)",
@@ -249,6 +264,14 @@ export default function NewsPage() {
               )
             })}
           </div>
+          <button
+            onClick={() => tabsRef.current?.scrollBy({ left: 320, behavior: "smooth" })}
+            aria-label="Scroll tabs right"
+            className="flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-200 text-gray-600 hover:text-emerald-400 hover:bg-emerald-400/5"
+            style={{ border: "1px solid rgba(255,255,255,0.04)", background: "rgba(17, 17, 17, 0.4)" }}
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
         </nav>
 
         {loading ? (
