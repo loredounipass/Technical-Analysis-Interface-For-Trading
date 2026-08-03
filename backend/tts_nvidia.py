@@ -1,12 +1,25 @@
 import os
+import io
+import wave
 import logging
-import requests
 
 logger = logging.getLogger(__name__)
 
-TTS_URL = "https://integrate.api.nvidia.com/v1/audio/speech"
-TTS_MODEL = "nvidia/magpie-tts-zeroshot"
-TTS_VOICE = "female_consent_sample_1.wav"
+TTS_SERVER = "grpc.nvcf.nvidia.com:443"
+TTS_VOICE = "Magpie-ZeroShot.Female-1"
+TTS_LANGUAGE = "en-US"
+TTS_SAMPLE_RATE = 22050
+
+# function-id del cloud endpoint de NVIDIA para los modelos magpie TTS
+# (mismo UUID para multilingual y zeroshot: el dispatch lo hace el voice param).
+TTS_FUNCTION_ID = os.getenv(
+    "NVIDIA_TTS_FUNCTION_ID",
+    "877104f7-e885-42b9-8de8-f6e4c6303969",
+)
+
+# Path opcional a un WAV de referencia (audio prompt) para zero-shot voice
+# cloning. Si NO se setea, se usa la voice built-in (Magpie-ZeroShot.Female-1).
+TTS_AUDIO_PROMPT = os.getenv("NVIDIA_TTS_AUDIO_PROMPT", "")
 
 MAX_TEXT_LENGTH = 1000
 
@@ -21,30 +34,50 @@ def synthesize_speech(text, voice=TTS_VOICE):
 
     safe_text = text.strip()[:MAX_TEXT_LENGTH]
 
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json",
-        "Accept": "audio/wav",
-    }
-
-    payload = {
-        "model": TTS_MODEL,
-        "input": safe_text,
-        "voice": voice,
-    }
+    try:
+        import riva.client
+        from riva.client.proto.riva_audio_pb2 import AudioEncoding
+    except ImportError as e:
+        raise RuntimeError("nvidia-riva-client not installed") from e
 
     try:
-        import requests
-        logger.info(f"[TTS] Synthesizing {len(safe_text)} chars with voice={voice}")
-        resp = requests.post(TTS_URL, json=payload, headers=headers, timeout=60)
-        if not resp.ok:
-            logger.error(f"[TTS] NVIDIA API error {resp.status_code}: {resp.text[:300]}")
-            raise RuntimeError(f"TTS API returned {resp.status_code}")
+        logger.info(
+            f"[TTS] gRPC synthesize {len(safe_text)} chars voice={voice} "
+            f"audio_prompt={'yes' if TTS_AUDIO_PROMPT else 'no'}"
+        )
+        auth = riva.client.Auth(
+            uri=TTS_SERVER,
+            use_ssl=True,
+            metadata_args=[
+                ("function-id", TTS_FUNCTION_ID),
+                ("authorization", f"Bearer {api_key}"),
+            ],
+        )
+        service = riva.client.SpeechSynthesisService(auth)
 
-        return resp.content
-    except requests.exceptions.Timeout:
-        logger.error("[TTS] Request timed out after 60s")
-        raise RuntimeError("TTS synthesis timed out")
-    except requests.exceptions.RequestException as e:
-        logger.error(f"[TTS] Request failed: {e}")
-        raise RuntimeError(f"TTS request failed: {e}")
+        kwargs = {
+            "sample_rate_hz": TTS_SAMPLE_RATE,
+            "encoding": AudioEncoding.LINEAR_PCM,
+        }
+        if TTS_AUDIO_PROMPT and os.path.exists(TTS_AUDIO_PROMPT):
+            with open(TTS_AUDIO_PROMPT, "rb") as f:
+                kwargs["audio_prompt_data"] = f.read()
+            logger.info(f"[TTS] usando audio prompt de {TTS_AUDIO_PROMPT}")
+
+        resp = service.synthesize(
+            safe_text,
+            voice,
+            TTS_LANGUAGE,
+            **kwargs,
+        )
+
+        buf = io.BytesIO()
+        with wave.open(buf, "wb") as wf:
+            wf.setnchannels(1)
+            wf.setsampwidth(2)
+            wf.setframerate(TTS_SAMPLE_RATE)
+            wf.writeframesraw(resp.audio)
+        return buf.getvalue()
+    except Exception as e:
+        logger.error(f"[TTS] gRPC synthesis failed: {e}")
+        raise RuntimeError(f"TTS gRPC failed: {e}")
