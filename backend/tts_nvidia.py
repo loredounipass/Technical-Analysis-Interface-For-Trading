@@ -6,8 +6,25 @@ import logging
 logger = logging.getLogger(__name__)
 
 TTS_SERVER = "grpc.nvcf.nvidia.com:443"
-TTS_VOICE = "Magpie-ZeroShot.Female-1"
-TTS_LANGUAGE = "en-US"
+# Magpie TTS Multilingual: 12 idiomas (en, es, fr, de, zh, vi, it, hi, ja, ko, ar, pt).
+# Magpie TTS Zeroshot SOLO ingles (en-US) pero clona voz desde un audio prompt.
+# Como el agente responde en espanol, usamos Multilingual con voz ES integrada.
+TTS_VOICE = "Magpie-Multilingual.ES-US.Mateo"
+TTS_LANGUAGE = "es-US"
+TTS_VOICE_BY_LANG = {
+    "es": ("Magpie-Multilingual.ES-US.Mateo", "es-US"),
+    "en": ("Magpie-Multilingual.EN-US.Aria", "en-US"),
+    "fr": ("Magpie-Multilingual.FR-FR.Pascal", "fr-FR"),
+    "de": ("Magpie-Multilingual.DE-DE.Tobias", "de-DE"),
+    "it": ("Magpie-Multilingual.IT-IT.Pietro", "it-IT"),
+    "zh": ("Magpie-Multilingual.ZH-CN.Aria", "zh-CN"),
+    "ja": ("Magpie-Multilingual.JA-JP.Aria", "ja-JP"),
+    "ko": ("Magpie-Multilingual.KO-KR.Aria", "ko-KR"),
+    "pt": ("Magpie-Multilingual.PT-BR.Aria", "pt-BR"),
+    "hi": ("Magpie-Multilingual.HI-IN.Aria", "hi-IN"),
+    "vi": ("Magpie-Multilingual.VI-VN.Aria", "vi-VN"),
+    "ar": ("Magpie-Multilingual.AR-AR.Aria", "ar-AR"),
+}
 TTS_SAMPLE_RATE = 22050
 
 # function-id del cloud endpoint de NVIDIA para los modelos magpie TTS
@@ -17,14 +34,19 @@ TTS_FUNCTION_ID = os.getenv(
     "877104f7-e885-42b9-8de8-f6e4c6303969",
 )
 
-# Path opcional a un WAV de referencia (audio prompt) para zero-shot voice
-# cloning. Si NO se setea, se usa la voice built-in (Magpie-ZeroShot.Female-1).
-TTS_AUDIO_PROMPT = os.getenv("NVIDIA_TTS_AUDIO_PROMPT", "")
-
 MAX_TEXT_LENGTH = 1000
 
 
-def synthesize_speech(text, voice=TTS_VOICE):
+def _detect_lang(text, override=None):
+    if override:
+        return override
+    t = text.lower()
+    if any(w in t for w in [" el ", " la ", " los ", " las ", " y ", " que ", " de "]):
+        return "es"
+    return "en"
+
+
+def synthesize_speech(text, voice=None, lang=None):
     api_key = os.getenv("NVIDIA_API_KEY")
     if not api_key:
         raise RuntimeError("NVIDIA_API_KEY not set")
@@ -34,6 +56,11 @@ def synthesize_speech(text, voice=TTS_VOICE):
 
     safe_text = text.strip()[:MAX_TEXT_LENGTH]
 
+    detected = _detect_lang(safe_text, lang)
+    if not voice:
+        voice_lang = TTS_VOICE_BY_LANG.get(detected, TTS_VOICE_BY_LANG["en"])
+        voice, lang = voice_lang
+
     try:
         import riva.client
         from riva.client.proto.riva_audio_pb2 import AudioEncoding
@@ -42,8 +69,7 @@ def synthesize_speech(text, voice=TTS_VOICE):
 
     try:
         logger.info(
-            f"[TTS] gRPC synthesize {len(safe_text)} chars voice={voice} "
-            f"audio_prompt={'yes' if TTS_AUDIO_PROMPT else 'no'}"
+            f"[TTS] gRPC synthesize {len(safe_text)} chars voice={voice} lang={lang}"
         )
         auth = riva.client.Auth(
             uri=TTS_SERVER,
@@ -54,21 +80,12 @@ def synthesize_speech(text, voice=TTS_VOICE):
             ],
         )
         service = riva.client.SpeechSynthesisService(auth)
-
-        kwargs = {
-            "sample_rate_hz": TTS_SAMPLE_RATE,
-            "encoding": AudioEncoding.LINEAR_PCM,
-        }
-        if TTS_AUDIO_PROMPT and os.path.exists(TTS_AUDIO_PROMPT):
-            with open(TTS_AUDIO_PROMPT, "rb") as f:
-                kwargs["audio_prompt_data"] = f.read()
-            logger.info(f"[TTS] usando audio prompt de {TTS_AUDIO_PROMPT}")
-
         resp = service.synthesize(
             safe_text,
             voice,
-            TTS_LANGUAGE,
-            **kwargs,
+            lang,
+            sample_rate_hz=TTS_SAMPLE_RATE,
+            encoding=AudioEncoding.LINEAR_PCM,
         )
 
         buf = io.BytesIO()
