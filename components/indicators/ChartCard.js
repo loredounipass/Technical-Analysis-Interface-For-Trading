@@ -1,8 +1,8 @@
-"use client"
+import React from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine } from "recharts"
 
-export default function ChartCard({ title, icon, type, datos = {} }) {
+const ChartCard = ({ title, icon, type, datos = {} }) => {
   // HELPER: ESTILO COMÚN PARA TOOLTIP (REUTILIZADO EN LOS GRÁFICOS)
   const TOOLTIP_STYLE = {
     backgroundColor: "rgba(5, 7, 10, 0.9)",
@@ -650,3 +650,27 @@ export default function ChartCard({ title, icon, type, datos = {} }) {
     </Card>
   )
 }
+
+export default React.memo(ChartCard, (prev, next) => {
+  if (prev.title !== next.title || prev.type !== next.type) return false
+  const p = prev.datos || {}
+  const n = next.datos || {}
+  
+  if (p.precio !== n.precio) return false
+  if (p.timeframe !== n.timeframe || p.symbol !== n.symbol) return false
+  
+  const pTime = p.history?.times?.[p.history.times.length - 1]
+  const nTime = n.history?.times?.[n.history.times.length - 1]
+  if (pTime !== nTime) return false
+
+  switch (prev.type) {
+    case "rsi": return p.rsi === n.rsi && p.rsiStoch === n.rsiStoch
+    case "macd": return p.macdValue === n.macdValue && p.macdSignal === n.macdSignal
+    case "bollinger": return p.bbUpper === n.bbUpper && p.bbLower === n.bbLower
+    case "ema": return p.ema50 === n.ema50 && p.ema200 === n.ema200
+    case "stoch": return p.stochK === n.stochK && p.stochD === n.stochD
+    case "cci": return p.cci === n.cci
+    case "adx": return p.adx === n.adx && p.plusDi === n.plusDi
+    default: return true
+  }
+})

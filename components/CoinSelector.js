@@ -23,25 +23,41 @@ export default function CoinSelector({ monedas, acciones, onSelect }) {
 
   const activeList = market === "stock" ? acciones : monedas
 
-  const coinColors = {
-    "ETHUSDT": { from: "#627eea", to: "#3b5998", glow: "rgba(98, 126, 234, 0.3)" },
-    "PEPEUSDT": { from: "#3cc68a", to: "#1a8f5c", glow: "rgba(60, 198, 138, 0.3)" },
-    "SOLUSDT": { from: "#9945ff", to: "#14f195", glow: "rgba(153, 69, 255, 0.3)" },
-    "BTCUSDT": { from: "#f7931a", to: "#e2820a", glow: "rgba(247, 147, 26, 0.3)" },
-    "BNBUSDT": { from: "#f3ba2f", to: "#c98f10", glow: "rgba(243, 186, 47, 0.3)" },
-    "DOGEUSDT": { from: "#c2a633", to: "#8f7a1f", glow: "rgba(194, 166, 51, 0.3)" },
-    "XRPUSDT": { from: "#23292f", to: "#0f1216", glow: "rgba(35, 41, 47, 0.4)" },
-    "AAPL": { from: "#a2aaad", to: "#6e7679", glow: "rgba(162, 170, 173, 0.3)" },
-    "MSFT": { from: "#00a4ef", to: "#0d5b8c", glow: "rgba(0, 164, 239, 0.3)" },
-    "NVDA": { from: "#76b900", to: "#4a7a00", glow: "rgba(118, 185, 0, 0.3)" },
-    "TSLA": { from: "#e82127", to: "#8f1216", glow: "rgba(232, 33, 39, 0.3)" },
-    "AMZN": { from: "#ff9900", to: "#b36a00", glow: "rgba(255, 153, 0, 0.3)" },
-    "GOOGL": { from: "#4285f4", to: "#1a56c4", glow: "rgba(66, 133, 244, 0.3)" },
-    "META": { from: "#0866ff", to: "#0550b8", glow: "rgba(8, 102, 255, 0.3)" },
-    "NFLX": { from: "#e50914", to: "#8f070d", glow: "rgba(229, 9, 20, 0.3)" },
-    "AMD": { from: "#ed1c24", to: "#96121a", glow: "rgba(237, 28, 36, 0.3)" },
-    "INTC": { from: "#0071c5", to: "#00518c", glow: "rgba(0, 113, 197, 0.3)" },
-    "LMT": { from: "#00a0df", to: "#00658f", glow: "rgba(0, 160, 223, 0.3)" },
+  const getDynamicCoinColor = (symbol) => {
+    const knownColors = {
+      "ETHUSDT": { from: "#627eea", to: "#3b5998", glow: "rgba(98, 126, 234, 0.3)" },
+      "PEPEUSDT": { from: "#3cc68a", to: "#1a8f5c", glow: "rgba(60, 198, 138, 0.3)" },
+      "SOLUSDT": { from: "#9945ff", to: "#14f195", glow: "rgba(153, 69, 255, 0.3)" },
+      "BTCUSDT": { from: "#f7931a", to: "#e2820a", glow: "rgba(247, 147, 26, 0.3)" },
+      "BNBUSDT": { from: "#f3ba2f", to: "#c98f10", glow: "rgba(243, 186, 47, 0.3)" },
+      "DOGEUSDT": { from: "#c2a633", to: "#8f7a1f", glow: "rgba(194, 166, 51, 0.3)" },
+      "XRPUSDT": { from: "#23292f", to: "#0f1216", glow: "rgba(35, 41, 47, 0.4)" },
+      "AAPL": { from: "#a2aaad", to: "#6e7679", glow: "rgba(162, 170, 173, 0.3)" },
+      "MSFT": { from: "#00a4ef", to: "#0d5b8c", glow: "rgba(0, 164, 239, 0.3)" },
+      "NVDA": { from: "#76b900", to: "#4a7a00", glow: "rgba(118, 185, 0, 0.3)" },
+      "TSLA": { from: "#e82127", to: "#8f1216", glow: "rgba(232, 33, 39, 0.3)" },
+      "AMZN": { from: "#ff9900", to: "#b36a00", glow: "rgba(255, 153, 0, 0.3)" },
+      "GOOGL": { from: "#4285f4", to: "#1a56c4", glow: "rgba(66, 133, 244, 0.3)" },
+      "META": { from: "#0866ff", to: "#0550b8", glow: "rgba(8, 102, 255, 0.3)" },
+      "NFLX": { from: "#e50914", to: "#8f070d", glow: "rgba(229, 9, 20, 0.3)" },
+      "AMD": { from: "#ed1c24", to: "#96121a", glow: "rgba(237, 28, 36, 0.3)" },
+      "INTC": { from: "#0071c5", to: "#00518c", glow: "rgba(0, 113, 197, 0.3)" },
+      "LMT": { from: "#00a0df", to: "#00658f", glow: "rgba(0, 160, 223, 0.3)" },
+    }
+    
+    if (knownColors[symbol]) return knownColors[symbol]
+
+    let hash = 0
+    for (let i = 0; i < symbol.length; i++) {
+      hash = symbol.charCodeAt(i) + ((hash << 5) - hash)
+    }
+    
+    const h = Math.abs(hash % 360)
+    const from = `hsl(${h}, 80%, 60%)`
+    const to = `hsl(${h}, 80%, 30%)`
+    const glow = `hsla(${h}, 80%, 60%, 0.3)`
+    
+    return { from, to, glow }
   }
 
   return (
@@ -176,7 +192,7 @@ export default function CoinSelector({ monedas, acciones, onSelect }) {
         {/* Asset cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {Object.entries(activeList).map(([key, moneda], index) => {
-            const colors = coinColors[moneda.symbol] || { from: "#10b981", to: "#059669", glow: "rgba(16,185,129,0.3)" }
+            const colors = getDynamicCoinColor(moneda.symbol)
             const isHovered = hoveredKey === key
 
             return (

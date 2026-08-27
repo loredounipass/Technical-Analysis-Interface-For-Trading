@@ -7,7 +7,7 @@ import IndicatorGrid from "@/components/indicators/IndicatorGrid"
 import AiChat from "@/components/AiChat"
 import { getRecommendation } from "@/utils/dataUtils"
 import { fetchTradingData } from "@/utils/apiService"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import useTradingSocket from "@/hooks/useTradingSocket"
 import { Radio, Activity } from "lucide-react"
 
@@ -21,6 +21,7 @@ export default function Dashboard({ moneda, market = "crypto", onCambiarMoneda }
   const [mounted, setMounted] = useState(false)
   const [woodyScanning, setWoodyScanning] = useState(false)
 
+  const fetchCounterRef = useRef(0)
   const { liveData, isConnected } = useTradingSocket(moneda.symbol, timeframe, market)
 
   useEffect(() => {
@@ -35,16 +36,23 @@ export default function Dashboard({ moneda, market = "crypto", onCambiarMoneda }
   }, [])
 
   const fetchData = async (selectedTimeframe = timeframe, force = false) => {
+    const currentFetch = ++fetchCounterRef.current
     try {
       const nuevoDatos = await fetchTradingData(moneda.symbol, selectedTimeframe, market, force)
-      setDatos(nuevoDatos)
-      setUltimaActualizacion(new Date().toLocaleString())
-      setError(null)
+      if (currentFetch === fetchCounterRef.current) {
+        setDatos(nuevoDatos)
+        setUltimaActualizacion(new Date().toLocaleString())
+        setError(null)
+      }
     } catch (err) {
-      console.error("Error:", err)
-      setError("Error al obtener datos de trading")
+      if (currentFetch === fetchCounterRef.current) {
+        console.error("Error:", err)
+        setError("Error al obtener datos de trading")
+      }
     } finally {
-      setLoading(false)
+      if (currentFetch === fetchCounterRef.current) {
+        setLoading(false)
+      }
     }
   }
 
@@ -61,6 +69,8 @@ export default function Dashboard({ moneda, market = "crypto", onCambiarMoneda }
 
   useEffect(() => {
     if (liveData) {
+      // Si llega data viva, invalidamos cualquier fetch REST pendiente
+      fetchCounterRef.current++
       setDatos(liveData)
       setUltimaActualizacion(new Date().toLocaleString())
       setLoading(false)

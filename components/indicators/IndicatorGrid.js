@@ -32,8 +32,9 @@ function fmt(v, d = 2) {
   const n = Number(v)
   return isFinite(n) ? n.toFixed(d) : (0).toFixed(d)
 }
+import React from "react"
 
-export default function IndicatorGrid({ datos }) {
+const IndicatorGrid = ({ datos }) => {
   const dec = datos.decimales ?? 2
   // Prepare chart data
   const rsiData = [{ name: "RSI", value: datos.rsi, threshold: 70, oversold: 30 }]
@@ -351,3 +352,14 @@ export default function IndicatorGrid({ datos }) {
     </>
   )
 }
+
+export default React.memo(IndicatorGrid, (prev, next) => {
+  const p = prev.datos || {}
+  const n = next.datos || {}
+  if (p.precio !== n.precio) return false
+  if (p.symbol !== n.symbol || p.timeframe !== n.timeframe) return false
+  const pTime = p.history?.times?.[p.history.times.length - 1]
+  const nTime = n.history?.times?.[n.history.times.length - 1]
+  if (pTime !== nTime) return false
+  return true
+})
