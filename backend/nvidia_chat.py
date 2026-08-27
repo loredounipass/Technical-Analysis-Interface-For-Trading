@@ -162,7 +162,7 @@ def get_trading_system_prompt(indicator_data=None, global_context=None, model_na
         # indicador (ultimos 30 candles, del mas antiguo al mas nuevo) para
         # detectar divergencias, cruces y direccion real del movimiento.
         if closes:
-            base += "\n=== RECENT INDICATOR SERIES (last 30 candles, oldest → newest) ===\n"
+            base += "\n=== RECENT INDICATOR SERIES (last 10 candles, oldest → newest) ===\n"
             base += f"PRICE: {_format_recent(hist, 'closes')}\n"
             base += f"VOLUME (USDT per candle): {_format_recent_volume(hist)}\n"
             base += f"RSI(14): {_format_recent(hist, 'rsi')}\n"
@@ -197,7 +197,7 @@ def _format_recent(history, key, decimals=2):
         elif max_abs < 100:
             decimals = 3
     out = []
-    for v in vals[-30:]:
+    for v in vals[-10:]:
         if v is None:
             out.append('N/A')
         else:
@@ -226,7 +226,7 @@ def _format_recent_volume(history):
     vals = history.get('volumes')
     if not vals:
         return 'N/A'
-    return ', '.join(_format_compact(v) for v in vals[-30:])
+    return ', '.join(_format_compact(v) for v in vals[-10:])
 
 
 # Valor None-safe para la tabla: 'N/A' en vez de 'None'

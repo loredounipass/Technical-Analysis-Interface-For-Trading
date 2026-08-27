@@ -4,53 +4,15 @@ import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianG
 
 export default function PriceCard({ precio, decimales = 2, symbol, history = {} }) {
   const parsePrecio = (p) => {
-    if (typeof p === 'number' && Number.isFinite(p)) return p
-    if (typeof p !== 'string') return Number(p) || 0
-
-    let s = p.trim()
-    const hasComma = s.indexOf(',') !== -1
-    const hasDot = s.indexOf('.') !== -1
-
-    if (hasComma && hasDot) {
-      const lastComma = s.lastIndexOf(',')
-      const lastDot = s.lastIndexOf('.')
-      if (lastComma > lastDot) {
-        s = s.replace(/\./g, '')
-        s = s.replace(/,/g, '.')
-      } else {
-        s = s.replace(/,/g, '')
-      }
-    } else if (hasComma) {
-      const parts = s.split(',')
-      if (parts.length > 1) {
-        const last = parts[parts.length - 1]
-        if (last.length === 3) {
-          s = parts.join('')
-        } else {
-          const intPart = parts.slice(0, -1).join('')
-          s = `${intPart}.${last}`
-        }
-      }
-    } else if (hasDot) {
-      const parts = s.split('.')
-      if (parts.length > 1) {
-        const last = parts[parts.length - 1]
-        if (last.length === 3) {
-          s = parts.join('')
-        } else {
-        }
-      }
-    }
-
-    const n = Number(s)
-    return Number.isFinite(n) ? n : 0
+    const n = Number(p);
+    return Number.isFinite(n) ? n : 0;
   }
 
   const formatWithDots = (n, d) => {
-    const fixed = Number(n).toFixed(d)
-    const [intPart, decPart] = fixed.split('.')
-    const intWithDots = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
-    return `${intWithDots}.${decPart}`
+    return new Intl.NumberFormat('es-ES', { 
+        minimumFractionDigits: d, 
+        maximumFractionDigits: d 
+    }).format(n);
   }
 
   const value = parsePrecio(precio)
