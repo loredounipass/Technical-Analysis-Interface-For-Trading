@@ -214,7 +214,15 @@ export default function AiChat({ symbol, datos, interval = "15m", market = "cryp
   const activeModelRef = useRef(null)
   const inputRef = useRef(null)
   const chatContainerRef = useRef(null)
+  const isAutoScrollPausedRef = useRef(false)
   const { ttsEnabled, toggle: toggleTTS, playResponse } = useVoiceTTS()
+
+  const handleScroll = () => {
+    const container = chatContainerRef.current
+    if (!container) return
+    const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 150
+    isAutoScrollPausedRef.current = !isNearBottom
+  }
 
   // Ajusta la altura del panel al area realmente visible en movil
   // (teclado abierto, barra de navegacion del sistema, etc.)
@@ -270,11 +278,8 @@ export default function AiChat({ symbol, datos, interval = "15m", market = "cryp
     const container = chatContainerRef.current
     if (!container) return
 
-    // If the user has manually scrolled up (more than 150px from the bottom), don't force auto-scroll
-    const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 150
-
-    if (isNearBottom) {
-      scrollChatToBottom()
+    if (!isAutoScrollPausedRef.current) {
+      container.scrollTo({ top: container.scrollHeight, behavior: "auto" })
     }
   }, [messages, typingText])
 
@@ -409,6 +414,7 @@ export default function AiChat({ symbol, datos, interval = "15m", market = "cryp
     setMessages((prev) => [...prev, userMsg])
     setInput("")
     setLoading(true)
+    isAutoScrollPausedRef.current = false
     // Al enviar SIEMPRE auto-scroll al ultimo mensaje (aunque el usuario
     // este scrolleado hacia arriba).
     setTimeout(() => scrollChatToBottom(), 50)
@@ -778,6 +784,7 @@ export default function AiChat({ symbol, datos, interval = "15m", market = "cryp
       {/* Messages */}
       <div 
         ref={chatContainerRef}
+        onScroll={handleScroll}
         className="flex-1 overflow-y-auto px-4 py-3 space-y-3 cyber-scrollbar relative z-10"
         style={{ background: "rgba(0, 0, 0, 0.3)" }}
       >
