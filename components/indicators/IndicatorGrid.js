@@ -14,9 +14,9 @@ function formatVolume(v) {
 }
 
 // Formatea precios de soporte/resistencia de forma segura (nunca crashea con null)
-function formatLevel(v) {
+function formatLevel(v, decimales = 2) {
   if (v === null || v === undefined || !isFinite(Number(v))) return "—"
-  return `$${Number(v).toFixed(2)}`
+  return `$${Number(v).toFixed(decimales)}`
 }
 
 // Distancia porcentual segura: null -> 0.00
@@ -34,6 +34,7 @@ function fmt(v, d = 2) {
 }
 
 export default function IndicatorGrid({ datos }) {
+  const dec = datos.decimales ?? 2
   // Prepare chart data
   const rsiData = [{ name: "RSI", value: datos.rsi, threshold: 70, oversold: 30 }]
 
@@ -318,7 +319,7 @@ export default function IndicatorGrid({ datos }) {
                   <span className="text-[9px] text-emerald-500/60 font-mono uppercase">{support.strength}</span>
                 </div>
                 <div className="flex flex-col items-end">
-                  <span className="text-white font-mono tabular-nums text-sm">{formatLevel(support.value)}</span>
+                  <span className="text-white font-mono tabular-nums text-sm">{formatLevel(support.value, dec)}</span>
                   <span className="text-[9px] text-emerald-400/80 font-mono tabular-nums">-{support.distance}%</span>
                 </div>
               </div>
@@ -339,7 +340,7 @@ export default function IndicatorGrid({ datos }) {
                   <span className="text-[9px] text-red-500/60 font-mono uppercase">{resistance.strength}</span>
                 </div>
                 <div className="flex flex-col items-end">
-                  <span className="text-white font-mono tabular-nums text-sm">{formatLevel(resistance.value)}</span>
+                  <span className="text-white font-mono tabular-nums text-sm">{formatLevel(resistance.value, dec)}</span>
                   <span className="text-[9px] text-red-400/80 font-mono tabular-nums">+{resistance.distance}%</span>
                 </div>
               </div>

@@ -1,4 +1,4 @@
-﻿from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request
 from flask_cors import CORS
 from flask_socketio import SocketIO
 import time
@@ -89,9 +89,17 @@ RATE_LIMIT = 60
 ip_requests = {}
 ip_lock = threading.Lock()
 # LIMITA LAS PETICIONES POR IP EN UNA VENTANA TEMPORAL; DEVUELVE TRUE SI SE SUPERA EL LIMITE
+_last_ip_cleanup = 0
 def rate_limited(ip):
+    global _last_ip_cleanup
     now = time.time()
     with ip_lock:
+        # Limpieza periodica de IPs huerfanas (cada 60s)
+        if now - _last_ip_cleanup > 60:
+            _last_ip_cleanup = now
+            stale = [k for k, v in ip_requests.items() if now - v[-1] > RATE_WINDOW]
+            for k in stale:
+                del ip_requests[k]
         arr = ip_requests.get(ip)
         if not arr:
             ip_requests[ip] = [now]
@@ -250,6 +258,7 @@ def _fetch_klines_and_volume(symbol, interval_str, market):
 # KLINES. Funcion pura reutilizable: el hilo de streaming la invoca para
 # recalcular con la vela viva de Binance sin hacer re-fetch REST.
 def build_payload(symbol, interval_str, market, klines, vol_24h=None):
+    is_synthetic = False
     secs = interval_seconds(interval_str)
     opens = []
     highs = []
@@ -332,6 +341,7 @@ def build_payload(symbol, interval_str, market, klines, vol_24h=None):
     # Si no hay historial real, construir una historia sintetica basada en el precio actual
     if not history.get('closes'):
         try:
+            is_synthetic = True
             base = float(precio)
             synthetic = []
             s_opens = []
@@ -421,7 +431,7 @@ def build_payload(symbol, interval_str, market, klines, vol_24h=None):
     macd_sig_curr = last_non_none(macd_signal)
     macd_hist = (macd_curr - macd_sig_curr) if (macd_curr is not None and macd_sig_curr is not None) else None
 
-    return {
+    result = {
         'symbol': symbol,
         'market': market,
         'precio': precio,
@@ -456,6 +466,9 @@ def build_payload(symbol, interval_str, market, klines, vol_24h=None):
         'timeframe': interval_str,
         'history': history
     }
+    if is_synthetic:
+        result['synthetic'] = True
+    return result
 
 
 # ENTRY POINT REST/SOCKET: KLINES + VOLUMEN + INDICADORES COMPLETOS
@@ -537,7 +550,8 @@ def fetch_yahoo_chart(symbol, interval_str='15m'):
 
     if interval_str == '4h' and len(bars) > 1:
         grouped = []
-        for i in range(0, len(bars) - len(bars) % 4, 4):
+        # Agrupar de a 4, incluyendo el remainder parcial al final
+        for i in range(0, len(bars), 4):
             chunk = bars[i:i + 4]
             grouped.append([
                 chunk[0][0],
@@ -826,10 +840,12 @@ def compute_signal_summary(rsi, stoch_k, stoch_d, cci, macd_v, macd_sig, adx_v,
         else:
             neutral += 1
 
-    vote(rsi, 70, 30)
-    vote(stoch_k, 80, 20)
-    vote(stoch_d, 80, 20)
-    vote(cci, 100, -100)
+    # Osciladores: logica mean-reversion estilo TradingView.
+    # Overbought (valor alto) = SELL, Oversold (valor bajo) = BUY.
+    vote(rsi, 30, 70)
+    vote(stoch_k, 20, 80)
+    vote(stoch_d, 20, 80)
+    vote(cci, -100, 100)
     if macd_v is not None and macd_sig is not None:
         if macd_v > macd_sig:
             buy += 1
@@ -837,7 +853,7 @@ def compute_signal_summary(rsi, stoch_k, stoch_d, cci, macd_v, macd_sig, adx_v,
             sell += 1
     else:
         neutral += 1
-    vote(rsi_stoch, 80, 20)
+    vote(rsi_stoch, 20, 80)
     if plus_di is not None and minus_di is not None and adx_v is not None:
         if adx_v >= 20:
             if plus_di > minus_di:
@@ -910,24 +926,28 @@ def get_trading_cached(symbol, interval_str='15m', market='crypto', force=False)
 
     # Cache STALE pero dentro de STALE_TTL: servir stale y refrescar en background
     if entry and 'data' in entry and now - entry['ts'] <= STALE_TTL:
-        # Verificar si ya hay una peticion en vuelo para este cache_key
-        if cache_key not in in_flight:
-            # Refrescar como maximo una vez cada REFRESH_MIN_GAP segundos por cache_key.
-            # Sin esta guardia, cada ciclo de polling del socket dispararia la API
-            # (Binance/Yahoo) aunque los datos no hayan cambiado.
-            last_refresh = entry.get('last_refresh', 0)
-            if now - last_refresh >= REFRESH_MIN_GAP:
-                entry['last_refresh'] = now
-                def refresh():
-                    try:
-                        data = fetch_trading_data(symbol, interval_str, market)
-                        with cache_lock:
-                            cache[cache_key] = {'data': data, 'ts': time.time(), 'last_refresh': time.time()}
-                        logger.info(f"[StaleRefresh] {cache_key} refrescado en background")
-                    except Exception as e:
-                        logger.warning(f"[StaleRefresh] {cache_key} fallo: {e}")
-                t = threading.Thread(target=refresh, daemon=True)
-                t.start()
+        # Verificar si ya hay una peticion en vuelo para este cache_key.
+        # El bloque entero se protege con cache_lock para evitar que dos threads
+        # pasen simultaneamente el check de REFRESH_MIN_GAP y lancen refreshes
+        # duplicados contra la API.
+        with cache_lock:
+            if cache_key not in in_flight:
+                # Refrescar como maximo una vez cada REFRESH_MIN_GAP segundos por cache_key.
+                # Sin esta guardia, cada ciclo de polling del socket dispararia la API
+                # (Binance/Yahoo) aunque los datos no hayan cambiado.
+                last_refresh = entry.get('last_refresh', 0)
+                if now - last_refresh >= REFRESH_MIN_GAP:
+                    entry['last_refresh'] = now
+                    def refresh():
+                        try:
+                            data = fetch_trading_data(symbol, interval_str, market)
+                            with cache_lock:
+                                cache[cache_key] = {'data': data, 'ts': time.time(), 'last_refresh': time.time()}
+                            logger.info(f"[StaleRefresh] {cache_key} refrescado en background")
+                        except Exception as e:
+                            logger.warning(f"[StaleRefresh] {cache_key} fallo: {e}")
+                    t = threading.Thread(target=refresh, daemon=True)
+                    t.start()
         return entry['data']
 
     # Cache EXPIRADA o no existe: refrescar sincronicamente

@@ -318,9 +318,9 @@ export default function ChartCard({ title, icon, type, datos = {} }) {
           if (validIndices.length > 0) {
             bbChartData = validIndices.map((idx, i) => ({
               name: `${i}`,
-              upper: datos.history.bb_upper?.[idx] || null,
-              middle: datos.history.bb_middle?.[idx] || null,
-              lower: datos.history.bb_lower?.[idx] || null,
+              upper: datos.history.bb_upper?.[idx] ?? null,
+              middle: datos.history.bb_middle?.[idx] ?? null,
+              lower: datos.history.bb_lower?.[idx] ?? null,
               price: datos.history.closes[idx]
             }))
             
