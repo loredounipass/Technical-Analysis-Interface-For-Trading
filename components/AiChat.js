@@ -785,11 +785,13 @@ export default function AiChat({ symbol, datos, interval = "15m", market = "cryp
       <div 
         ref={chatContainerRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto px-4 py-3 space-y-3 cyber-scrollbar relative z-10"
+        className="flex-1 overflow-y-auto px-4 py-3 flex flex-col gap-3 cyber-scrollbar relative z-10"
         style={{ background: "rgba(0, 0, 0, 0.3)" }}
       >
+        {messages.length > 0 && <div className="mt-auto flex-shrink-0" />}
+
         {messages.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-full text-center px-4">
+          <div className="flex flex-col items-center justify-center flex-1 text-center px-4">
             {/* Cyberpunk boot logo */}
             <div className="relative mb-6">
               <div className="w-20 h-20 flex items-center justify-center"
