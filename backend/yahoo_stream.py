@@ -103,26 +103,39 @@ class YahooStreamThread:
         self.intervals = intervals
         self.store = {}
         self.store_lock = threading.Lock()
+        self.seeding = set()
+        self.seeding_lock = threading.Lock()
         self.last_recompute = {}
         self.last_emitted = {}
+        self.vol_cache = {}
         self.running = True
 
     def _get_bars(self, symbol, interval):
         with self.store_lock:
             return self.store.get(symbol, {}).get(interval)
 
-    def ensure_seeded(self, symbol, interval):
-        bars = self._get_bars(symbol, interval)
-        if bars and len(bars) > 0:
-            return bars
+    def _seed_background(self, symbol, interval):
         try:
             klines, _ = self.hooks['fetch_klines_vol'](symbol, interval, 'stock')
             if klines and len(klines) > 0:
                 with self.store_lock:
                     self.store.setdefault(symbol, {})[interval] = klines
-                return klines
         except Exception as e:
             logger.warning(f"[YahooStream] seed fallo para {symbol} {interval}: {e}")
+        finally:
+            with self.seeding_lock:
+                self.seeding.discard((symbol, interval))
+
+    def ensure_seeded(self, symbol, interval):
+        bars = self._get_bars(symbol, interval)
+        if bars and len(bars) > 0:
+            return bars
+        
+        with self.seeding_lock:
+            if (symbol, interval) not in self.seeding:
+                self.seeding.add((symbol, interval))
+                threading.Thread(target=self._seed_background, args=(symbol, interval), daemon=True).start()
+                
         return None
 
     def handle_quote(self, symbol, price):
@@ -136,22 +149,17 @@ class YahooStreamThread:
                 continue
             interval_ms = INTERVAL_SECONDS.get(interval, 900) * 1000
             if now_ms - int(bars[-1][0]) >= interval_ms:
-                # La vela viva termino: re-seed desde REST para arrancar la nueva
-                # (Yahoo WS no envia velas, solo quotes).
-                try:
-                    fresh, _ = self.hooks['fetch_klines_vol'](symbol, interval, 'stock')
-                except Exception as e:
-                    logger.warning(f"[YahooStream] reseed fallo para {room}: {e}")
-                    continue
-                if not fresh or len(fresh) == 0:
-                    continue
-                if now_ms - int(fresh[-1][0]) >= interval_ms:
-                    # Aun no existe vela nueva (ej. grupo 4h incompleto o
-                    # mercado cerrado): NO tocar velas ya cerradas.
-                    continue
-                with self.store_lock:
-                    self.store.setdefault(symbol, {})[interval] = fresh
-                bars = fresh
+                with self.seeding_lock:
+                    if (symbol, interval) not in self.seeding:
+                        self.seeding.add((symbol, interval))
+                        threading.Thread(target=self._seed_background, args=(symbol, interval), daemon=True).start()
+                
+                # Optimistically create a new candle to keep updating instantly
+                new_ts = int(bars[-1][0]) + interval_ms
+                if now_ms >= new_ts:
+                    bars.append([new_ts, price, price, price, price, 0, new_ts, 0])
+                    if len(bars) > 2000:
+                        del bars[0]
             last = bars[-1]
             last[2] = max(float(last[2]), price)
             last[3] = min(float(last[3]), price)
@@ -167,10 +175,20 @@ class YahooStreamThread:
         self.last_recompute[room] = now
 
         now_ms = int(now * 1000)
-        try:
-            vol_24h = sum(float(k[5]) for k in bars if now_ms - int(k[0]) <= 86400000)
-        except Exception:
-            vol_24h = None
+        
+        # Optimize volume calculation by caching
+        cache_key = f"{symbol}:{interval}"
+        vol_cache_entry = self.vol_cache.get(cache_key)
+        
+        # Only recompute full 24h volume if 15 seconds have passed (reduces O(N) by 90%)
+        if vol_cache_entry and now - vol_cache_entry['ts'] < 15:
+            vol_24h = vol_cache_entry['vol']
+        else:
+            try:
+                vol_24h = sum(float(k[5]) for k in bars if now_ms - int(k[0]) <= 86400000)
+                self.vol_cache[cache_key] = {'ts': now, 'vol': vol_24h}
+            except Exception:
+                vol_24h = None
 
         try:
             payload = self.hooks['build_payload'](symbol, interval, 'stock', list(bars), vol_24h)

@@ -115,6 +115,18 @@ def rate_limited(ip):
         if len(arr) > RATE_LIMIT:
             return True
         return False
+
+# Recolector de basura para evitar fuga de memoria con IPs inactivas
+def _rate_limiter_gc():
+    while True:
+        time.sleep(RATE_WINDOW * 2)
+        now = time.time()
+        with ip_lock:
+            stale = [ip for ip, arr in ip_requests.items() if not arr or now - arr[-1] > RATE_WINDOW]
+            for ip in stale:
+                del ip_requests[ip]
+
+threading.Thread(target=_rate_limiter_gc, daemon=True).start()
 # CREA O RETORNA UN LOCK ESPECIFICO PARA UN SIMBOLO PARA SINCRONIZAR ACCESOS
 def get_symbol_lock(symbol):
     with cache_lock:

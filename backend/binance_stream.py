@@ -33,6 +33,8 @@ class BinanceStreamThread:
         self.intervals = intervals
         self.store = {}
         self.store_lock = threading.Lock()
+        self.seeding = set()
+        self.seeding_lock = threading.Lock()
         self.last_recompute = {}
         self.last_emitted = {}
         self.running = True
@@ -41,15 +43,10 @@ class BinanceStreamThread:
         with self.store_lock:
             return self.store.get(symbol, {}).get(interval)
 
-    def ensure_seeded(self, symbol, interval):
-        bars = self._get_bars(symbol, interval)
-        if bars and len(bars) > 0:
-            return bars
+    def _seed_background(self, symbol, interval):
         try:
             klines, vol_24h = self.hooks['fetch_klines_vol'](symbol, interval, 'crypto')
             if klines and len(klines) > 0:
-                # Las klines de la API REST traen OHLCV como strings: normalizar
-                # a float para poder actualizarlas con los ticks del WS.
                 bars = [
                     [int(k[0]), float(k[1]), float(k[2]), float(k[3]),
                      float(k[4]), float(k[5]), int(k[0]), float(k[7])]
@@ -59,9 +56,22 @@ class BinanceStreamThread:
                     self.store.setdefault(symbol, {})[interval] = bars
                 if vol_24h is not None:
                     self.hooks['update_ticker'](symbol, vol_24h)
-                return bars
         except Exception as e:
             logger.warning(f"[Stream] seed fallo para {symbol} {interval}: {e}")
+        finally:
+            with self.seeding_lock:
+                self.seeding.discard((symbol, interval))
+
+    def ensure_seeded(self, symbol, interval):
+        bars = self._get_bars(symbol, interval)
+        if bars and len(bars) > 0:
+            return bars
+        
+        with self.seeding_lock:
+            if (symbol, interval) not in self.seeding:
+                self.seeding.add((symbol, interval))
+                threading.Thread(target=self._seed_background, args=(symbol, interval), daemon=True).start()
+        
         return None
 
     @staticmethod

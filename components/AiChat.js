@@ -13,6 +13,9 @@ function renderMarkdown(text) {
   let listItems = []
   let tableRows = []
   let inTable = false
+  let inCodeBlock = false
+  let codeBlockLines = []
+  let codeBlockLang = ""
 
   const flushList = () => {
     if (listItems.length > 0) {
@@ -56,22 +59,29 @@ function renderMarkdown(text) {
 
   const formatInline = (line, keyPrefix) => {
     let result = []
-    let current = line
     let keyIdx = 0
 
-    // Bold (**text**)
-    const partsBold = current.split(/(\*\*.*?\*\*)/)
-    partsBold.forEach(part => {
-      if (part.startsWith('**') && part.endsWith('**')) {
-        result.push(<strong key={`${keyPrefix}-b-${keyIdx++}`} className="font-semibold text-emerald-300">{part.slice(2, -2)}</strong>)
+    // Inline code (`text`)
+    const partsCode = line.split(/(`.*?`)/)
+    partsCode.forEach(part => {
+      if (part.startsWith('`') && part.endsWith('`') && part.length >= 2) {
+        result.push(<code key={`${keyPrefix}-c-${keyIdx++}`} className="px-1 py-0.5 rounded bg-emerald-900/30 text-emerald-300 font-mono text-[12px]">{part.slice(1, -1)}</code>)
       } else {
-        // Italics (*text*) inside the non-bold parts
-        const partsItalic = part.split(/(\*.*?\*)/)
-        partsItalic.forEach(subPart => {
-          if (subPart.startsWith('*') && subPart.endsWith('*') && subPart.length > 2) {
-            result.push(<em key={`${keyPrefix}-i-${keyIdx++}`} className="italic text-emerald-100/70">{subPart.slice(1, -1)}</em>)
-          } else if (subPart) {
-            result.push(subPart)
+        // Bold (**text**)
+        const partsBold = part.split(/(\*\*.*?\*\*)/)
+        partsBold.forEach(bPart => {
+          if (bPart.startsWith('**') && bPart.endsWith('**') && bPart.length >= 4) {
+            result.push(<strong key={`${keyPrefix}-b-${keyIdx++}`} className="font-semibold text-emerald-300">{bPart.slice(2, -2)}</strong>)
+          } else {
+            // Italics (*text*)
+            const partsItalic = bPart.split(/(\*.*?\*)/)
+            partsItalic.forEach(iPart => {
+              if (iPart.startsWith('*') && iPart.endsWith('*') && iPart.length >= 2) {
+                result.push(<em key={`${keyPrefix}-i-${keyIdx++}`} className="italic text-emerald-100/70">{iPart.slice(1, -1)}</em>)
+              } else if (iPart) {
+                result.push(iPart)
+              }
+            })
           }
         })
       }
@@ -81,6 +91,38 @@ function renderMarkdown(text) {
 
   lines.forEach((line, i) => {
     const trimmed = line.trim()
+
+    // Code blocks
+    if (trimmed.startsWith("```")) {
+      if (inCodeBlock) {
+        elements.push(
+          <div key={`code-${i}`} className="my-3 rounded-lg bg-[#05070a] border border-emerald-900/40 overflow-hidden">
+            {codeBlockLang && (
+              <div className="px-3 py-1 bg-emerald-900/20 border-b border-emerald-900/40 text-[10px] text-emerald-500 font-mono uppercase tracking-wider">
+                {codeBlockLang}
+              </div>
+            )}
+            <pre className="p-3 overflow-x-auto text-[12px] text-emerald-300 font-mono leading-relaxed">
+              <code>{codeBlockLines.join("\n")}</code>
+            </pre>
+          </div>
+        )
+        inCodeBlock = false
+        codeBlockLines = []
+        codeBlockLang = ""
+      } else {
+        flushList()
+        flushTable()
+        inCodeBlock = true
+        codeBlockLang = trimmed.slice(3).trim()
+      }
+      return
+    }
+
+    if (inCodeBlock) {
+      codeBlockLines.push(line)
+      return
+    }
 
     // Table parsing
     if (trimmed.startsWith("|") && trimmed.endsWith("|")) {
@@ -132,6 +174,17 @@ function renderMarkdown(text) {
       elements.push(<p key={i} className="text-gray-200 my-1.5 leading-[1.6]">{formatInline(trimmed, i)}</p>)
     }
   })
+  
+  if (inCodeBlock) {
+    elements.push(
+      <div key="code-unclosed" className="my-3 rounded-lg bg-[#05070a] border border-emerald-900/40 overflow-hidden">
+        <pre className="p-3 overflow-x-auto text-[12px] text-emerald-300 font-mono leading-relaxed">
+          <code>{codeBlockLines.join("\n")}</code>
+        </pre>
+      </div>
+    )
+  }
+  
   flushList()
   flushTable()
   return elements
