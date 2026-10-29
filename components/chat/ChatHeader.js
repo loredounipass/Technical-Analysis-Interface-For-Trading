@@ -24,7 +24,7 @@ export default function ChatHeader({
 }) {
   return (
     <>
-      <div className="relative px-5 py-3.5 sm:px-6 sm:py-4 bg-[#071116] border-b border-emerald-500/15 flex items-center justify-between z-10">
+      <div className="relative px-5 py-3.5 sm:px-6 sm:py-4 bg-[#071116]/75 backdrop-blur-md border-b border-emerald-500/15 flex items-center justify-between z-10">
         {/* Lado Izquierdo: Icono + Título + Subtítulo */}
         <div className="flex items-center gap-3.5">
           {/* Avatar Cuadrado con Icono de Matraz / Quant */}

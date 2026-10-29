@@ -36,7 +36,7 @@ export default function ChatMessageList({
       ref={chatContainerRef}
       onScroll={onScroll}
       className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5 space-y-5 cyber-scrollbar relative z-10"
-      style={{ background: "rgba(5, 11, 15, 0.92)" }}
+      style={{ background: "rgba(4, 9, 14, 0.45)" }}
     >
       {/* Píldora de Sesión Iniciada centrada */}
       <div className="flex justify-center my-1">
@@ -54,7 +54,7 @@ export default function ChatMessageList({
               <div className="relative group max-w-[85%] sm:max-w-[75%]">
                 {/* Punto verde de acento en la esquina superior derecha */}
                 <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_#10b981]" />
-                <div className="bg-[#092222] border border-emerald-500/40 text-white px-4 py-2.5 rounded-2xl rounded-tr-sm text-sm font-sans font-medium shadow-lg">
+                <div className="bg-[#092222]/80 backdrop-blur-sm border border-emerald-500/40 text-white px-4 py-2.5 rounded-2xl rounded-tr-sm text-sm font-sans font-medium shadow-lg">
                   {msg.content}
                 </div>
               </div>
@@ -78,7 +78,7 @@ export default function ChatMessageList({
               </div>
 
               {/* Tarjeta del Asistente con acento izquierdo cyan */}
-              <div className="flex-1 bg-[#071218] border border-slate-800/90 border-l-2 border-l-cyan-400 rounded-r-2xl rounded-bl-2xl p-4 sm:p-5 shadow-xl space-y-3.5 text-slate-200">
+              <div className="flex-1 bg-[#071218]/80 backdrop-blur-sm border border-slate-800/90 border-l-2 border-l-cyan-400 rounded-r-2xl rounded-bl-2xl p-4 sm:p-5 shadow-xl space-y-3.5 text-slate-200">
                 {/* Encabezado del Mensaje del Agente */}
                 <div className="flex items-center justify-between pb-1.5 border-b border-slate-800/60 flex-wrap gap-2">
                   <div className="flex items-center gap-2">
@@ -116,7 +116,7 @@ export default function ChatMessageList({
           <div className="w-9 h-9 rounded-xl border border-cyan-500/40 bg-[#081820] flex items-center justify-center shadow-[0_0_12px_rgba(6,182,212,0.2)] flex-shrink-0 mt-1">
             <Sparkles className="w-4 h-4 text-cyan-300" />
           </div>
-          <div className="flex-1 bg-[#071218] border border-slate-800/90 border-l-2 border-l-cyan-400 rounded-r-2xl rounded-bl-2xl p-4 sm:p-5 shadow-xl space-y-3 text-slate-200">
+          <div className="flex-1 bg-[#071218]/80 backdrop-blur-sm border border-slate-800/90 border-l-2 border-l-cyan-400 rounded-r-2xl rounded-bl-2xl p-4 sm:p-5 shadow-xl space-y-3 text-slate-200">
             <div className="flex items-center justify-between pb-1.5 border-b border-slate-800/60">
               <span className="text-xs font-mono font-bold tracking-wider text-white">
                 WOODY QUANT INTEL
@@ -139,7 +139,7 @@ export default function ChatMessageList({
           <div className="w-9 h-9 rounded-xl border border-cyan-500/40 bg-[#081820] flex items-center justify-center shadow-[0_0_12px_rgba(6,182,212,0.2)] flex-shrink-0 mt-1">
             <Sparkles className="w-4 h-4 text-cyan-300 animate-spin" />
           </div>
-          <div className="bg-[#071218] border border-slate-800/90 border-l-2 border-l-cyan-400 rounded-r-2xl rounded-bl-2xl px-4 py-3 shadow-xl flex items-center gap-3">
+          <div className="bg-[#071218]/80 backdrop-blur-sm border border-slate-800/90 border-l-2 border-l-cyan-400 rounded-r-2xl rounded-bl-2xl px-4 py-3 shadow-xl flex items-center gap-3">
             <div className="flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-bounce" style={{ animationDelay: "0ms" }} />
               <span className="w-2 h-2 rounded-full bg-cyan-400 animate-bounce" style={{ animationDelay: "150ms" }} />

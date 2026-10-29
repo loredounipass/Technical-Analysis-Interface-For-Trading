@@ -9,7 +9,7 @@ import React from "react"
  */
 export default function ChatTelemetryBar({ buyerPercent, trendLabel }) {
   return (
-    <div className="px-5 py-2 sm:px-6 bg-[#050c10] border-b border-emerald-500/15 flex items-center justify-between text-xs font-mono z-10 flex-wrap gap-2">
+    <div className="px-5 py-2 sm:px-6 bg-[#050c10]/60 backdrop-blur-sm border-b border-emerald-500/15 flex items-center justify-between text-xs font-mono z-10 flex-wrap gap-2">
       {/* Lado Izquierdo: Estado de vinculación al libro de órdenes y volumen */}
       <div className="flex items-center gap-2 flex-wrap">
         <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#10b981]" />
