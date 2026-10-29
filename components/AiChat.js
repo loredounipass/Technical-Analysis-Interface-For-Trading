@@ -23,7 +23,7 @@ import ChatLauncherButton from "./chat/ChatLauncherButton"
  * - ChatLauncherButton: Botón de reapertura cuando está minimizado
  */
 export default function AiChat({ symbol, datos, interval = "15m", market = "crypto", onAnalysisChange }) {
-  const [isOpen, setIsOpen] = useState(true)
+  const [isOpen, setIsOpen] = useState(false)
 
   const chat = useChatSession({
     symbol,
