@@ -9,7 +9,7 @@ import { Sparkles, BarChart2, Scale, Zap, FileText } from "lucide-react"
  */
 export default function ChatQuickActions({ symbol, interval, onSendQuickAction, disabled }) {
   return (
-    <div className="px-5 py-2.5 sm:px-6 bg-[#050d12] border-t border-emerald-500/10 flex items-center gap-3 overflow-x-auto cyber-scrollbar z-10">
+    <div className="px-5 py-2.5 sm:px-6 bg-[#050d12]/60 backdrop-blur-sm border-t border-emerald-500/10 flex items-center gap-3 overflow-x-auto cyber-scrollbar z-10">
       <div className="flex items-center gap-1.5 text-[11px] font-mono text-slate-400 font-semibold flex-shrink-0">
         <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
         <span>Acciones Rápidas:</span>
