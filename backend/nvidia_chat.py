@@ -13,46 +13,22 @@ NVIDIA_API_BASE = "https://integrate.api.nvidia.com/v1"
 REQUEST_TIMEOUT = 60
 
 AVAILABLE_MODELS = {
-    "nvidia-llama": {
-        "id": "meta/llama-3.1-8b-instruct",
-        "name": "Llama 3.1 8B",
-        "provider": "Meta",
-        "free": True,
-    },
     "nvidia-nemotron": {
         "id": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning",
         "name": "Nemotron 3 Nano Omni",
         "provider": "NVIDIA",
         "free": True,
     },
-    "nvidia-llama-70b": {
-        "id": "meta/llama-3.3-70b-instruct",
-        "name": "Llama 3.3 70B",
+    "meta-muse": {
+        "id": "meta/muse-glimmer-30b",
+        "name": "Muse Glimmer 30B",
         "provider": "Meta",
         "free": True,
     },
-    "nvidia-nemotron-super": {
-        "id": "nvidia/nemotron-3-super-120b-a12b",
-        "name": "Nemotron 3 Super 120B",
-        "provider": "NVIDIA",
-        "free": True,
-    },
-    "nvidia-nemotron-ultra": {
-        "id": "nvidia/nemotron-3-ultra-550b-a55b",
-        "name": "Nemotron 3 Ultra 550B",
-        "provider": "NVIDIA",
-        "free": True,
-    },
-    "nvidia-gpt-oss": {
-        "id": "openai/gpt-oss-20b",
-        "name": "GPT-OSS 20B",
-        "provider": "OpenAI",
-        "free": True,
-    },
-    "nvidia-gpt-oss-120b": {
-        "id": "openai/gpt-oss-120b",
-        "name": "GPT-OSS 120B",
-        "provider": "OpenAI",
+    "google-diffusiongemma": {
+        "id": "google/diffusiongemma-26b-a4b-it",
+        "name": "DiffusionGemma 26B",
+        "provider": "Google",
         "free": True,
     },
 }
@@ -312,7 +288,7 @@ def build_messages(prompt: str, system_prompt: str, history: list | None = None)
 
 def nvidia_chat(
     prompt: str,
-    model_key: str = "nvidia-llama",
+    model_key: str = "nvidia-nemotron",
     temperature: float = 0.3,
     max_tokens: int = 4096,
     history: list | None = None,

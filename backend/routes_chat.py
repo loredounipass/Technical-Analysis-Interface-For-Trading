@@ -77,7 +77,7 @@ def chat_endpoint():
     prompt = data.get('prompt', '').strip()
     if not prompt:
         return jsonify({'error': 'prompt is required'}), 400
-    model_key = data.get('model', 'nvidia-llama')
+    model_key = data.get('model', 'nvidia-nemotron')
     symbol = data.get('symbol', 'BTCUSDT')
     interval = data.get('interval', '15m')
     market = data.get('market', 'crypto')

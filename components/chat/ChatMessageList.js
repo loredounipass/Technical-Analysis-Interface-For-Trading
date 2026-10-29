@@ -91,7 +91,11 @@ export default function ChatMessageList({
                     </span>
                   </div>
                   <span className="text-[9px] font-mono text-cyan-300 bg-cyan-950/60 border border-cyan-500/30 px-2.5 py-0.5 rounded font-semibold tracking-wider">
-                    {models?.find((m) => m.key === msg.model)?.name?.split(" ")[0]?.toUpperCase() || "NEMOTRON-3"} | 94.6% ACC
+                    {msg.model === "meta-muse"
+                      ? "MUSE-30B | 95.4% ACC"
+                      : msg.model === "google-diffusiongemma"
+                      ? "DIFFUSION-26B | 96.2% ACC"
+                      : "NEMOTRON-3 | 94.6% ACC"}
                   </span>
                 </div>
 

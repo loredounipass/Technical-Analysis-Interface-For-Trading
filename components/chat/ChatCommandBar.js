@@ -24,7 +24,12 @@ export default function ChatCommandBar({
   interval,
   selectedModel,
 }) {
-  const modelEngine = selectedModel?.toUpperCase().replace("NVIDIA-", "") || "NEMOTRON-3"
+  const modelEngine =
+    selectedModel === "meta-muse"
+      ? "MUSE-GLIMMER-30B"
+      : selectedModel === "google-diffusiongemma"
+      ? "DIFFUSIONGEMMA-26B"
+      : "NEMOTRON-3"
 
   return (
     <div className="px-5 py-3 sm:px-6 bg-[#050c10]/70 backdrop-blur-md border-t border-emerald-500/15 space-y-2 z-10">
