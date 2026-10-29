@@ -23,7 +23,7 @@ export default function ChatSessionsDrawer({
       onClick={onClose}
     >
       <div
-        className="w-72 h-full bg-[#070e13] border-r border-emerald-500/30 flex flex-col p-4 space-y-3"
+        className="w-72 h-full bg-[#070e13]/90 backdrop-blur-md border-r border-emerald-500/30 flex flex-col p-4 space-y-3"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between pb-3 border-b border-slate-800">
