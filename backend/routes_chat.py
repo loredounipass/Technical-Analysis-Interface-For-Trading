@@ -90,8 +90,24 @@ def chat_endpoint():
     # Fetch the latest indicator data for the current symbol
     indicator_data = None
     try:
-        indicator_data = _get_cached_fn(symbol, interval, market)
+        frontend_data = data.get('indicator_data')
+        cached_data = _get_cached_fn(symbol, interval, market) if _get_cached_fn else {}
+        
+        # Merge: usar datos cacheados/frescos del backend y sobreescribir con datos en vivo del frontend
+        if cached_data and isinstance(cached_data, dict):
+            indicator_data = dict(cached_data)
+        else:
+            indicator_data = {}
+            
+        if frontend_data and isinstance(frontend_data, dict) and frontend_data.get('precio'):
+            for k, v in frontend_data.items():
+                if v is not None:
+                    indicator_data[k] = v
+
         indicator_data['symbol'] = symbol
+        indicator_data['timeframe'] = interval
+        indicator_data['market'] = market
+
         # El agente tambien ve el MISMO activo en TODAS las temporalidades
         # (snapshots compactos desde la cache) para evaluar alineacion de
         # tendencias entre marcos: la primera llamada por timeframe puede
@@ -100,8 +116,10 @@ def chat_endpoint():
             symbol, interval, market
         )
     except Exception as e:
-        # If we can't get indicator data, continue without it
-        indicator_data = {'symbol': symbol, 'error': str(e)}
+        # If we can't get indicator data, continue with whatever we have
+        logger.warning(f"[Chat] Error obteniendo indicator_data: {e}")
+        if not indicator_data:
+            indicator_data = data.get('indicator_data') or {'symbol': symbol, 'error': str(e)}
 
     # Primer intento con historial completo
     try:

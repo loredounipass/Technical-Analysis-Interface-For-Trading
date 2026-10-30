@@ -60,17 +60,19 @@ def get_trading_system_prompt(indicator_data=None, global_context=None, model_na
     base += (
         "=== PROFESSIONAL ANALYSIS FRAMEWORK ===\n"
         "When performing an analysis, you MUST structure your response professionally using Markdown headers, bullet points, and bold text for readability. Use the following structure for full analyses:\n"
-        "### 📊 Executive Summary\n"
-        "A concise 1-2 sentence overview of the current market state and the primary recommendation.\n\n"
-        "### 🔍 Technical Breakdown\n"
-        "Analyze the data provided in detail. Use bullet points for:\n"
-        "- **Trend & Structure:** (EMAs, Price Action)\n"
-        "- **Momentum:** (RSI, Stochastic, MACD)\n"
-        "- **Volatility:** (Bollinger Bands, ADX)\n\n"
-        "### 🎯 Key Levels\n"
-        "Clearly state the immediate Support and Resistance zones based on Pivot Points.\n\n"
-        "### 💡 Strategic Recommendation\n"
-        "Provide highly actionable advice (BUY / SELL / HOLD / WAIT) with logical Entry zones, Stop Loss (SL), and Take Profit (TP) targets based on risk/reward.\n\n"
+        "### 📊 Resumen Ejecutivo & Señal de Mercado\n"
+        "Un panorama conciso de 1-2 oraciones del estado del mercado, contrastando el **MARKET SIGNAL** actual (COMPRA / VENTA / NEUTRAL) y el ratio de flujo de presión compradora/vendedora.\n\n"
+        "### 💧 Mapa de Liquidez & Order Book (Bubble Map)\n"
+        "Analiza la distribución del libro de órdenes: dominancia compradora vs vendedora, volumen acumulado y los principales muros de liquidez (clusters de soporte en bids y de resistencia en asks) identificados en el Bubble Map.\n\n"
+        "### 🔍 Desglose Técnico Completo\n"
+        "Analiza detalladamente todos los indicadores suministrados:\n"
+        "- **Estructura & Tendencia:** EMAs (50, 100, 200) y Price Action.\n"
+        "- **Momentum & Timing:** RSI (14), Stochastic RSI, Oscilador Estocástico (%K / %D), MACD (línea, señal e histograma) y CCI (20).\n"
+        "- **Volatilidad & Fuerza:** Bandas de Bollinger (20, 2σ) y ADX (14) con sus fuerzas direccionales (+DI / -DI).\n\n"
+        "### 🎯 Niveles Clave (Soporte & Resistencia)\n"
+        "Declara claramente las zonas inmediatas de Soporte (S1, S2, S3) y Resistencia (R1, R2, R3) basadas en Pivots y reforzadas por la liquidez del Order Book.\n\n"
+        "### 💡 Recomendación Estratégica\n"
+        "Provee asesoramiento altamente accionable (COMPRA / VENTA / MANTENER / ESPERAR) con zonas lógicas de Entrada, Stop Loss (SL) y objetivos de Take Profit (TP) basados en riesgo/beneficio.\n\n"
         "=== OPERATIONAL RULES & PERSONALITY ===\n"
         "- Respond in the SAME LANGUAGE as the user.\n"
         "- **BE HIGHLY STRUCTURED AND ELABORATE**: Your answers must look like a premium quantitative report from an institutional trading desk. Use beautiful, organized formatting.\n"
@@ -91,34 +93,76 @@ def get_trading_system_prompt(indicator_data=None, global_context=None, model_na
         lows = hist.get('lows') or []
         closes = hist.get('closes') or []
 
-        data_block = "\n📊 [EXACT MARKET DATA FEED - REAL-TIME SOURCE OF TRUTH]\n"
+        # MARKET SIGNAL computation (identico a RecommendationCard)
+        buy_sig = int(indicator_data.get('buySignals') or 0)
+        sell_sig = int(indicator_data.get('sellSignals') or 0)
+        neutral_sig = int(indicator_data.get('neutralSignals') or 0)
+        total_sig = buy_sig + sell_sig + neutral_sig
+        if buy_sig > sell_sig:
+            market_signal = "COMPRA"
+            market_signal_summary = "Predominancia alcista de corto plazo"
+        elif sell_sig > buy_sig:
+            market_signal = "VENTA"
+            market_signal_summary = "Predominancia bajista de corto plazo"
+        else:
+            market_signal = "NEUTRAL"
+            market_signal_summary = "Consolidación neutral de mercado"
+
+        active_total = buy_sig + sell_sig
+        if active_total > 0:
+            bullish_flow = (buy_sig / active_total) * 100
+            bearish_pressure = (sell_sig / active_total) * 100
+        elif total_sig > 0:
+            bullish_flow = (buy_sig / total_sig) * 100
+            bearish_pressure = (sell_sig / total_sig) * 100
+        else:
+            bullish_flow = 50.0
+            bearish_pressure = 50.0
+
+        # LIQUIDITY BUBBLE MAP & ORDER BOOK
+        buyer_pct = indicator_data.get('buyerPercent')
+        buyer_pct_str = f"{float(buyer_pct):.1f}%" if buyer_pct is not None else f"{bullish_flow:.1f}%"
+        bid_vol = indicator_data.get('bidVolume')
+        ask_vol = indicator_data.get('askVolume')
+        best_bid = indicator_data.get('bestBid')
+        best_ask = indicator_data.get('bestAsk')
+        ob_source = indicator_data.get('orderBookSource', 'order_book' if market == 'crypto' else 'volume_proxy')
+        depth_raw = indicator_data.get('depthRaw')
+        liquidity_walls = _format_liquidity_clusters(depth_raw, decimals=2)
+
+        data_block = "\n📊 [EXACT MARKET DATA FEED & LIVE INDICATORS - SOURCE OF TRUTH]\n"
         data_block += f"| CORE METRIC | VALUE | CONTEXT |\n"
         data_block += f"| :--- | :--- | :--- |\n"
-        data_block += f"| Symbol | {indicator_data.get('symbol', 'N/A')} | Pair |\n"
-        data_block += f"| Asset Type | {market} | crypto (spot USDT) or stock (NYSE/NASDAQ) |\n"
-        data_block += f"| Timeframe | {indicator_data.get('timeframe', 'N/A')} | Candle interval (CRITICAL: all indicator values below correspond to this timeframe) |\n"
-        data_block += f"| Data Timestamp | {_fmt_ts(last_ts)} | Last candle open time (UTC) |\n"
-        data_block += f"| Current Price | {indicator_data.get('precio', 'N/A')} | Spot |\n"
-        data_block += f"| 24h Volume | {_format_compact(indicator_data.get('volumen'))} | {'USDT quote volume' if market == 'crypto' else 'shares volume'} |\n"
-        data_block += f"| Last Candle OHLC | O {_fmt(opens[-1] if opens else None)} H {_fmt(highs[-1] if highs else None)} L {_fmt(lows[-1] if lows else None)} C {_fmt(closes[-1] if closes else None)} | Forming candle |\n"
-        data_block += f"| RSI (14) | {indicator_data.get('rsi', 'N/A')} | Momentum |\n"
-        data_block += f"| Stoch RSI K (14, 3, 3) | {indicator_data.get('rsiStoch', 'N/A')} | Timing |\n"
-        data_block += f"| Stoch K / D (14, 3, 3) | {indicator_data.get('stochK', '0')} / {indicator_data.get('stochD', '0')} | Overbought/Oversold |\n"
-        data_block += f"| CCI (20) | {indicator_data.get('cci', 'N/A')} | Trend Deviation |\n"
-        data_block += f"| MACD Line (12, 26, 9) | {indicator_data.get('macdValue', 'N/A')} | Trend Direction |\n"
-        data_block += f"| MACD Signal (12, 26, 9) | {indicator_data.get('macdSignal', 'N/A')} | Trigger Line |\n"
-        data_block += f"| MACD Histogram (12, 26, 9) | {indicator_data.get('macdHistogram', 'N/A')} | Momentum Acceleration |\n"
-        data_block += f"| ADX (14) | {indicator_data.get('adx', 'N/A')} | Trend Strength |\n"
-        data_block += f"| ADX +DI / -DI (14) | {indicator_data.get('plusDi', 'N/A')} / {indicator_data.get('minusDi', 'N/A')} | Bullish / Bearish Directional Force |\n"
-        data_block += f"| Bollinger Upper (20, 2σ) | {indicator_data.get('bbUpper', 'N/A')} | Resistance Ceiling |\n"
-        data_block += f"| Bollinger Middle (20, 2σ) | {indicator_data.get('bbMiddle', 'N/A')} | Mean Reversion |\n"
-        data_block += f"| Bollinger Lower (20, 2σ) | {indicator_data.get('bbLower', 'N/A')} | Support Floor |\n"
-        data_block += f"| EMA 50 / 100 / 200 | {indicator_data.get('ema50', 'N/A')} / {indicator_data.get('ema100', 'N/A')} / {indicator_data.get('ema200', 'N/A')} | Moving Averages |\n"
-        data_block += f"| Pivot Points (R) | R1: {_val(indicator_data, 'r1')} | R2: {_val(indicator_data, 'r2')} | R3: {_val(indicator_data, 'r3')} |\n"
-        data_block += f"| Pivot Points (S) | S1: {_val(indicator_data, 's1')} | S2: {_val(indicator_data, 's2')} | S3: {_val(indicator_data, 's3')} |\n"
-        data_block += f"| Summary Signals | BUY: {indicator_data.get('buySignals')} | SELL: {indicator_data.get('sellSignals')} | NEUTRAL: {indicator_data.get('neutralSignals')} |\n"
+        data_block += f"| Symbol & Market | {indicator_data.get('symbol', 'N/A')} ({market.upper()}) | Trading pair / asset |\n"
+        data_block += f"| Timeframe | {indicator_data.get('timeframe', 'N/A')} | Candle interval (all indicator values correspond to this timeframe) |\n"
+        data_block += f"| Current Spot Price | ${_fmt(indicator_data.get('precio'))} | Live Spot Price |\n"
+        data_block += f"| 24h Volume | {_format_compact(indicator_data.get('volumen'))} | {'USDT turnover' if market == 'crypto' else 'Shares volume'} |\n"
+        data_block += f"| MARKET SIGNAL | **{market_signal}** | {market_signal_summary} |\n"
+        data_block += f"| Signal Counts | {buy_sig} BUY \| {neutral_sig} HOLD \| {sell_sig} SELL | Total Signals: {total_sig} |\n"
+        data_block += f"| Flow Ratio | {bullish_flow:.1f}% Bullish Flow \| {bearish_pressure:.1f}% Bearish Pressure | Order flow pressure |\n"
+        data_block += f"| LIQUIDITY BUBBLE MAP | Buyer Dominance: {buyer_pct_str} | Depth Source: {ob_source} |\n"
+        if bid_vol is not None and ask_vol is not None:
+            data_block += f"| Order Book Bid/Ask Vol | Bids: {_format_compact(bid_vol)} USDT \| Asks: {_format_compact(ask_vol)} USDT | Aggregate 40-level depth |\n"
+        if best_bid is not None and best_ask is not None:
+            data_block += f"| Best Bid / Best Ask | ${_fmt(best_bid)} / ${_fmt(best_ask)} | Spread: {abs(float(best_ask) - float(best_bid)):.4f} USDT |\n"
+        if liquidity_walls:
+            data_block += f"| Top Bid Liquidity Walls | {liquidity_walls['top_bids']} | Major support/demand zones in Bubble Map |\n"
+            data_block += f"| Top Ask Liquidity Walls | {liquidity_walls['top_asks']} | Major resistance/supply zones in Bubble Map |\n"
+        data_block += f"| Last Candle OHLC | O: {_fmt(opens[-1] if opens else None)} H: {_fmt(highs[-1] if highs else None)} L: {_fmt(lows[-1] if lows else None)} C: {_fmt(closes[-1] if closes else None)} | Forming candle |\n"
+        data_block += f"| RSI (14) | {_fmt(indicator_data.get('rsi'))} | Momentum Oscillator (OS <30, OB >70) |\n"
+        data_block += f"| Stoch RSI (14, 3, 3) | {_fmt(indicator_data.get('rsiStoch'))} | Stochastic RSI (OS <20, OB >80) |\n"
+        data_block += f"| Stochastic (14, 3, 3) | %K: {_fmt(indicator_data.get('stochK'))} / %D: {_fmt(indicator_data.get('stochD'))} | Fast/Slow Stochastic Oscillator |\n"
+        data_block += f"| CCI (20) | {_fmt(indicator_data.get('cci'))} | Commodity Channel Index (OS <-100, OB >100) |\n"
+        data_block += f"| MACD (12, 26, 9) | Line: {_fmt(indicator_data.get('macdValue'))} \| Signal: {_fmt(indicator_data.get('macdSignal'))} | MACD trend line & trigger line |\n"
+        data_block += f"| MACD Histogram (12, 26, 9)| {_fmt(indicator_data.get('macdHistogram'))} | Momentum acceleration (>0 Bullish, <0 Bearish) |\n"
+        data_block += f"| ADX (14) Trend Strength | {_fmt(indicator_data.get('adx'))} | Trend Strength (>25 Trend, <25 Consolidation) |\n"
+        data_block += f"| ADX Directional Force | +DI: {_fmt(indicator_data.get('plusDi'))} / -DI: {_fmt(indicator_data.get('minusDi'))} | Directional Movement Index |\n"
+        data_block += f"| Bollinger Bands (20, 2σ) | Upper: ${_fmt(indicator_data.get('bbUpper'))} \| Mid: ${_fmt(indicator_data.get('bbMiddle'))} \| Lower: ${_fmt(indicator_data.get('bbLower'))} | Volatility envelope |\n"
+        data_block += f"| Moving Averages | EMA50: ${_fmt(indicator_data.get('ema50'))} \| EMA100: ${_fmt(indicator_data.get('ema100'))} \| EMA200: ${_fmt(indicator_data.get('ema200'))} | Trend bias & dynamic S/R |\n"
+        data_block += f"| Support Levels (Pivots) | S1: ${_fmt(indicator_data.get('s1'))} \| S2: ${_fmt(indicator_data.get('s2'))} \| S3: ${_fmt(indicator_data.get('s3'))} | Key dynamic support floors |\n"
+        data_block += f"| Resistance Levels (Pivots)| R1: ${_fmt(indicator_data.get('r1'))} \| R2: ${_fmt(indicator_data.get('r2'))} \| R3: ${_fmt(indicator_data.get('r3'))} | Key dynamic resistance ceilings |\n"
         
-        data_block += "\nUse THESE EXACT VALUES for your analysis. If the user asks for a specific indicator (like CCI or Stochastics), reference these values from the table.\n"
+        data_block += "\nUse THESE EXACT VALUES for your analysis. You MUST synthesize the MARKET SIGNAL and the LIQUIDITY BUBBLE MAP along with ALL technical indicators above.\n"
         base += data_block
 
         # Contexto multi-temporalidad: el MISMO activo en todas las temporalidades
@@ -160,6 +204,33 @@ def get_trading_system_prompt(indicator_data=None, global_context=None, model_na
             base += "\nUse these series to confirm trends, spot crossovers, divergences, and momentum shifts. They are the source of truth for the exact numbers above.\n"
 
     return base
+
+
+def _format_liquidity_clusters(depth_raw, decimals=2):
+    """Extrae los principales muros de liquidez del Bubble Map para el prompt del agente."""
+    if not depth_raw or not isinstance(depth_raw, dict):
+        return None
+    bids = depth_raw.get('bids') or []
+    asks = depth_raw.get('asks') or []
+    if not bids and not asks:
+        return None
+    try:
+        bid_clusters = sorted(
+            [(float(p), float(q) * float(p)) for p, q in bids if float(q) > 0],
+            key=lambda x: x[1],
+            reverse=True
+        )[:3]
+        ask_clusters = sorted(
+            [(float(p), float(q) * float(p)) for p, q in asks if float(q) > 0],
+            key=lambda x: x[1],
+            reverse=True
+        )[:3]
+        bid_str = ", ".join(f"${p:.{decimals}f} ({_format_compact(v)} USDT)" for p, v in bid_clusters) if bid_clusters else "N/A"
+        ask_str = ", ".join(f"${p:.{decimals}f} ({_format_compact(v)} USDT)" for p, v in ask_clusters) if ask_clusters else "N/A"
+        return {"top_bids": bid_str, "top_asks": ask_str}
+    except Exception as e:
+        logger.warning(f"[NvidiaChat] Error calculando clusters de liquidez: {e}")
+        return None
 
 
 def _format_recent(history, key, decimals=2):
