@@ -95,7 +95,7 @@ export default function Dashboard({ moneda, market = "crypto", onCambiarMoneda }
             <span className="w-3 h-3 rounded-full bg-[#00f5c4] animate-ping" />
           </div>
           <div className="text-white text-sm font-bold tracking-[0.25em] animate-pulse">
-            SYNAPSE • LOADING FEED...
+            SYNAPSE TERMINAL • LOADING FEED...
           </div>
         </div>
       </div>
