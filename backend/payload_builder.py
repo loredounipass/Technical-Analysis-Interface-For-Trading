@@ -2,7 +2,7 @@
 a partir de klines crudas.
 
 Funcion pura reutilizable: el hilo de streaming la invoca para recalcular
-con la vela viva de Binance sin hacer re-fetch REST.
+con la vela viva del exchange sin hacer re-fetch REST.
 """
 
 import time
@@ -201,7 +201,7 @@ def build_payload(symbol, interval_str, market, klines, vol_24h=None):
 
     # ────────────────────────────────────────────────────────────────
     # LIBRO DE ÓRDENES REAL + DOMINANCIA COMPRADORA
-    # Crypto: profundidad de Binance (bids/asks reales, 20 niveles).
+    # Crypto: profundidad de Coinbase (bids/asks reales, 20 niveles; fallback Binance).
     # Stocks: Yahoo no expone depth público → proxy direccional con el
     # volumen real de las últimas velas (alcistas = comprador, bajistas = vendedor).
     # ────────────────────────────────────────────────────────────────
@@ -222,7 +222,7 @@ def build_payload(symbol, interval_str, market, klines, vol_24h=None):
                 ask_vol = sum(q * p for p, q in asks[:20])
                 best_bid = bids[0][0]
                 best_ask = asks[0][0]
-                ob_source = 'binance_depth'
+                ob_source = 'order_book'
         except Exception as e:
             logger.warning(f"[TradingData] order book fallo para {symbol}: {e}")
 

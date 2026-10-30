@@ -147,9 +147,9 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
     return {
       buyerPercent,
       trendLabel,
-      // Estado real del libro de órdenes: binance_depth = vinculado al libro
-      // real; volume_proxy = estimación direccional con volumen de velas.
-      orderBookLinked: datos?.orderBookSource === "binance_depth",
+      // Estado real del libro de órdenes: order_book = vinculado al libro
+      // real (Coinbase/Binance); volume_proxy = estimación direccional con velas.
+      orderBookLinked: !!datos?.orderBookSource && datos.orderBookSource !== "volume_proxy",
       orderBookSource: datos?.orderBookSource || null,
       diagnostic: {
         rsiValue: rsiVal,

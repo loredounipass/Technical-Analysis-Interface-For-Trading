@@ -1,6 +1,7 @@
 """Data fetchers: funciones que obtienen datos de mercado desde APIs externas.
 
-Binance (klines REST, ticker 24h) y Yahoo Finance (charts OHLCV).
+Coinbase Exchange / Advanced Trade (fuente PRIMARIA de crypto: API pública,
+sin API key), Binance (fallback de crypto) y Yahoo Finance (stocks).
 Funciones puras de I/O: no tocan cache, no dependen de Flask.
 """
 
@@ -54,13 +55,27 @@ def fetch_quote_volume_24h(symbol):
         cached = _ticker_cache.get(symbol)
         if cached and now - cached[0] <= TICKER_TTL:
             return cached[1]
-    resp = requests.get(
-        'https://data-api.binance.vision/api/v3/ticker/24hr',
-        params={'symbol': symbol},
-        timeout=8,
-    )
-    resp.raise_for_status()
-    quote_volume = float(resp.json()['quoteVolume'])
+    quote_volume = None
+    try:
+        # Coinbase ticker: volume = volumen BASE 24h; quote ~ base * precio
+        product = coinbase_product_id(symbol)
+        resp = requests.get(
+            f'{COINBASE_BASE}/products/{product}/ticker',
+            headers=COINBASE_HEADERS, timeout=8,
+        )
+        resp.raise_for_status()
+        td = resp.json()
+        quote_volume = float(td['volume']) * float(td['price'])
+    except Exception as e:
+        logger.warning(f"[TradingData] Coinbase ticker 24h fallo para {symbol}: {e}")
+    if quote_volume is None:
+        resp = requests.get(
+            'https://data-api.binance.vision/api/v3/ticker/24hr',
+            params={'symbol': symbol},
+            timeout=8,
+        )
+        resp.raise_for_status()
+        quote_volume = float(resp.json()['quoteVolume'])
     with _ticker_lock:
         _ticker_cache[symbol] = (time.time(), quote_volume)
     return quote_volume
@@ -70,6 +85,74 @@ def update_ticker_cache(symbol, quote_volume):
     """Permite al stream de Binance actualizar el sub-cache del ticker."""
     with _ticker_lock:
         _ticker_cache[symbol] = (time.time(), float(quote_volume))
+
+
+# ─────────────────────────────────────────────────────────────────────
+# COINBASE (fuente primaria de crypto: API pública, sin API key)
+# ─────────────────────────────────────────────────────────────────────
+COINBASE_BASE = 'https://api.exchange.coinbase.com'
+COINBASE_ADV_BASE = 'https://api.coinbase.com/api/v3/brokerage/market'
+COINBASE_HEADERS = {'User-Agent': 'woody-quant/1.0', 'Accept': 'application/json'}
+# Granularidad en segundos que acepta /products/{id}/candles
+COINBASE_GRANULARITY = {'1m': 60, '5m': 300, '15m': 900, '1h': 3600, '4h': 21600, '1d': 86400}
+COINBASE_PAGE = 300  # max velas por peticion de /candles
+
+
+def coinbase_product_id(symbol):
+    """BTCUSDT -> BTC-USD (Coinbase cotiza contra USD, no USDT)."""
+    base = symbol[:-4] if symbol.endswith('USDT') else symbol
+    return f"{base}-USD"
+
+
+def fetch_coinbase_klines(symbol, interval_str='15m'):
+    """Velas paginadas de Coinbase convertidas al formato kline de Binance
+    ([ts_ms, open, high, low, close, vol_base, close_time, quote_vol, ...]),
+    para que el resto del pipeline no cambie."""
+    product = coinbase_product_id(symbol)
+    gran = COINBASE_GRANULARITY.get(interval_str, 900)
+    # ~2000 velas (igual que la paginacion Binance) para que EMA(200)/MACD/ADX converjan
+    pages = 7
+    end = int(time.time())
+    seen = set()
+    candles = []
+    for _ in range(pages):
+        start = end - COINBASE_PAGE * gran
+        resp = requests.get(
+            f'{COINBASE_BASE}/products/{product}/candles',
+            params={'granularity': gran, 'start': start, 'end': end},
+            headers=COINBASE_HEADERS,
+            timeout=15,
+        )
+        resp.raise_for_status()
+        rows = resp.json()
+        if not isinstance(rows, list) or not rows:
+            break
+        oldest = None
+        for row in rows:
+            # Coinbase: [time(s), low, high, open, close, volume_base], mas nuevo primero
+            ts = int(row[0])
+            if ts in seen:
+                continue
+            seen.add(ts)
+            candles.append(row)
+            if oldest is None or ts < oldest:
+                oldest = ts
+        if oldest is None:
+            break
+        end = oldest  # la siguiente pagina termina donde empieza esta
+    if not candles:
+        raise ValueError(f'Coinbase devolvio 0 velas para {product}')
+    candles.sort(key=lambda r: r[0])
+    klines = []
+    for ts, low, high, open_, close, vol in candles:
+        ts_ms = int(ts) * 1000
+        close_f = float(close)
+        vol_f = float(vol)
+        klines.append([
+            ts_ms, str(open_), str(high), str(low), str(close), str(vol),
+            ts_ms + gran * 1000, str(vol_f * close_f), 0, '0', '0', '0',
+        ])
+    return klines
 
 
 # LIBRO DE ÓRDENES REAL (Binance depth). El endpoint devuelve hasta 100 niveles
@@ -82,21 +165,44 @@ _depth_lock = threading.Lock()
 
 
 def fetch_order_book_depth(symbol):
-    """Devuelve el libro de órdenes real de Binance:
+    """Devuelve el libro de órdenes real:
     {'bids': [[price, qty], ...], 'asks': [[price, qty], ...]}.
-    None si falla (el payload cae al proxy de volumen de velas)."""
+    Fuente primaria: Coinbase Advanced Trade (público, limit configurable).
+    Fallback: Binance depth. None si ambos fallan (proxy de volumen)."""
     now = time.time()
     with _depth_lock:
         cached = _depth_cache.get(symbol)
         if cached and now - cached[0] <= DEPTH_TTL:
             return cached[1]
-    resp = requests.get(
-        'https://data-api.binance.vision/api/v3/depth',
-        params={'symbol': symbol, 'limit': 100},
-        timeout=8,
-    )
-    resp.raise_for_status()
-    data = resp.json()
+    data = None
+    try:
+        product = coinbase_product_id(symbol)
+        resp = requests.get(
+            f'{COINBASE_ADV_BASE}/product_book',
+            params={'product_id': product, 'limit': 50},
+            headers=COINBASE_HEADERS,
+            timeout=10,
+        )
+        resp.raise_for_status()
+        book = resp.json().get('pricebook', {})
+        bids = [[b['price'], b['size']] for b in book.get('bids', [])]
+        asks = [[a['price'], a['size']] for a in book.get('asks', [])]
+        if bids and asks:
+            data = {'bids': bids, 'asks': asks}
+    except Exception as e:
+        logger.warning(f"[TradingData] Coinbase book fallo para {symbol}: {e}")
+    if data is None:
+        try:
+            resp = requests.get(
+                'https://data-api.binance.vision/api/v3/depth',
+                params={'symbol': symbol, 'limit': 100},
+                timeout=8,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+        except Exception as e:
+            logger.warning(f"[TradingData] Binance depth fallo para {symbol}: {e}")
+            return None
     with _depth_lock:
         _depth_cache[symbol] = (time.time(), data)
     return data
@@ -188,6 +294,16 @@ def fetch_last_price(symbol, market):
         if bars:
             return float(bars[-1][4])
         raise ValueError(f'Yahoo Finance sin datos para {symbol}')
+    try:
+        product = coinbase_product_id(symbol)
+        r = requests.get(
+            f'{COINBASE_BASE}/products/{product}/ticker',
+            headers=COINBASE_HEADERS, timeout=8,
+        )
+        r.raise_for_status()
+        return float(r.json()['price'])
+    except Exception as e:
+        logger.warning(f"[TradingData] Coinbase last price fallo para {symbol}: {e}")
     url = 'https://data-api.binance.vision/api/v3/ticker/price'
     resp = requests.get(url, params={'symbol': symbol}, timeout=8)
     resp.raise_for_status()
@@ -203,22 +319,28 @@ def fetch_klines_and_volume(symbol, interval_str, market):
         if market == 'stock':
             klines = fetch_yahoo_chart(symbol, interval_str)
         else:
-            # Binance permite hasta 1000 velas por llamada. Se pide una pagina
-            # adicional mas antigua (2000 total) para que EMA(200)/MACD/ADX
-            # converjan a los mismos valores que TradingView/Binance.
-            klines = fetch_klines(symbol, interval=interval_str, limit=1000)
-            if klines and len(klines) >= 1000:
-                try:
-                    older = fetch_klines(
-                        symbol,
-                        interval=interval_str,
-                        limit=1000,
-                        end_time=int(klines[0][0]) - 1,
-                    )
-                    if older:
-                        klines = older + klines
-                except Exception as e:
-                    logger.warning(f"[TradingData] pagina extra fallo para {symbol}: {e}")
+            try:
+                klines = fetch_coinbase_klines(symbol, interval_str)
+            except Exception as e:
+                logger.warning(f"[TradingData] Coinbase klines fallo para {symbol}, usando Binance: {e}")
+                klines = None
+            if klines is None:
+                # Binance permite hasta 1000 velas por llamada. Se pide una pagina
+                # adicional mas antigua (2000 total) para que EMA(200)/MACD/ADX
+                # converjan a los mismos valores que TradingView/Binance.
+                klines = fetch_klines(symbol, interval=interval_str, limit=1000)
+                if klines and len(klines) >= 1000:
+                    try:
+                        older = fetch_klines(
+                            symbol,
+                            interval=interval_str,
+                            limit=1000,
+                            end_time=int(klines[0][0]) - 1,
+                        )
+                        if older:
+                            klines = older + klines
+                    except Exception as e:
+                        logger.warning(f"[TradingData] pagina extra fallo para {symbol}: {e}")
     except Exception as e:
         logger.warning(f"[TradingData] klines fallo para {symbol} ({market}): {e}")
 

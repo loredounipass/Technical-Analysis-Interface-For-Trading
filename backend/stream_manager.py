@@ -1,11 +1,11 @@
-"""Gestor y orquestador de streams en tiempo real (Binance WS + Yahoo Finance WS).
+"""Gestor y orquestador de streams en tiempo real (Coinbase WS + Yahoo Finance WS).
 
 Centraliza la configuración y el cableado de callbacks para los streams
 de mercado en vivo, desacoplando app.py de los detalles de streaming.
 """
 
 from sockets import subscriber_rooms
-from binance_stream import init_binance_stream
+from coinbase_stream import init_coinbase_stream
 from yahoo_stream import init_yahoo_stream
 from data_fetchers import (
     fetch_klines_and_volume, fetch_quote_volume_24h, update_ticker_cache,
@@ -17,10 +17,11 @@ STREAM_TIMEFRAMES = ['1m', '5m', '15m', '1h', '4h', '1d']
 
 
 def init_market_streams(socketio):
-    """Inicializa los streams en tiempo real de Binance (crypto) y Yahoo Finance (stocks)."""
-    # STREAMING EN TIEMPO REAL DE BINANCE: actualiza la caché y emite a las salas
-    # con la vela viva (klines + volumen 24h) sin hacer re-fetch REST.
-    init_binance_stream(
+    """Inicializa los streams en tiempo real de Coinbase (crypto) y Yahoo Finance (stocks)."""
+    # STREAMING EN TIEMPO REAL DE COINBASE: actualiza la caché y emite a las salas
+    # con la vela viva (trades + volumen 24h) sin hacer re-fetch REST. Misma
+    # fuente que el REST de crypto, asi que no se mezclan exchanges.
+    init_coinbase_stream(
         socketio,
         {
             'fetch_klines_vol': lambda s, iv, m: fetch_klines_and_volume(s, iv, m),
