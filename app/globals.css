@@ -6,6 +6,11 @@
 
 @layer base {
   :root {
+    /* Fuentes definidas aquí (carga en runtime vía @import) para evitar
+       descargas de Google Fonts durante el build de Docker/Render */
+    --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --font-serif: "Newsreader", "Iowan Old Style", Georgia, Cambria, serif;
+    --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
     --background: 220 30% 5%;
     --foreground: 220 15% 95%;
     --card: 220 28% 9%;
