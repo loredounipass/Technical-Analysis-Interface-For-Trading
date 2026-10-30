@@ -216,41 +216,45 @@ export default function ChatQuickActions({ symbol, interval, onSendQuickAction, 
               </button>
             </div>
 
-            {/* Contenido dividido en Estrategias y Análisis */}
-            <div className="px-5 py-4 space-y-5">
-              {/* Sección: Estrategias */}
-              <section>
-                <div className="flex items-center gap-2 mb-2.5">
-                  <Zap className="w-3.5 h-3.5 text-emerald-400" />
-                  <span className="text-[10px] font-mono font-bold tracking-widest text-emerald-300 uppercase">
-                    Estrategias de Trading
-                  </span>
-                  <span className="text-[9px] font-mono text-slate-500 bg-slate-900/60 border border-slate-800 px-1.5 py-0.5 rounded-full">
-                    {strategies.length}
-                  </span>
-                  <div className="flex-1 h-px bg-gradient-to-r from-emerald-500/30 to-transparent" />
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  {strategies.map(renderAction)}
-                </div>
-              </section>
-
-              {/* Sección: Análisis */}
-              <section>
-                <div className="flex items-center gap-2 mb-2.5">
-                  <BarChart2 className="w-3.5 h-3.5 text-cyan-400" />
+            {/* Contenido: dos cuadros separados — 1) ANÁLISIS 2) ESTRATEGIAS */}
+            <div className="px-5 py-4 space-y-4">
+              {/* Cuadro 1: Análisis Técnico */}
+              <div className="rounded-xl border border-cyan-500/25 bg-[#071218]/50 p-3.5 shadow-lg">
+                <div className="flex items-center gap-2.5 mb-3">
+                  <div className="w-7 h-7 rounded-lg bg-cyan-950/50 border border-cyan-500/30 flex items-center justify-center flex-shrink-0">
+                    <BarChart2 className="w-3.5 h-3.5 text-cyan-400" />
+                  </div>
                   <span className="text-[10px] font-mono font-bold tracking-widest text-cyan-300 uppercase">
-                    Análisis Técnico
-                  </span>
-                  <span className="text-[9px] font-mono text-slate-500 bg-slate-900/60 border border-slate-800 px-1.5 py-0.5 rounded-full">
-                    {analyses.length}
+                    1 · Análisis Técnico
                   </span>
                   <div className="flex-1 h-px bg-gradient-to-r from-cyan-500/30 to-transparent" />
+                  <span className="text-[9px] font-mono text-slate-500 bg-slate-900/60 border border-slate-800 px-1.5 py-0.5 rounded-full flex-shrink-0">
+                    {analyses.length}
+                  </span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   {analyses.map(renderAction)}
                 </div>
-              </section>
+              </div>
+
+              {/* Cuadro 2: Estrategias de Trading */}
+              <div className="rounded-xl border border-emerald-500/25 bg-[#071218]/50 p-3.5 shadow-lg">
+                <div className="flex items-center gap-2.5 mb-3">
+                  <div className="w-7 h-7 rounded-lg bg-emerald-950/50 border border-emerald-500/30 flex items-center justify-center flex-shrink-0">
+                    <Zap className="w-3.5 h-3.5 text-emerald-400" />
+                  </div>
+                  <span className="text-[10px] font-mono font-bold tracking-widest text-emerald-300 uppercase">
+                    2 · Estrategias de Trading
+                  </span>
+                  <div className="flex-1 h-px bg-gradient-to-r from-emerald-500/30 to-transparent" />
+                  <span className="text-[9px] font-mono text-slate-500 bg-slate-900/60 border border-slate-800 px-1.5 py-0.5 rounded-full flex-shrink-0">
+                    {strategies.length}
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {strategies.map(renderAction)}
+                </div>
+              </div>
             </div>
           </div>
         </div>
