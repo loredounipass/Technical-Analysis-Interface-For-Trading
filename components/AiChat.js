@@ -94,6 +94,8 @@ export default function AiChat({ symbol, datos, interval = "15m", market = "cryp
         <ChatTelemetryBar
           buyerPercent={chat.marketTelemetry.buyerPercent}
           trendLabel={chat.marketTelemetry.trendLabel}
+          orderBookLinked={chat.marketTelemetry.orderBookLinked}
+          orderBookSource={chat.marketTelemetry.orderBookSource}
         />
 
         {/* 3. Área de Mensajes del Chat */}

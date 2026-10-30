@@ -15,7 +15,10 @@ from indicators import (
     compute_cci_series, compute_adx_series, compute_pivots,
     compute_signal_summary, last_non_none, price_decimals,
 )
-from data_fetchers import fetch_last_price, fetch_klines_and_volume, interval_seconds
+from data_fetchers import (
+    fetch_last_price, fetch_klines_and_volume, interval_seconds,
+    fetch_order_book_depth,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -196,6 +199,55 @@ def build_payload(symbol, interval_str, market, klines, vol_24h=None):
     macd_sig_curr = last_non_none(macd_signal)
     macd_hist = (macd_curr - macd_sig_curr) if (macd_curr is not None and macd_sig_curr is not None) else None
 
+    # ────────────────────────────────────────────────────────────────
+    # LIBRO DE ÓRDENES REAL + DOMINANCIA COMPRADORA
+    # Crypto: profundidad de Binance (bids/asks reales, 20 niveles).
+    # Stocks: Yahoo no expone depth público → proxy direccional con el
+    # volumen real de las últimas velas (alcistas = comprador, bajistas = vendedor).
+    # ────────────────────────────────────────────────────────────────
+    bid_vol = None
+    ask_vol = None
+    best_bid = None
+    best_ask = None
+    buyer_percent = None
+    ob_source = None
+
+    if market == 'crypto':
+        try:
+            depth = fetch_order_book_depth(symbol)
+            if depth and depth.get('bids') and depth.get('asks'):
+                bids = [(float(p), float(q)) for p, q in depth['bids']]
+                asks = [(float(p), float(q)) for p, q in depth['asks']]
+                bid_vol = sum(q * p for p, q in bids[:20])
+                ask_vol = sum(q * p for p, q in asks[:20])
+                best_bid = bids[0][0]
+                best_ask = asks[0][0]
+                ob_source = 'binance_depth'
+        except Exception as e:
+            logger.warning(f"[TradingData] order book fallo para {symbol}: {e}")
+
+    if bid_vol is None and closes:
+        try:
+            up_vol = 0.0
+            down_vol = 0.0
+            window = closes[-30:]
+            vols_window = quote_volumes[-30:] if quote_volumes else []
+            for i in range(1, len(window)):
+                v = float(vols_window[i]) if i < len(vols_window) and vols_window[i] is not None else 0.0
+                if window[i] > window[i - 1]:
+                    up_vol += v
+                else:
+                    down_vol += v
+            if up_vol + down_vol > 0:
+                bid_vol = up_vol
+                ask_vol = down_vol
+                ob_source = 'volume_proxy'
+        except Exception as e:
+            logger.warning(f"[TradingData] proxy de volumen fallo para {symbol}: {e}")
+
+    if bid_vol is not None and ask_vol is not None and (bid_vol + ask_vol) > 0:
+        buyer_percent = round(bid_vol / (bid_vol + ask_vol) * 100, 1)
+
     result = {
         'symbol': symbol,
         'market': market,
@@ -228,6 +280,12 @@ def build_payload(symbol, interval_str, market, klines, vol_24h=None):
         'buySignals': buy,
         'sellSignals': sell,
         'neutralSignals': neutral,
+        'buyerPercent': buyer_percent,
+        'bidVolume': bid_vol,
+        'askVolume': ask_vol,
+        'bestBid': best_bid,
+        'bestAsk': best_ask,
+        'orderBookSource': ob_source,
         'timeframe': interval_str,
         'history': history
     }

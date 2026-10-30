@@ -63,7 +63,13 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
     const total = buy + sell + neutral
 
     let buyerPercent = "52.8%"
-    if (total > 0) {
+    // VOLUMEN COMPRADOR REAL: buyerPercent llega del backend calculado con el
+    // libro de órdenes de Binance (o proxy de volumen de velas para stocks).
+    // Solo si el backend no lo manda se cae al conteo de señales de indicadores.
+    const realBuyerPercent = datos?.buyerPercent
+    if (realBuyerPercent != null && !isNaN(Number(realBuyerPercent))) {
+      buyerPercent = Number(realBuyerPercent).toFixed(1) + "%"
+    } else if (total > 0) {
       buyerPercent = ((buy / total) * 100).toFixed(1) + "%"
     }
 
@@ -141,6 +147,10 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
     return {
       buyerPercent,
       trendLabel,
+      // Estado real del libro de órdenes: binance_depth = vinculado al libro
+      // real; volume_proxy = estimación direccional con volumen de velas.
+      orderBookLinked: datos?.orderBookSource === "binance_depth",
+      orderBookSource: datos?.orderBookSource || null,
       diagnostic: {
         rsiValue: rsiVal,
         rsiBadge,

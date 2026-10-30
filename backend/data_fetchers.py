@@ -72,6 +72,36 @@ def update_ticker_cache(symbol, quote_volume):
         _ticker_cache[symbol] = (time.time(), float(quote_volume))
 
 
+# LIBRO DE ÓRDENES REAL (Binance depth). El endpoint devuelve hasta 100 niveles
+# de bids/asks; se suman los 20 primeros niveles de cada lado para calcular la
+# dominancia compradora real. Tiene sub-cache propia: el depth pesa 5 weight y
+# los ciclos de streaming lo consultan muy seguido.
+DEPTH_TTL = 12
+_depth_cache = {}
+_depth_lock = threading.Lock()
+
+
+def fetch_order_book_depth(symbol):
+    """Devuelve el libro de órdenes real de Binance:
+    {'bids': [[price, qty], ...], 'asks': [[price, qty], ...]}.
+    None si falla (el payload cae al proxy de volumen de velas)."""
+    now = time.time()
+    with _depth_lock:
+        cached = _depth_cache.get(symbol)
+        if cached and now - cached[0] <= DEPTH_TTL:
+            return cached[1]
+    resp = requests.get(
+        'https://data-api.binance.vision/api/v3/depth',
+        params={'symbol': symbol, 'limit': 100},
+        timeout=8,
+    )
+    resp.raise_for_status()
+    data = resp.json()
+    with _depth_lock:
+        _depth_cache[symbol] = (time.time(), data)
+    return data
+
+
 # ─────────────────────────────────────────────────────────────────────
 # YAHOO FINANCE
 # ─────────────────────────────────────────────────────────────────────
