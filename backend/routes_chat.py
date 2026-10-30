@@ -6,7 +6,7 @@ Endpoint del agente de trading AI con contexto multi-temporalidad.
 import logging
 
 from flask import Blueprint, jsonify, request
-from nvidia_chat import nvidia_chat, AVAILABLE_MODELS
+from nvidia_chat import nvidia_chat, NvidiaChatError, AVAILABLE_MODELS
 from cache import rate_limited
 
 logger = logging.getLogger(__name__)
@@ -103,6 +103,7 @@ def chat_endpoint():
         # If we can't get indicator data, continue without it
         indicator_data = {'symbol': symbol, 'error': str(e)}
 
+    # Primer intento con historial completo
     try:
         response = nvidia_chat(
             prompt=prompt,
@@ -113,9 +114,37 @@ def chat_endpoint():
             global_context=global_context,
             indicator_data=indicator_data,
         )
-        if response is None:
-            return jsonify({'error': 'AI service unavailable. Check NVIDIA_API_KEY.'}), 503
         return jsonify({'response': response, 'model': model_key})
+    except NvidiaChatError as e:
+        # Si fallo con historial y HAY historial, reintentar SIN historial
+        # (el cambio de modelo puede causar incompatibilidad con el contexto previo)
+        if history:
+            logger.warning(f"[Chat] Reintentando sin historial tras error: {e}")
+            try:
+                response = nvidia_chat(
+                    prompt=prompt,
+                    model_key=model_key,
+                    temperature=temperature,
+                    max_tokens=4096,
+                    history=None,
+                    global_context=global_context,
+                    indicator_data=indicator_data,
+                )
+                return jsonify({
+                    'response': response,
+                    'model': model_key,
+                    'context_reset': True,
+                })
+            except NvidiaChatError as retry_err:
+                return jsonify({
+                    'error': str(retry_err),
+                    'error_code': retry_err.code,
+                }), 503
+        # Sin historial o segundo fallo: devolver el error específico
+        return jsonify({
+            'error': str(e),
+            'error_code': e.code,
+        }), 503
     except Exception as e:
         return jsonify({'error': f'Chat error: {str(e)}'}), 500
 

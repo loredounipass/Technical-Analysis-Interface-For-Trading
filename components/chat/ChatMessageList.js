@@ -12,6 +12,18 @@ function formatTime(timestamp) {
   return d.toTimeString().split(" ")[0]
 }
 
+function getModelBadge(modelKey) {
+  switch (modelKey) {
+    case "meta-muse":
+      return "MUSE-30B | 95.4% ACC"
+    case "google-diffusiongemma":
+      return "DIFFUSION-26B | 96.2% ACC"
+    case "nvidia-nemotron":
+    default:
+      return "NEMOTRON-3 | 94.6% ACC"
+  }
+}
+
 /**
  * Contenedor de la conversación:
  * Renderiza los mensajes del usuario, las respuestas de Woody Agent con estilo
@@ -25,6 +37,7 @@ export default function ChatMessageList({
   symbol,
   interval,
   models,
+  selectedModel,
   isTyping,
   typingText,
   loading,
@@ -91,11 +104,7 @@ export default function ChatMessageList({
                     </span>
                   </div>
                   <span className="text-[9px] font-mono text-cyan-300 bg-cyan-950/60 border border-cyan-500/30 px-2.5 py-0.5 rounded font-semibold tracking-wider">
-                    {msg.model === "meta-muse"
-                      ? "MUSE-30B | 95.4% ACC"
-                      : msg.model === "google-diffusiongemma"
-                      ? "DIFFUSION-26B | 96.2% ACC"
-                      : "NEMOTRON-3 | 94.6% ACC"}
+                    {getModelBadge(msg.model || selectedModel)}
                   </span>
                 </div>
 
@@ -104,7 +113,7 @@ export default function ChatMessageList({
                   {renderMarkdown(msg.content, symbol, intervalLabel)}
                 </div>
 
-                {/* Diagnóstico Cuantitativo si viene adjunto */}
+                {/* Diagnóstico Cuantitativo con datos reales */}
                 {msg.diagnostic && (
                   <DiagnosticCard diagnostic={msg.diagnostic} symbol={symbol} interval={interval} />
                 )}

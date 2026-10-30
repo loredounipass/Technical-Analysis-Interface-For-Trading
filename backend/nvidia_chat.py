@@ -34,6 +34,13 @@ AVAILABLE_MODELS = {
 }
 
 
+class NvidiaChatError(Exception):
+    """Custom exception to carry specific error info from NVIDIA API."""
+    def __init__(self, message, code=None):
+        super().__init__(message)
+        self.code = code
+
+
 def get_trading_system_prompt(indicator_data=None, global_context=None, model_name="AI"):
     """Build a specialized trading agent system prompt with live indicator data and global context."""
     base = (
@@ -294,15 +301,16 @@ def nvidia_chat(
     history: list | None = None,
     global_context: str | None = None,
     indicator_data: dict | None = None,
-) -> Optional[str]:
+) -> str:
+    """Call the NVIDIA API. Returns the response text on success.
+    Raises NvidiaChatError with a descriptive message on failure."""
     api_key = get_api_key()
     if not api_key:
-        return None
+        raise NvidiaChatError("NVIDIA_API_KEY no está configurado en el servidor.", code="NO_API_KEY")
 
     model_config = AVAILABLE_MODELS.get(model_key)
     if not model_config:
-        logger.error(f"Unknown model key: {model_key}")
-        return None
+        raise NvidiaChatError(f"Modelo desconocido: {model_key}", code="UNKNOWN_MODEL")
     model_id = model_config["id"]
     model_name = model_config["name"]
     timeout = float(model_config.get("timeout", REQUEST_TIMEOUT))
@@ -327,19 +335,35 @@ def nvidia_chat(
             choices = data.get("choices", [])
             if not choices:
                 logger.error(f"NVIDIA API returned no choices: {data}")
-                return None
+                raise NvidiaChatError("El modelo no devolvió respuesta. Intenta de nuevo.", code="NO_CHOICES")
             content = choices[0].get("message", {}).get("content", "")
-            return content.strip() if content else None
+            if not content or not content.strip():
+                raise NvidiaChatError("El modelo devolvió una respuesta vacía.", code="EMPTY_RESPONSE")
+            return content.strip()
     except HTTPError as e:
         body = e.read().decode("utf-8", errors="replace")
         logger.error(f"NVIDIA API HTTP {e.code} for model {model_id}: {body}")
-        return None
+        # Parse NVIDIA error body for a user-friendly message
+        detail = ""
+        try:
+            err_json = json.loads(body)
+            detail = err_json.get("detail", "") or err_json.get("message", "") or err_json.get("error", "")
+            if isinstance(detail, dict):
+                detail = detail.get("message", str(detail))
+        except Exception:
+            detail = body[:200] if body else ""
+        raise NvidiaChatError(
+            f"Error del modelo {model_name} (HTTP {e.code}): {detail or 'Error desconocido del API'}",
+            code=f"HTTP_{e.code}"
+        )
     except URLError as e:
         logger.error(f"NVIDIA API request failed for {model_id}: {e.reason}")
-        return None
+        raise NvidiaChatError(f"No se pudo conectar al API de NVIDIA: {e.reason}", code="URL_ERROR")
     except json.JSONDecodeError as e:
         logger.error(f"NVIDIA API invalid JSON for {model_id}: {e}")
-        return None
+        raise NvidiaChatError("Respuesta inválida del API de NVIDIA.", code="JSON_ERROR")
+    except NvidiaChatError:
+        raise
     except Exception as e:
         logger.exception(f"Unexpected NVIDIA API error for {model_id}: {e}")
-        return None
+        raise NvidiaChatError(f"Error inesperado: {str(e)}", code="UNEXPECTED")

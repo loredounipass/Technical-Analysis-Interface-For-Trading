@@ -105,6 +105,7 @@ export default function AiChat({ symbol, datos, interval = "15m", market = "cryp
           symbol={symbol}
           interval={interval}
           models={chat.models}
+          selectedModel={chat.selectedModel}
           isTyping={chat.isTyping}
           typingText={chat.typingText}
           loading={chat.loading}
@@ -135,23 +136,6 @@ export default function AiChat({ symbol, datos, interval = "15m", market = "cryp
           selectedModel={chat.selectedModel}
         />
       </div>
-
-      <style jsx global>{`
-        .cyber-scrollbar::-webkit-scrollbar {
-          width: 4px;
-          height: 4px;
-        }
-        .cyber-scrollbar::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        .cyber-scrollbar::-webkit-scrollbar-thumb {
-          background: rgba(16, 185, 129, 0.2);
-          border-radius: 4px;
-        }
-        .cyber-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: rgba(16, 185, 129, 0.4);
-        }
-      `}</style>
     </div>
   )
 }

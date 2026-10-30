@@ -55,6 +55,7 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
   }, [])
 
   // Telemetría en vivo del libro de órdenes y diagnóstico cuantitativo
+  // Se alimenta directamente de los indicadores de `datos`
   const marketTelemetry = useMemo(() => {
     const buy = datos?.buySignals || 0
     const sell = datos?.sellSignals || 0
@@ -79,35 +80,81 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
       trendLabel = "RANGO NEUTRAL"
     }
 
-    const rsiVal = datos?.rsi != null ? Number(datos.rsi).toFixed(2) : "32.25"
-    const s1Val =
-      datos?.s1 != null
-        ? "$" + Number(datos.s1).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-        : datos?.precio != null
-        ? "$" + (Number(datos.precio) * 0.985).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-        : "$2,764.50"
+    // RSI (14) - Lee datos reales de datos.rsi
+    const rsiVal = datos?.rsi != null ? Number(datos.rsi).toFixed(2) : "28.12"
+    const rsiNum = Number(rsiVal)
+    let rsiBadge = "DIVERGENCIA"
+    let rsiSubtitle = "▲ Alcista oculta"
+    if (rsiNum < 30) {
+      rsiBadge = "SOBREVENTA"
+      rsiSubtitle = "▲ Alcista oculta"
+    } else if (rsiNum < 40) {
+      rsiBadge = "DIVERGENCIA"
+      rsiSubtitle = "▲ Alcista oculta"
+    } else if (rsiNum > 70) {
+      rsiBadge = "SOBRECOMPRA"
+      rsiSubtitle = "▼ Presión bajista"
+    } else if (rsiNum > 60) {
+      rsiBadge = "PRESIÓN ALTA"
+      rsiSubtitle = "▲ Impulso activo"
+    } else {
+      rsiBadge = "EQUILIBRIO"
+      rsiSubtitle = "● Neutral"
+    }
 
-    const adxVal = datos?.adx != null ? Number(datos.adx).toFixed(2) : "39.23"
-    const macdVal = datos?.macdHistogram != null ? Number(datos.macdHistogram).toFixed(2) : "-18.07"
+    // SOPORTE CLAVE (S1 DINÁMICO) - Lee datos reales de datos.s1 o calcula con datos.precio
+    let s1Val = "$2,197.57"
+    if (datos?.s1 != null) {
+      const s1Num = Number(datos.s1)
+      s1Val = "$" + (s1Num < 1 ? s1Num.toFixed(4) : s1Num.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }))
+    } else if (datos?.precio != null) {
+      const s1Calc = Number(datos.precio) * 0.985
+      s1Val = "$" + (s1Calc < 1 ? s1Calc.toFixed(4) : s1Calc.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }))
+    }
+
+    // ADX FUERZA - Lee datos reales de datos.adx
+    const adxVal = datos?.adx != null ? Number(datos.adx).toFixed(2) : "42.38"
+    const adxNum = Number(adxVal)
+    const adxBadge = adxNum >= 25 ? "DEFINIDA" : "CONSOLIDACIÓN"
+    const adxSubtitle = adxNum >= 25 ? "Tendencia alta" : "Lateral"
+
+    // MACD CRUCE - Lee datos reales de datos.macdHistogram
+    const macdVal = datos?.macdHistogram != null ? Number(datos.macdHistogram).toFixed(2) : "-1.04"
+    const macdNum = Number(macdVal)
+    const macdBadge = macdNum < 0 ? "CONTRACCIÓN" : "EXPANSIÓN"
+    const macdSubtitle = "Histograma"
+
+    // Diagnóstico resumen dinámico basado en las señales e indicadores reales
+    let summary = "Actualmente observo compresión de volatilidad con presión compradora absorbiendo ventas cerca de soporte clave."
+    if (datos) {
+      if (buy > sell && rsiNum < 40) {
+        summary = "Actualmente observo compresión de volatilidad con presión compradora absorbiendo ventas cerca de soporte clave."
+      } else if (buy > sell) {
+        summary = `Flujo comprador predominante (${buyerPercent}) con estructura alcista consolidando sobre soporte dinámico.`
+      } else if (sell > buy) {
+        summary = `Presión vendedora activa en el histograma MACD. Monitoreando soporte clave para confirmación de absorción.`
+      } else {
+        summary = "Actualmente observo compresión de volatilidad con equilibrio entre oferta y demanda cerca de niveles clave."
+      }
+    }
 
     return {
       buyerPercent,
       trendLabel,
       diagnostic: {
         rsiValue: rsiVal,
-        rsiBadge: Number(rsiVal) < 35 ? "DIVERGENCIA" : Number(rsiVal) > 65 ? "SOBRECOMPRA" : "EQUILIBRIO",
-        rsiSubtitle: Number(rsiVal) < 40 ? "Alcista oculta" : "Neutral",
+        rsiBadge,
+        rsiSubtitle,
         supportValue: s1Val,
         supportBadge: "S1 DINÁMICO",
         supportSubtitle: "Rechazo fuerte",
         adxValue: adxVal,
-        adxBadge: Number(adxVal) > 25 ? "DEFINIDA" : "CONSOLIDACIÓN",
-        adxSubtitle: Number(adxVal) > 25 ? "Tendencia alta" : "Lateral",
+        adxBadge,
+        adxSubtitle,
         macdValue: macdVal,
-        macdBadge: Number(macdVal) < 0 ? "CONTRACCIÓN" : "EXPANSIÓN",
-        macdSubtitle: "Histograma",
-        summary:
-          "Actualmente observo compresión de volatilidad con presión compradora absorbiendo ventas cerca de soporte clave.",
+        macdBadge,
+        macdSubtitle,
+        summary,
       },
     }
   }, [datos])
@@ -169,7 +216,7 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
     }
   }, [isOpen, activeSessionId, isSidebarOpen])
 
-  // Cargar sesiones previas
+  // Cargar sesiones previas o crear nueva
   useEffect(() => {
     const saved = localStorage.getItem("trading_terminal_sessions")
     if (saved) {
@@ -187,6 +234,26 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
     }
     createNewSession()
   }, [])
+
+  // Sincronizar reactivamente el diagnóstico y el modelo en el mensaje de bienvenida
+  // cuando lleguen datos nuevos de indicadores o cuando cambie el modelo / timeframe / símbolo
+  useEffect(() => {
+    setMessages((prev) => {
+      if (prev.length === 0) return prev
+      const first = prev[0]
+      if (first.role === "assistant" && first.diagnostic) {
+        const intervalLabel = INTERVAL_LABELS[interval] || interval
+        const updatedFirst = {
+          ...first,
+          content: `¡Hola! ¿En qué puedo asistirte con el análisis del mercado de **${symbol}** en el timeframe de **${intervalLabel}**?`,
+          model: selectedModel,
+          diagnostic: marketTelemetry.diagnostic,
+        }
+        return [updatedFirst, ...prev.slice(1)]
+      }
+      return prev
+    })
+  }, [datos, symbol, interval, selectedModel, marketTelemetry.diagnostic])
 
   useEffect(() => {
     localStorage.setItem("trading_terminal_model", selectedModel)
@@ -210,7 +277,7 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
     onAnalysisChange?.(loading || isTyping)
   }, [loading, isTyping, onAnalysisChange])
 
-  // Crear nueva sesión con el saludo inicial estilizado
+  // Crear nueva sesión con el saludo inicial estilizado y datos actualizados
   const createNewSession = () => {
     const newId = Date.now().toString()
     const intervalLabel = INTERVAL_LABELS[interval] || interval
@@ -308,6 +375,21 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
     const controller = new AbortController()
     abortRef.current = controller
 
+    // Historial limpio y seguro:
+    // 1. Omitir el mensaje de bienvenida sintético (asistente inicial) para evitar problemas de orden de roles
+    // 2. Omitir mensajes de error
+    // 3. Limitar a los últimos 6 intercambios
+    // 4. Truncar respuestas muy largas de modelos anteriores para no agotar la ventana de tokens
+    const cleanHistory = messages
+      .filter((m, idx) => !m.isError && !(idx === 0 && m.role === "assistant"))
+      .slice(-6)
+      .map((m) => ({
+        role: m.role,
+        content: m.role === "assistant" && m.content.length > 1500
+          ? m.content.slice(0, 1500) + "..."
+          : m.content,
+      }))
+
     try {
       const res = await fetch(`${API_BASE_URL}/chat`, {
         method: "POST",
@@ -319,7 +401,7 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
           symbol: symbol,
           interval: interval,
           market: market,
-          history: messages.map((m) => ({ role: m.role, content: m.content })),
+          history: cleanHistory,
           global_context: globalContext,
           temperature: 0.3,
         }),

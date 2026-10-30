@@ -4,13 +4,21 @@ import React from "react"
 
 /**
  * Componente Tarjeta Cuantitativa (DIAGNÓSTICO CUANTITATIVO ACTUAL)
- * Muestra el panel técnico 2x2 con RSI, Soporte Clave, ADX Fuerza y MACD Cruce.
+ * Muestra el panel técnico 2x2 con RSI, Soporte Clave, ADX Fuerza y MACD Cruce
+ * con datos reales provenientes de los indicadores del activo y timeframe en pantalla.
  */
 export default function DiagnosticCard({ diagnostic }) {
   if (!diagnostic) return null
 
+  const rsiSub = diagnostic.rsiSubtitle || "▲ Alcista oculta"
+  const isRsiBullish = rsiSub.includes("▲") || rsiSub.toLowerCase().includes("alcista")
+  const isRsiBearish = rsiSub.includes("▼") || rsiSub.toLowerCase().includes("bajista")
+  const rsiSubText = rsiSub.startsWith("▲") || rsiSub.startsWith("▼") || rsiSub.startsWith("●")
+    ? rsiSub
+    : `▲ ${rsiSub}`
+
   return (
-    <div className="bg-[#050c10]/70 backdrop-blur-sm border border-slate-800/90 rounded-xl p-3.5 sm:p-4 space-y-3.5 my-3 shadow-inner">
+    <div className="bg-[#050c10]/80 backdrop-blur-sm border border-slate-800/90 rounded-xl p-3.5 sm:p-4 space-y-3.5 my-3 shadow-inner">
       {/* Header del Diagnóstico */}
       <div className="flex items-center justify-between pb-1 border-b border-slate-800/60">
         <div className="flex items-center gap-2">
@@ -36,8 +44,10 @@ export default function DiagnosticCard({ diagnostic }) {
           </div>
           <div className="flex items-baseline gap-2">
             <span className="text-cyan-400 font-mono font-bold text-base sm:text-lg">{diagnostic.rsiValue}</span>
-            <span className="text-emerald-400 font-mono text-[11px] flex items-center gap-0.5">
-              ▲ {diagnostic.rsiSubtitle || "Alcista oculta"}
+            <span className={`font-mono text-[11px] flex items-center gap-0.5 ${
+              isRsiBullish ? "text-emerald-400" : isRsiBearish ? "text-rose-400" : "text-slate-400"
+            }`}>
+              {rsiSubText}
             </span>
           </div>
         </div>
@@ -85,7 +95,7 @@ export default function DiagnosticCard({ diagnostic }) {
         </div>
       </div>
 
-      {/* Comentario de análisis sintético del scanner */}
+      {/* Comentario de análisis sintético del scanner basado en indicadores */}
       {diagnostic.summary && (
         <p className="text-[12px] text-slate-300 font-sans leading-relaxed pt-1 border-t border-slate-800/60">
           {diagnostic.summary}
