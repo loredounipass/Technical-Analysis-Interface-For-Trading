@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useMemo } from "react"
+import React, { useMemo, useState, useRef, useEffect } from "react"
 import {
   ResponsiveContainer,
   ComposedChart,
@@ -13,6 +13,14 @@ import {
   Line,
   ReferenceLine,
 } from "recharts"
+import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Radio } from "lucide-react"
+
+const DEFAULT_COUNT = 60
+const MIN_COUNT = 12
+// Margen aproximado del eje Y derecho (para calcular el ancho util del plot)
+const AXIS_MARGIN = 90
+
+const clamp = (v, min, max) => Math.min(Math.max(v, min), max)
 
 export default function CandleChart({
   data = [],
@@ -20,13 +28,15 @@ export default function CandleChart({
   timeframe = "15m",
   spread = "0.02",
 }) {
-  if (!data || data.length === 0) {
-    return (
-      <div className="h-[280px] flex items-center justify-center text-slate-500 font-mono text-xs">
-        Awaiting real-time candlestick data...
-      </div>
-    )
-  }
+  // ── Navegación: count = velas visibles (zoom); end = índice final de la
+  // ventana (null = siguiendo el precio en vivo) ──
+  const [count, setCount] = useState(DEFAULT_COUNT)
+  const [end, setEnd] = useState(null)
+  const [width, setWidth] = useState(0)
+  const chartRef = useRef(null)
+  const dragRef = useRef(null)
+  const wheelHandlerRef = useRef(() => {})
+  const hasData = data.length > 0
 
   // Format helper
   const fmt = (n) => {
@@ -64,15 +74,94 @@ export default function CandleChart({
     })
   }, [data])
 
+  // ── Ventana visible según pan/zoom ──
+  const total = chartDataWithEma.length
+  const effCount = Math.max(1, Math.min(count, total))
+  const effEnd = end === null ? total : clamp(end, effCount, total)
+  const start = Math.max(0, effEnd - effCount)
+  const visibleData = chartDataWithEma.slice(start, effEnd)
+  const isLive = effEnd >= total
+
+  // Ancho del contenedor para escalar el tamaño de vela con el zoom
+  useEffect(() => {
+    const el = chartRef.current
+    if (!el) return
+    const observer = new ResizeObserver((entries) => {
+      setWidth(entries[0].contentRect.width)
+    })
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [hasData])
+
+  const plotWidth = Math.max(50, width - AXIS_MARGIN)
+  const bodySize = clamp((plotWidth / effCount) * 0.6, 1.5, 40)
+  const wickSize = Math.max(1, bodySize * 0.18)
+
+  // ── Zoom (rueda del mouse anclado al cursor / botones centrados) ──
+  const zoomBy = (deltaY, ratio) => {
+    if (total === 0) return
+    const next = clamp(
+      Math.round(deltaY > 0 ? effCount * 1.2 : effCount / 1.2),
+      MIN_COUNT,
+      total
+    )
+    if (next === effCount) return
+    // Mantener fija la vela bajo el cursor mientras se hace zoom
+    const anchorIdx = start + ratio * effCount
+    const newEnd = clamp(Math.round(anchorIdx + (1 - ratio) * next), next, total)
+    setCount(next)
+    setEnd(newEnd >= total ? null : newEnd)
+  }
+
+  wheelHandlerRef.current = (e) => {
+    e.preventDefault()
+    const rect = chartRef.current?.getBoundingClientRect()
+    const ratio = rect ? clamp((e.clientX - rect.left) / rect.width, 0, 1) : 0.5
+    zoomBy(e.deltaY, ratio)
+  }
+
+  useEffect(() => {
+    const el = chartRef.current
+    if (!el) return
+    const fn = (e) => wheelHandlerRef.current(e)
+    el.addEventListener("wheel", fn, { passive: false })
+    return () => el.removeEventListener("wheel", fn)
+  }, [hasData])
+
+  // ── Pan arrastrando (mouse y touch), estilo exchange ──
+  const onPointerDown = (e) => {
+    dragRef.current = { x: e.clientX, end: effEnd }
+    e.currentTarget.setPointerCapture(e.pointerId)
+  }
+  const onPointerMove = (e) => {
+    const d = dragRef.current
+    if (!d) return
+    const barWidth = plotWidth / effCount
+    const deltaCandles = Math.round((e.clientX - d.x) / barWidth)
+    if (deltaCandles === 0) return
+    const newEnd = clamp(d.end - deltaCandles, effCount, total)
+    setEnd(newEnd >= total ? null : newEnd)
+  }
+  const onPointerUp = () => {
+    dragRef.current = null
+  }
+
+  // ── Botones de navegación ──
+  const panBy = (candles) => {
+    const newEnd = clamp(effEnd + candles, effCount, total)
+    setEnd(newEnd >= total ? null : newEnd)
+  }
+  const goLive = () => setEnd(null)
+
   // Latest candle values for header stats
   const latestCandle = chartDataWithEma[chartDataWithEma.length - 1] || {}
   const currentPrice = latestCandle.close || 0
   const isLatestBullish = (latestCandle.close || 0) >= (latestCandle.open || 0)
 
-  // Calculate Y-axis domain
-  const allValues = data.flatMap((d) => [d.high, d.low]).filter((v) => Number.isFinite(v))
-  const minVal = Math.min(...allValues)
-  const maxVal = Math.max(...allValues)
+  // Y-axis domain: solo velas VISIBLES (auto-escala al navegar/hacer zoom)
+  const allValues = visibleData.flatMap((d) => [d.high, d.low]).filter((v) => Number.isFinite(v))
+  const minVal = allValues.length ? Math.min(...allValues) : 0
+  const maxVal = allValues.length ? Math.max(...allValues) : 100
   const pad = Math.max((maxVal - minVal) * 0.08, 0.001)
   const domain = [minVal - pad, maxVal + pad]
 
@@ -110,6 +199,17 @@ export default function CandleChart({
     }
     return null
   }
+
+  if (!hasData) {
+    return (
+      <div className="h-[280px] flex items-center justify-center text-slate-500 font-mono text-xs">
+        Awaiting real-time candlestick data...
+      </div>
+    )
+  }
+
+  const navBtnClass =
+    "p-1 rounded-md text-slate-400 hover:text-[#00f5c4] hover:bg-[#00f5c4]/10 border border-transparent hover:border-[#00f5c4]/30 transition-colors"
 
   return (
     <div className="w-full">
@@ -151,27 +251,73 @@ export default function CandleChart({
           )}
         </div>
 
-        {/* Right stats: Spread + Candles + EMA */}
+        {/* Right stats: Spread + Candles + EMA + Controles de navegación */}
         <div className="flex items-center gap-2 text-[11px]">
-          <span className="text-slate-400">
+          <span className="text-slate-400 hidden xl:inline">
             Spread: <span className="text-[#00f5c4] font-bold">{spread} USDT</span>
           </span>
 
-          <span className="px-2 py-0.5 rounded bg-[#09111b] border border-[#16283d] text-slate-300 font-medium uppercase">
+          <span className="px-2 py-0.5 rounded bg-[#09111b] border border-[#16283d] text-slate-300 font-medium uppercase hidden sm:inline">
             CANDLES {timeframe}
           </span>
 
-          <span className="px-2 py-0.5 rounded bg-[#00f5c4]/10 border border-[#00f5c4]/30 text-[#00f5c4] font-semibold text-[10px]">
+          <span className="px-2 py-0.5 rounded bg-[#00f5c4]/10 border border-[#00f5c4]/30 text-[#00f5c4] font-semibold text-[10px] hidden md:inline">
             EMA 20/50/200
           </span>
+
+          {/* Controles de navegación del gráfico */}
+          <div className="flex items-center gap-0.5 bg-[#09111b] border border-[#16283d] rounded-lg px-1 py-0.5">
+            <button
+              onClick={() => panBy(-Math.max(1, Math.round(effCount / 4)))}
+              className={navBtnClass}
+              title="Ir atrás en el tiempo"
+            >
+              <ChevronLeft className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => panBy(Math.max(1, Math.round(effCount / 4)))}
+              className={navBtnClass}
+              title="Ir adelante en el tiempo"
+            >
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+            <span className="w-px h-3.5 bg-[#16283d] mx-0.5" />
+            <button onClick={() => zoomBy(-100, 0.5)} className={navBtnClass} title="Acercar (zoom in)">
+              <ZoomIn className="w-3.5 h-3.5" />
+            </button>
+            <button onClick={() => zoomBy(100, 0.5)} className={navBtnClass} title="Alejar (zoom out)">
+              <ZoomOut className="w-3.5 h-3.5" />
+            </button>
+            {!isLive && (
+              <>
+                <span className="w-px h-3.5 bg-[#16283d] mx-0.5" />
+                <button
+                  onClick={goLive}
+                  className="flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[#00f5c4] hover:bg-[#00f5c4]/15 border border-[#00f5c4]/40 text-[9px] font-bold tracking-wider transition-colors"
+                  title="Volver al precio en vivo"
+                >
+                  <Radio className="w-3 h-3" />
+                  LIVE
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Main Chart Canvas */}
-      <div className="h-[300px] w-full relative">
+      {/* Main Chart Canvas: arrastrar = pan, rueda = zoom */}
+      <div
+        ref={chartRef}
+        className="h-[300px] w-full relative select-none cursor-grab active:cursor-grabbing"
+        style={{ touchAction: "pan-y" }}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerUp}
+      >
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart
-            data={chartDataWithEma}
+            data={visibleData}
             margin={{ top: 12, right: 75, left: 0, bottom: 5 }}
           >
             <defs>
@@ -209,10 +355,11 @@ export default function CandleChart({
 
             <Tooltip content={<CustomTooltip />} cursor={{ stroke: "#244163", strokeDasharray: "3 3" }} />
 
-            {/* Current Price Reference Line & Badge */}
+            {/* Current Price Reference Line & Badge (oculta si queda fuera de la vista) */}
             {currentPrice > 0 && (
               <ReferenceLine
                 y={currentPrice}
+                ifOverflow="hidden"
                 stroke="#00f5c4"
                 strokeDasharray="2 2"
                 strokeOpacity={0.6}
@@ -233,8 +380,8 @@ export default function CandleChart({
             )}
 
             {/* Wick Bar (thin centered line from low to high) */}
-            <Bar dataKey="wickRange" barSize={1.5} isAnimationActive={false}>
-              {chartDataWithEma.map((entry, index) => {
+            <Bar dataKey="wickRange" barSize={wickSize} isAnimationActive={false}>
+              {visibleData.map((entry, index) => {
                 const isBull = entry.close >= entry.open
                 return (
                   <Cell
@@ -247,8 +394,8 @@ export default function CandleChart({
             </Bar>
 
             {/* Body Bar (wide rectangle from open to close) */}
-            <Bar dataKey="bodyRange" barSize={10} isAnimationActive={false}>
-              {chartDataWithEma.map((entry, index) => {
+            <Bar dataKey="bodyRange" barSize={bodySize} isAnimationActive={false}>
+              {visibleData.map((entry, index) => {
                 const isBull = entry.close >= entry.open
                 return (
                   <Cell
@@ -284,13 +431,22 @@ export default function CandleChart({
         </ResponsiveContainer>
 
         {/* Floating Current Price Pill on the Right Axis */}
-        {currentPrice > 0 && (
+        {currentPrice > 0 && isLive && (
           <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1 hidden sm:block">
             <div className="px-2 py-0.5 rounded bg-[#00f5c4] text-[#070c14] font-mono font-bold text-[10px] shadow-[0_0_12px_rgba(0,245,196,0.5)]">
               ${fmt(currentPrice)}
             </div>
           </div>
         )}
+      </div>
+
+      {/* Hint de navegación + rango visible */}
+      <div className="flex items-center justify-between pt-2 text-[10px] font-mono text-slate-600">
+        <span>DRAG: PAN · SCROLL: ZOOM</span>
+        <span>
+          {start + 1}–{effEnd} de {total} velas
+          {!isLive && <span className="text-amber-500/80 ml-2">· HISTORIAL</span>}
+        </span>
       </div>
     </div>
   )

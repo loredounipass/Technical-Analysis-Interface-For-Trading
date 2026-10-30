@@ -52,7 +52,8 @@ const IndicatorGrid = ({ datos = {} }) => {
 
   if (datos.history && Array.isArray(datos.history.opens)) {
     const len = datos.history.closes.length
-    const startIdx = Math.max(0, len - 36)
+    // Hasta 300 velas para que el grafico principal pueda navegarse (pan/zoom)
+    const startIdx = Math.max(0, len - 300)
 
     for (let i = startIdx; i < len; i++) {
       const o = Number(datos.history.opens[i])
@@ -85,6 +86,9 @@ const IndicatorGrid = ({ datos = {} }) => {
     }
   }
 
+  // Barras de volumen: solo las ultimas 36 (la tarjeta es pequena)
+  const recentVolumeData = volumeChartData.slice(-36)
+
   // Calculate Buyer Ratio
   const totalSignals = (datos.buySignals || 0) + (datos.sellSignals || 0)
   const buyerRatio =
@@ -99,6 +103,7 @@ const IndicatorGrid = ({ datos = {} }) => {
       {/* 1. Main Middle Card: Candlestick Chart */}
       <div className="synapse-card p-4">
         <CandleChart
+          key={`${datos.symbol}-${datos.timeframe}`}
           data={candleData}
           decimales={dec}
           timeframe={datos.timeframe || "15m"}
@@ -139,9 +144,9 @@ const IndicatorGrid = ({ datos = {} }) => {
 
           {/* Volume Bars */}
           <div className="h-[120px] w-full my-1">
-            {volumeChartData.length > 0 ? (
+            {recentVolumeData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={volumeChartData} margin={{ top: 5, right: 5, left: 5, bottom: 0 }}>
+                <BarChart data={recentVolumeData} margin={{ top: 5, right: 5, left: 5, bottom: 0 }}>
                   <Tooltip
                     contentStyle={{
                       backgroundColor: "rgba(8, 18, 28, 0.95)",
@@ -154,7 +159,7 @@ const IndicatorGrid = ({ datos = {} }) => {
                     formatter={(v) => [formatVolume(v), "Volume"]}
                   />
                   <Bar dataKey="volume" barSize={8} isAnimationActive={false}>
-                    {volumeChartData.map((entry, index) => (
+                    {recentVolumeData.map((entry, index) => (
                       <Cell
                         key={`vol-${index}`}
                         fill={entry.isBull ? "#00f5c4" : "#ff3b69"}
