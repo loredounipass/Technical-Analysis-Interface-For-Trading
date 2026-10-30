@@ -100,11 +100,6 @@ function AgentPanel({ modelBadge, statusLabel, statusPulse, steps, children, foo
         {/* Barra de título estilo terminal */}
         <div className="flex items-center justify-between gap-2 px-4 py-2.5 border-b border-slate-800/70 bg-[#081820]/70 flex-wrap">
           <div className="flex items-center gap-2.5">
-            <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-rose-500/70" />
-              <span className="w-2.5 h-2.5 rounded-full bg-amber-400/70" />
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400/70" />
-            </div>
             <span className="text-[11px] font-mono font-bold tracking-widest text-cyan-300">
               WOODY QUANT INTEL
             </span>
