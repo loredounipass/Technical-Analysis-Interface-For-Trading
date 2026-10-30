@@ -2,22 +2,24 @@
 
 import React, { useEffect, useState } from "react"
 import {
-  Sparkles,
   X,
-  Zap,
-  BarChart2,
-  Scale,
-  FileText,
-  TrendingUp,
-  Activity,
-  Crosshair,
-  Radar,
-  Layers,
   ChevronRight,
-  PiggyBank,
+  Layers,
+  Bot,
+  Cpu,
+  CandlestickChart,
+  GitCompare,
+  Scale,
+  Gauge,
+  BarChart3,
+  Zap,
+  Target,
+  TrendingUp,
+  Compass,
+  CircleDollarSign,
   LayoutGrid,
-  ArrowUpRight,
-  Flame,
+  LineChart,
+  Waves,
 } from "lucide-react"
 
 /**
@@ -72,7 +74,7 @@ export default function ChatQuickActions({ symbol, interval, onSendQuickAction, 
 Evalúa con los indicadores en vivo del terminal (RSI, MACD, ADX, volumen, precio vs EMAs) si el setup está ACTIVO ahora o hay que esperar. Indica exactamente qué condición falta para que se active.`,
     },
     {
-      icon: Crosshair,
+      icon: Target,
       iconColor: "text-cyan-400",
       title: "Breakout de consolidación",
       desc: "Ruptura de rango con confirmación de volumen",
@@ -130,8 +132,8 @@ Usa el ADX, ancho de Bollinger, volumen y precio actual del terminal para determ
 Usa las EMAs, RSI, MACD y ADX actuales del terminal para determinar si el setup está activo ahora o qué falta.`,
     },
     {
-      icon: Activity,
-      iconColor: "text-rose-400",
+      icon: Compass,
+      iconColor: "text-blue-400",
       title: "Tendencia con ADX",
       desc: "Seguimiento de tendencia con filtro ADX > 25",
       prompt: `Diseña una estrategia profesional de SEGUIMIENTO DE TENDENCIA con ADX para ${symbol} en ${interval} usando los datos de mercado en vivo del terminal. Estructura tu respuesta así:
@@ -161,7 +163,7 @@ Usa las EMAs, RSI, MACD y ADX actuales del terminal para determinar si el setup 
 Evalúa el ADX, +DI, -DI, RSI, MACD y posición del precio vs EMAs actuales del terminal. Determina si hay tendencia operable ahora o si hay que esperar.`,
     },
     {
-      icon: PiggyBank,
+      icon: CircleDollarSign,
       iconColor: "text-emerald-400",
       title: "DCA (Promediar costo)",
       desc: "Compras periódicas para promediar el costo de entrada",
@@ -224,7 +226,7 @@ Genera la tabla completa con cada nivel de compra y venta. Usa los soportes y re
 Evalúa el ADX, ancho de Bollinger, y volatilidad actual del terminal. Determina si el mercado está lateral (ideal para grid) o tendencial (peligroso para grid).`,
     },
     {
-      icon: ArrowUpRight,
+      icon: LineChart,
       iconColor: "text-amber-400",
       title: "Cruce dorado EMA 50/200",
       desc: "Cambio de tendencia con medias exponenciales",
@@ -255,7 +257,7 @@ Evalúa el ADX, ancho de Bollinger, y volatilidad actual del terminal. Determina
 Usa las EMAs, ADX, MACD y RSI actuales del terminal para determinar si se aproxima un cruce, cuál sería, y si los indicadores de momentum lo confirman.`,
     },
     {
-      icon: Flame,
+      icon: Waves,
       iconColor: "text-rose-400",
       title: "Momentum con volumen",
       desc: "Rupturas con volumen y RSI confirmando",
@@ -295,10 +297,10 @@ Evalúa todos los indicadores de momentum del terminal y determina si hay moment
 
   const analyses = [
     {
-      icon: BarChart2,
+      icon: GitCompare,
       iconColor: "text-cyan-400",
-      title: "Soporte y resistencia",
-      desc: "Mapa completo de niveles estructurales y liquidez",
+      title: "Soporte clave",
+      desc: "Niveles de soporte y zonas de reacción",
       prompt: `Realiza un análisis profesional de SOPORTES Y RESISTENCIAS para ${symbol} en ${interval} usando los datos de mercado en vivo del terminal. Estructura tu respuesta así:
 
 ### MAPA DE NIVELES ESTRUCTURALES
@@ -325,7 +327,7 @@ Usa el precio spot actual del terminal para ubicarlo respecto a todos los nivele
       icon: Scale,
       iconColor: "text-amber-400",
       title: "Riesgo/beneficio 1:3",
-      desc: "Setup operativo con ratio de entrada, stop y objetivos",
+      desc: "Ratio de entrada, stop y objetivos",
       prompt: `Calcula un setup profesional con RATIO RIESGO/BENEFICIO de al menos 1:3 para ${symbol} en ${interval} usando los datos de mercado en vivo del terminal. Estructura tu respuesta así:
 
 ### CONTEXTO DEL SETUP
@@ -353,10 +355,10 @@ Misma estructura con niveles invertidos usando los datos reales del terminal.
 Usa los indicadores actuales del terminal (RSI, MACD, ADX, MFI, Stochastic) para evaluar si el ratio R:R justifica tomar la operación ahora. Indica si los indicadores confirman o contradicen la dirección del setup.`,
     },
     {
-      icon: Radar,
+      icon: Gauge,
       iconColor: "text-emerald-400",
       title: "Momentum y tendencia",
-      desc: "Evaluación completa de osciladores y fuerza direccional",
+      desc: "RSI, MACD y ADX evaluados en conjunto",
       prompt: `Realiza un análisis profesional de MOMENTUM Y TENDENCIA para ${symbol} en ${interval} usando los datos de mercado en vivo del terminal. Estructura tu respuesta así:
 
 ### DASHBOARD DE MOMENTUM
@@ -386,10 +388,10 @@ Usa los valores exactos del terminal para completar cada fila:
 Veredicto claro basado en todos los datos del terminal: el momentum favorece COMPRA, VENTA o ESPERAR. Indica el nivel de confianza (alto, medio, bajo) y qué indicadores respaldan el veredicto.`,
     },
     {
-      icon: FileText,
+      icon: BarChart3,
       iconColor: "text-rose-400",
       title: "Resumen técnico completo",
-      desc: "Informe cuantitativo institucional de todos los indicadores",
+      desc: "Informe cuantitativo de todos los indicadores",
       prompt: `Genera un INFORME TÉCNICO CUANTITATIVO COMPLETO de grado institucional para ${symbol} en ${interval} usando todos los datos de mercado en vivo del terminal. Estructura tu respuesta así:
 
 ### RESUMEN EJECUTIVO
@@ -456,7 +458,7 @@ Veredicto operativo claro: COMPRA, VENTA, MANTENER o ESPERAR. Incluye zona de en
       {/* Barra inferior con acceso a la ventana emergente */}
       <div className="px-5 py-2.5 sm:px-6 bg-[#050d12]/40 backdrop-blur-sm border-t border-emerald-500/10 flex items-center gap-3 z-10">
         <div className="flex items-center gap-1.5 text-[11px] font-mono text-slate-400 font-semibold flex-shrink-0">
-          <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+          <Bot className="w-3.5 h-3.5 text-cyan-400" />
           <span>Acciones Rápidas:</span>
         </div>
 
@@ -490,11 +492,11 @@ Veredicto operativo claro: COMPRA, VENTA, MANTENER o ESPERAR. Incluye zona de en
             <div className="sticky top-0 z-10 px-5 py-4 bg-[#071116]/80 backdrop-blur-md border-b border-emerald-500/20 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-xl bg-emerald-950/40 border border-emerald-500/40 flex items-center justify-center shadow-[0_0_12px_rgba(16,185,129,0.15)]">
-                  <Sparkles className="w-4 h-4 text-cyan-300" />
+                  <Bot className="w-4 h-4 text-cyan-300" />
                 </div>
                 <div>
                   <div className="text-sm font-mono font-bold tracking-wider text-white">
-                    ACCIONES RÁPIDAS
+                    WOODY AGENT • ACCIONES RÁPIDAS
                   </div>
                   <div className="text-[10px] font-mono text-slate-500">
                     Selecciona un comando para ejecutarlo con el agente
@@ -516,7 +518,7 @@ Veredicto operativo claro: COMPRA, VENTA, MANTENER o ESPERAR. Incluye zona de en
               <div className="rounded-xl border border-cyan-500/25 bg-[#071218]/50 p-3.5 shadow-lg">
                 <div className="flex items-center gap-2.5 mb-3">
                   <div className="w-7 h-7 rounded-lg bg-cyan-950/50 border border-cyan-500/30 flex items-center justify-center flex-shrink-0">
-                    <BarChart2 className="w-3.5 h-3.5 text-cyan-400" />
+                    <CandlestickChart className="w-3.5 h-3.5 text-cyan-400" />
                   </div>
                   <span className="text-[10px] font-mono font-bold tracking-widest text-cyan-300 uppercase">
                     1 · Análisis Técnico
@@ -535,7 +537,7 @@ Veredicto operativo claro: COMPRA, VENTA, MANTENER o ESPERAR. Incluye zona de en
               <div className="rounded-xl border border-emerald-500/25 bg-[#071218]/50 p-3.5 shadow-lg">
                 <div className="flex items-center gap-2.5 mb-3">
                   <div className="w-7 h-7 rounded-lg bg-emerald-950/50 border border-emerald-500/30 flex items-center justify-center flex-shrink-0">
-                    <Zap className="w-3.5 h-3.5 text-emerald-400" />
+                    <Cpu className="w-3.5 h-3.5 text-emerald-400" />
                   </div>
                   <span className="text-[10px] font-mono font-bold tracking-widest text-emerald-300 uppercase">
                     2 · Estrategias de Trading

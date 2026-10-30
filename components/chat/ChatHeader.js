@@ -1,7 +1,7 @@
 "use client"
 
 import React from "react"
-import { FlaskConical, Sparkles, ChevronDown, History, Trash2, Minus, X, Cpu, SquarePen } from "lucide-react"
+import { FlaskConical, ChevronDown, History, Trash2, Minus, X, Cpu, SquarePen } from "lucide-react"
 
 /**
  * Encabezado superior de la ventana Cyber-Quant:
@@ -50,7 +50,7 @@ export default function ChatHeader({
 
             {/* Subtítulo: Motor de IA y Estado */}
             <div className="flex items-center gap-1.5 mt-0.5">
-              <Sparkles className="w-3 h-3 text-cyan-400 flex-shrink-0" />
+              <Cpu className="w-3 h-3 text-cyan-400 flex-shrink-0" />
               <button
                 onClick={() => setShowModelSelect(!showModelSelect)}
                 className="text-cyan-400/90 hover:text-cyan-300 font-mono text-[11px] flex items-center gap-1 transition-colors text-left"
