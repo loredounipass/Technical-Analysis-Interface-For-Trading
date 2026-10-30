@@ -156,7 +156,7 @@ export default function PriceCard({
             ${formatWithDots(low24, decimales)}
           </span>
         </span>
-        <span className="text-slate-600">•</span>
+        <span className="text-slate-400">•</span>
         <span>
           Vol 24h:{" "}
           <span className="text-slate-300 font-medium tabular-nums">

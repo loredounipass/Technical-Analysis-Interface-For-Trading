@@ -15,6 +15,7 @@ import {
   Waves,
   GitCompare,
   Compass,
+  Sparkles,
 } from "lucide-react"
 import { ResponsiveContainer, BarChart, Bar, Cell, Tooltip } from "recharts"
 
@@ -48,14 +49,13 @@ function fmt(v, d = 2) {
 const IndicatorGrid = ({ datos = {} }) => {
   const dec = datos.decimales ?? 2
 
-  // Prepare candle data
+  // Prepare candle data — hasta 500 velas para navegación profunda
   const candleData = []
   const volumeChartData = []
 
   if (datos.history && Array.isArray(datos.history.opens)) {
     const len = datos.history.closes.length
-    // Hasta 300 velas para que el grafico principal pueda navegarse (pan/zoom)
-    const startIdx = Math.max(0, len - 300)
+    const startIdx = Math.max(0, len - 500)
 
     for (let i = startIdx; i < len; i++) {
       const o = Number(datos.history.opens[i])
@@ -88,7 +88,7 @@ const IndicatorGrid = ({ datos = {} }) => {
     }
   }
 
-  // Barras de volumen: ventana navegable (pan/zoom) sobre las 300 velas
+  // Barras de volumen: ventana navegable (pan/zoom) sobre las 500 velas
   const volWin = useChartWindow(volumeChartData.length, { defaultCount: 36, minCount: 10 })
   const recentVolumeData = volumeChartData.slice(volWin.start, volWin.effEnd)
   const volBarSize = Math.min(Math.max((volWin.plotWidth / volWin.effCount) * 0.55, 1), 12)
@@ -137,8 +137,10 @@ const IndicatorGrid = ({ datos = {} }) => {
         <div className="synapse-card p-3.5 flex flex-col justify-between">
           {/* Header */}
           <div className="flex items-center justify-between pb-2 mb-2 border-b border-[#142335] text-xs font-mono">
-            <div className="flex items-center gap-1.5 font-bold tracking-wider text-slate-300 uppercase text-[11px]">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shadow-[0_0_8px_#fbbf24]" />
+            <div className="flex items-center gap-2 font-bold tracking-wider text-white uppercase text-[11px]">
+              <div className="w-6 h-6 rounded-md bg-amber-400/10 border border-amber-400/30 flex items-center justify-center text-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.25)] flex-shrink-0">
+                <Gauge className="w-3.5 h-3.5" />
+              </div>
               <span>24H VOLUME & ADX</span>
             </div>
             <div className="px-2.5 py-0.5 rounded-full text-[10px] font-bold font-mono tracking-wider bg-amber-500/15 border border-amber-500/40 text-amber-400">
@@ -179,14 +181,14 @@ const IndicatorGrid = ({ datos = {} }) => {
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-full flex items-center justify-center text-slate-500 font-mono text-xs">
+              <div className="h-full flex items-center justify-center text-slate-400 font-mono text-xs">
                 No volume bars available
               </div>
             )}
           </div>
 
           {/* Controles de navegacion del volumen */}
-          <div className="flex items-center justify-between gap-2 text-[9px] font-mono text-slate-600 pb-1">
+          <div className="flex items-center justify-between gap-2 text-[9px] font-mono text-slate-300 pb-1">
             <span>{volWin.start + 1}–{volWin.effEnd} de {volumeChartData.length}</span>
             <ChartNavControls
               onPanLeft={() => volWin.panBy(-Math.max(1, Math.round(volWin.effCount / 4)))}
@@ -199,10 +201,10 @@ const IndicatorGrid = ({ datos = {} }) => {
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-between pt-2 border-t border-[#142335] text-[10px] font-mono tracking-wider text-slate-400">
+          <div className="flex items-center justify-between pt-2 border-t border-[#142335] text-[10px] font-mono tracking-wider text-slate-300">
             <span>
               Raw Vol:{" "}
-              <span className="text-slate-300 font-medium">
+              <span className="text-white font-medium">
                 ${formatVolume(datos.volumen)}
               </span>
             </span>
@@ -230,51 +232,22 @@ const IndicatorGrid = ({ datos = {} }) => {
         />
       </div>
 
-      {/* 4. Oscillators & ADX Strength */}
+      {/* 4. Oscillators: Stochastic Oscillator (ChartCard) + Stochastic RSI (ChartCard) */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Stochastic Oscillator */}
-        <IndicatorCard
+        <ChartCard
           title="STOCHASTIC OSCILLATOR (14, 3, 3)"
-          icon={<Percent className="w-3.5 h-3.5 text-[#00f5c4]" />}
-          badge={
-            <span
-              className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold font-mono tracking-wider ${
-                datos.stochK > 80
-                  ? "bg-[#ff3b69]/15 border border-[#ff3b69]/40 text-[#ff3b69]"
-                  : datos.stochK < 20
-                  ? "bg-[#00f5c4]/15 border border-[#00f5c4]/40 text-[#00f5c4]"
-                  : "bg-cyan-500/10 border border-cyan-500/30 text-cyan-400"
-              }`}
-            >
-              {datos.stochK > 80 ? "Overbought" : datos.stochK < 20 ? "Oversold" : "Neutral"}
-            </span>
-          }
-        >
-          <div className="space-y-2.5 font-mono">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="bg-[#09111b] p-2.5 rounded-md border border-[#16283d]">
-                <div className="text-[10px] text-slate-400 uppercase tracking-wider">%K Line</div>
-                <div className="text-base font-bold text-cyan-400 tabular-nums">
-                  {fmt(datos.stochK)}
-                </div>
-              </div>
-              <div className="bg-[#09111b] p-2.5 rounded-md border border-[#16283d]">
-                <div className="text-[10px] text-slate-400 uppercase tracking-wider">%D Line</div>
-                <div className="text-base font-bold text-[#00f5c4] tabular-nums">
-                  {fmt(datos.stochD)}
-                </div>
-              </div>
-            </div>
-            {/* Progress gauge */}
-            <div className="w-full bg-[#08111a] rounded-full h-1.5 overflow-hidden flex">
-              <div
-                className="bg-[#00f5c4] h-full transition-all duration-300 shadow-[0_0_8px_#00f5c4]"
-                style={{ width: `${Math.min(100, Math.max(0, datos.stochK || 50))}%` }}
-              />
-            </div>
-          </div>
-        </IndicatorCard>
+          type="stoch"
+          datos={datos}
+        />
+        <ChartCard
+          title="STOCHASTIC RSI (14, 3, 3)"
+          type="stochRsi"
+          datos={datos}
+        />
+      </div>
 
+      {/* 5. CCI */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* CCI Indicator */}
         <IndicatorCard
           title="CCI (20)"
@@ -295,7 +268,7 @@ const IndicatorGrid = ({ datos = {} }) => {
         >
           <div className="space-y-2.5 font-mono">
             <div className="flex justify-between items-center bg-[#09111b] p-2.5 rounded-md border border-[#16283d]">
-              <span className="text-[10px] text-slate-400 uppercase tracking-wider">Commodity Channel Index</span>
+              <span className="text-[10px] text-slate-300 uppercase tracking-wider">Commodity Channel Index</span>
               <span
                 className={`text-lg font-bold tabular-nums ${
                   datos.cci > 100
@@ -309,7 +282,7 @@ const IndicatorGrid = ({ datos = {} }) => {
               </span>
             </div>
             <div className="w-full bg-[#08111a] rounded-full h-1.5 relative overflow-hidden flex items-center">
-              <div className="absolute left-1/2 top-0 bottom-0 w-[1px] bg-slate-600 z-10" />
+              <div className="absolute left-1/2 top-0 bottom-0 w-[1px] bg-slate-500 z-10" />
               <div
                 className={`h-full transition-all duration-300 ${
                   datos.cci > 100
@@ -329,9 +302,12 @@ const IndicatorGrid = ({ datos = {} }) => {
             </div>
           </div>
         </IndicatorCard>
+
+        {/* Empty placeholder for symmetry, or could add another indicator */}
+        <div />
       </div>
 
-      {/* 5. Support and Resistance Levels */}
+      {/* 6. Support and Resistance Levels */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Support */}
         <IndicatorCard
@@ -350,7 +326,7 @@ const IndicatorGrid = ({ datos = {} }) => {
               >
                 <div className="flex items-center gap-2">
                   <span className="text-[#00f5c4] font-bold text-xs">{support.level}</span>
-                  <span className="text-[9px] text-slate-400 uppercase">[{support.strength}]</span>
+                  <span className="text-[9px] text-slate-300 uppercase">[{support.strength}]</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="text-white font-medium text-xs tabular-nums">
@@ -382,7 +358,7 @@ const IndicatorGrid = ({ datos = {} }) => {
               >
                 <div className="flex items-center gap-2">
                   <span className="text-[#ff3b69] font-bold text-xs">{resistance.level}</span>
-                  <span className="text-[9px] text-slate-400 uppercase">[{resistance.strength}]</span>
+                  <span className="text-[9px] text-slate-300 uppercase">[{resistance.strength}]</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="text-white font-medium text-xs tabular-nums">

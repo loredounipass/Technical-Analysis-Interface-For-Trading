@@ -90,9 +90,9 @@ export default function RecommendationCard({
         {/* Signal counts: BUY | HOLD | SELL */}
         <div className="text-[11px] font-mono tracking-wider flex items-center gap-2">
           <span className="text-[#00f5c4] font-bold">{buys} BUY</span>
-          <span className="text-slate-600">|</span>
+          <span className="text-slate-400">|</span>
           <span className="text-slate-400 font-medium">{neutrals} HOLD</span>
-          <span className="text-slate-600">|</span>
+          <span className="text-slate-400">|</span>
           <span className="text-[#ff3b69] font-bold">{sells} SELL</span>
         </div>
       </div>
