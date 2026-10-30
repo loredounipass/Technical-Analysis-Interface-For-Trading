@@ -104,9 +104,8 @@ export default function CandleChart({
             <span className="text-white text-right font-medium">${fmt(d.low)}</span>
             <span className="text-slate-300">Close:</span>
             <span
-              className={`text-right font-bold ${
-                isBull ? "text-[#00f5c4]" : "text-[#ff3b69]"
-              }`}
+              className={`text-right font-bold ${isBull ? "text-[#00f5c4]" : "text-[#ff3b69]"
+                }`}
             >
               ${fmt(d.close)}
             </span>
@@ -156,9 +155,8 @@ export default function CandleChart({
               <span className="text-slate-300">
                 C:{" "}
                 <span
-                  className={`font-bold ${
-                    isLatestBullish ? "text-[#00f5c4]" : "text-[#ff3b69]"
-                  }`}
+                  className={`font-bold ${isLatestBullish ? "text-[#00f5c4]" : "text-[#ff3b69]"
+                    }`}
                 >
                   {fmt(latestCandle.close)}
                 </span>
@@ -305,15 +303,6 @@ export default function CandleChart({
           </ComposedChart>
         </ResponsiveContainer>
 
-        {/* Floating Current Price Pill on the Right Axis (texto en blanco/cyan neon) */}
-        {currentPrice > 0 && isLive && (
-          <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1 hidden sm:block">
-            <div className="px-2.5 py-0.5 rounded bg-[#0b1c26] border border-[#00f5c4] text-white font-mono font-bold text-[10px] shadow-[0_0_12px_rgba(0,245,196,0.35)] flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#00f5c4] animate-ping" />
-              <span>${fmt(currentPrice)}</span>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Hint de navegación + rango visible con texto en blanco */}
