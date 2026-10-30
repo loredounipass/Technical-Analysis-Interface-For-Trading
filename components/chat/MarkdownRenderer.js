@@ -3,9 +3,9 @@
 import React from "react"
 
 /**
- * Renderizador de Markdown adaptado a la estética Cyber-Quant.
- * Procesa encabezados, tablas, bloques de código, listas, citas,
- * y destaca automáticamente pares y temporalidades con píldoras de estilo terminal.
+ * Renderizador de Markdown adaptado a la estética Anthropic / Synapse Terminal.
+ * Procesa encabezados, tablas, bloques de código, listas y citas con tipografía
+ * de alta legibilidad, espaciado refinado y acentos cyan neón.
  */
 export function renderMarkdown(text, currentSymbol, currentInterval) {
   if (!text) return null
@@ -21,7 +21,10 @@ export function renderMarkdown(text, currentSymbol, currentInterval) {
   const flushList = () => {
     if (listItems.length > 0) {
       elements.push(
-        <ul key={`ul-${elements.length}`} className="my-2 ml-5 space-y-1.5 list-disc marker:text-emerald-400 text-slate-300 text-[13px]">
+        <ul
+          key={`ul-${elements.length}`}
+          className="my-2.5 ml-5 space-y-1.5 list-disc marker:text-[#00f5c4] text-slate-300 text-[13.5px] leading-[1.65] font-sans"
+        >
           {listItems}
         </ul>
       )
@@ -32,8 +35,11 @@ export function renderMarkdown(text, currentSymbol, currentInterval) {
   const flushTable = () => {
     if (tableRows.length > 0) {
       elements.push(
-        <div key={`table-${elements.length}`} className="my-3 overflow-x-auto border border-emerald-500/20 rounded-lg bg-[#04090d]">
-          <table className="w-full text-left border-collapse text-[12px] font-mono">
+        <div
+          key={`table-${elements.length}`}
+          className="my-3 overflow-x-auto border border-[#16283d] rounded-lg bg-[#050c14] shadow-sm"
+        >
+          <table className="w-full text-left border-collapse text-[11.5px] font-mono">
             <tbody>
               {tableRows.map((row, rIdx) => {
                 const isHeader = rIdx === 0
@@ -44,12 +50,17 @@ export function renderMarkdown(text, currentSymbol, currentInterval) {
                     key={rIdx}
                     className={
                       isHeader
-                        ? "bg-emerald-950/40 border-b border-emerald-500/30 text-emerald-300 font-semibold"
-                        : "border-b border-slate-800/60 hover:bg-emerald-950/20"
+                        ? "bg-[#0b1622] border-b border-[#16283d] text-[#00f5c4] font-semibold"
+                        : "border-b border-[#132235]/60 hover:bg-[#091522]/50 transition-colors"
                     }
                   >
                     {row.map((cell, cIdx) => (
-                      <td key={cIdx} className={`px-3 py-2 ${isHeader ? "text-emerald-300 font-bold" : "text-slate-300"}`}>
+                      <td
+                        key={cIdx}
+                        className={`px-3 py-2 ${
+                          isHeader ? "text-[#00f5c4] font-bold" : "text-slate-300"
+                        }`}
+                      >
                         {formatInline(cell.trim(), `${rIdx}-${cIdx}`)}
                       </td>
                     ))}
@@ -76,7 +87,7 @@ export function renderMarkdown(text, currentSymbol, currentInterval) {
         result.push(
           <code
             key={`${keyPrefix}-c-${keyIdx++}`}
-            className="px-1.5 py-0.5 rounded bg-emerald-950/60 text-emerald-300 border border-emerald-500/30 font-mono text-[11px]"
+            className="px-1.5 py-0.5 rounded bg-[#0b1622] text-[#00f5c4] border border-[#16283d] font-mono text-[11px]"
           >
             {part.slice(1, -1)}
           </code>
@@ -89,7 +100,7 @@ export function renderMarkdown(text, currentSymbol, currentInterval) {
             const rawBold = bPart.slice(2, -2)
             if (rawBold === currentSymbol || rawBold.includes("USDT") || rawBold.includes("/")) {
               result.push(
-                <strong key={`${keyPrefix}-b-${keyIdx++}`} className="text-white font-bold tracking-wide">
+                <strong key={`${keyPrefix}-b-${keyIdx++}`} className="text-white font-semibold tracking-wide">
                   {rawBold}
                 </strong>
               )
@@ -101,14 +112,14 @@ export function renderMarkdown(text, currentSymbol, currentInterval) {
               result.push(
                 <span
                   key={`${keyPrefix}-badge-${keyIdx++}`}
-                  className="inline-flex mx-1 px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono text-[11px] font-semibold"
+                  className="inline-flex mx-1 px-1.5 py-0.5 rounded bg-[#00f5c4]/10 text-[#00f5c4] border border-[#00f5c4]/20 font-mono text-[11px] font-semibold"
                 >
                   {rawBold}
                 </span>
               )
             } else {
               result.push(
-                <strong key={`${keyPrefix}-b-${keyIdx++}`} className="font-semibold text-emerald-300">
+                <strong key={`${keyPrefix}-b-${keyIdx++}`} className="font-semibold text-white">
                   {rawBold}
                 </strong>
               )
@@ -141,13 +152,13 @@ export function renderMarkdown(text, currentSymbol, currentInterval) {
     if (trimmed.startsWith("```")) {
       if (inCodeBlock) {
         elements.push(
-          <div key={`code-${i}`} className="my-3 rounded-lg bg-[#04080c] border border-emerald-500/25 overflow-hidden">
+          <div key={`code-${i}`} className="my-3 rounded-lg bg-[#04080c] border border-[#16283d] overflow-hidden">
             {codeBlockLang && (
-              <div className="px-3 py-1 bg-emerald-950/40 border-b border-emerald-500/20 text-[10px] text-emerald-400 font-mono uppercase tracking-wider">
+              <div className="px-3 py-1 bg-[#0b1622] border-b border-[#16283d] text-[10px] text-[#00f5c4] font-mono uppercase tracking-wider">
                 {codeBlockLang}
               </div>
             )}
-            <pre className="p-3 overflow-x-auto text-[12px] text-emerald-300 font-mono leading-relaxed">
+            <pre className="p-3 overflow-x-auto text-[12px] text-slate-200 font-mono leading-relaxed">
               <code>{codeBlockLines.join("\n")}</code>
             </pre>
           </div>
@@ -180,24 +191,25 @@ export function renderMarkdown(text, currentSymbol, currentInterval) {
       flushTable()
     }
 
+    // Headings
     if (trimmed.startsWith("### ")) {
       flushList()
       elements.push(
-        <h4 key={i} className="font-semibold text-emerald-300 text-[14px] mt-4 mb-2 flex items-center gap-2">
+        <h4 key={i} className="font-semibold text-[#00f5c4] text-[14px] mt-4 mb-2 flex items-center gap-2 font-sans tracking-tight">
           {formatInline(trimmed.slice(4), i)}
         </h4>
       )
     } else if (trimmed.startsWith("## ")) {
       flushList()
       elements.push(
-        <h3 key={i} className="font-bold text-white text-[16px] mt-5 mb-2.5 border-b border-emerald-500/20 pb-1.5 tracking-wide">
+        <h3 key={i} className="font-bold text-white text-[15px] mt-5 mb-2.5 border-b border-[#16283d] pb-1.5 tracking-tight font-sans">
           {formatInline(trimmed.slice(3), i)}
         </h3>
       )
     } else if (trimmed.startsWith("# ")) {
       flushList()
       elements.push(
-        <h2 key={i} className="font-bold text-white text-[18px] mt-6 mb-3 uppercase tracking-wider font-mono">
+        <h2 key={i} className="font-bold text-white text-[17px] mt-6 mb-3 tracking-tight font-sans">
           {formatInline(trimmed.slice(2), i)}
         </h2>
       )
@@ -210,15 +222,15 @@ export function renderMarkdown(text, currentSymbol, currentInterval) {
     } else if (/^\d+\.\s/.test(trimmed)) {
       flushList()
       elements.push(
-        <div key={i} className="my-1.5 flex gap-2 text-[13px]">
-          <span className="text-emerald-400 font-mono font-bold flex-shrink-0 mt-0.5">{trimmed.match(/^\d+\./)[0]}</span>
+        <div key={i} className="my-1.5 flex gap-2 text-[13.5px] font-sans">
+          <span className="text-[#00f5c4] font-mono font-bold flex-shrink-0 mt-0.5">{trimmed.match(/^\d+\./)[0]}</span>
           <span className="text-slate-300">{formatInline(trimmed.replace(/^\d+\.\s/, ""), i)}</span>
         </div>
       )
     } else if (trimmed.startsWith("> ")) {
       flushList()
       elements.push(
-        <blockquote key={i} className="pl-3 border-l-2 border-emerald-400 my-2 text-slate-300 italic bg-emerald-950/20 py-1.5 pr-2 rounded-r text-[13px]">
+        <blockquote key={i} className="pl-3 border-l-2 border-[#00f5c4] my-2.5 text-slate-300 italic bg-[#00f5c4]/5 py-2 pr-3 rounded-r text-[13.5px] font-sans">
           {formatInline(trimmed.slice(2), i)}
         </blockquote>
       )
@@ -228,7 +240,7 @@ export function renderMarkdown(text, currentSymbol, currentInterval) {
     } else {
       flushList()
       elements.push(
-        <p key={i} className="text-slate-200 my-1.5 leading-relaxed text-[13px]">
+        <p key={i} className="text-slate-200 my-1.5 leading-[1.68] text-[13.5px] sm:text-[14px] font-sans">
           {formatInline(trimmed, i)}
         </p>
       )
@@ -237,8 +249,8 @@ export function renderMarkdown(text, currentSymbol, currentInterval) {
 
   if (inCodeBlock) {
     elements.push(
-      <div key="code-unclosed" className="my-3 rounded-lg bg-[#04080c] border border-emerald-500/25 overflow-hidden">
-        <pre className="p-3 overflow-x-auto text-[12px] text-emerald-300 font-mono leading-relaxed">
+      <div key="code-unclosed" className="my-3 rounded-lg bg-[#04080c] border border-[#16283d] overflow-hidden">
+        <pre className="p-3 overflow-x-auto text-[12px] text-slate-200 font-mono leading-relaxed">
           <code>{codeBlockLines.join("\n")}</code>
         </pre>
       </div>

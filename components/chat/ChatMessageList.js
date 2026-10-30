@@ -25,7 +25,7 @@ function getModelBadge(modelKey) {
 }
 
 /**
- * Contenedor de la conversación:
+ * Contenedor de la conversación con tipografía Anthropic Claude:
  * Renderiza los mensajes del usuario, las respuestas de Woody Agent con estilo
  * cyan/esmeralda, el panel de diagnóstico y los estados de streaming/espera.
  */
@@ -67,7 +67,7 @@ export default function ChatMessageList({
               <div className="relative group max-w-[85%] sm:max-w-[75%]">
                 {/* Punto verde de acento en la esquina superior derecha */}
                 <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_#10b981]" />
-                <div className="bg-[#092222]/80 backdrop-blur-sm border border-emerald-500/40 text-white px-4 py-2.5 rounded-2xl rounded-tr-sm text-sm font-sans font-medium shadow-lg">
+                <div className="bg-[#092222]/80 backdrop-blur-sm border border-emerald-500/40 text-white px-4 py-2.5 rounded-2xl rounded-tr-sm text-[13.5px] sm:text-sm font-sans font-medium shadow-lg leading-relaxed">
                   {msg.content}
                 </div>
               </div>
@@ -83,7 +83,7 @@ export default function ChatMessageList({
               </div>
             </div>
           ) : (
-            /* Mensaje del Asistente (Woody Agent) */
+            /* Mensaje del Asistente (Woody Agent / Anthropic Claude Style) */
             <div className="flex items-start gap-3 w-full my-2">
               {/* Avatar Squircle con Sparkles */}
               <div className="w-9 h-9 rounded-xl border border-cyan-500/40 bg-[#081820] flex items-center justify-center shadow-[0_0_12px_rgba(6,182,212,0.2)] flex-shrink-0 mt-1">
@@ -91,7 +91,7 @@ export default function ChatMessageList({
               </div>
 
               {/* Tarjeta del Asistente con acento izquierdo cyan */}
-              <div className="flex-1 bg-[#071218]/80 backdrop-blur-sm border border-slate-800/90 border-l-2 border-l-cyan-400 rounded-r-2xl rounded-bl-2xl p-4 sm:p-5 shadow-xl space-y-3.5 text-slate-200">
+              <div className="flex-1 bg-[#071218]/85 backdrop-blur-sm border border-slate-800/90 border-l-2 border-l-cyan-400 rounded-r-2xl rounded-bl-2xl p-4 sm:p-5 shadow-xl space-y-3.5 text-slate-200">
                 {/* Encabezado del Mensaje del Agente */}
                 <div className="flex items-center justify-between pb-1.5 border-b border-slate-800/60 flex-wrap gap-2">
                   <div className="flex items-center gap-2">
@@ -108,8 +108,8 @@ export default function ChatMessageList({
                   </span>
                 </div>
 
-                {/* Contenido / Texto Markdown */}
-                <div className="text-[13px] sm:text-sm font-sans leading-relaxed text-slate-200 break-words">
+                {/* Contenido / Texto Markdown con tipografía Anthropic Claude */}
+                <div className="text-[13.5px] sm:text-[14.5px] font-sans leading-[1.68] text-slate-100 break-words tracking-[-0.01em]">
                   {renderMarkdown(msg.content, symbol, intervalLabel)}
                 </div>
 
@@ -129,7 +129,7 @@ export default function ChatMessageList({
           <div className="w-9 h-9 rounded-xl border border-cyan-500/40 bg-[#081820] flex items-center justify-center shadow-[0_0_12px_rgba(6,182,212,0.2)] flex-shrink-0 mt-1">
             <Sparkles className="w-4 h-4 text-cyan-300" />
           </div>
-          <div className="flex-1 bg-[#071218]/80 backdrop-blur-sm border border-slate-800/90 border-l-2 border-l-cyan-400 rounded-r-2xl rounded-bl-2xl p-4 sm:p-5 shadow-xl space-y-3 text-slate-200">
+          <div className="flex-1 bg-[#071218]/85 backdrop-blur-sm border border-slate-800/90 border-l-2 border-l-cyan-400 rounded-r-2xl rounded-bl-2xl p-4 sm:p-5 shadow-xl space-y-3 text-slate-200">
             <div className="flex items-center justify-between pb-1.5 border-b border-slate-800/60">
               <span className="text-xs font-mono font-bold tracking-wider text-white">
                 WOODY QUANT INTEL
@@ -138,7 +138,7 @@ export default function ChatMessageList({
                 STREAMING NEURAL COMPUTE...
               </span>
             </div>
-            <div className="text-[13px] sm:text-sm font-sans leading-relaxed text-slate-200 break-words">
+            <div className="text-[13.5px] sm:text-[14.5px] font-sans leading-[1.68] text-slate-100 break-words tracking-[-0.01em]">
               {renderMarkdown(typingText, symbol, intervalLabel)}
               <span className="inline-block w-1.5 h-4 ml-1 bg-emerald-400 animate-pulse align-middle" />
             </div>
