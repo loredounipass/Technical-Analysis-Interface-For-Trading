@@ -4,6 +4,7 @@ import React from "react"
 import IndicatorCard from "@/components/indicators/IndicatorCard"
 import ChartCard from "@/components/indicators/ChartCard"
 import CandleChart from "@/components/indicators/CandleChart"
+import LiquidityBubbleMap from "@/components/indicators/LiquidityBubbleMap"
 import useChartWindow from "@/components/indicators/useChartWindow"
 import ChartNavControls from "@/components/indicators/ChartNavControls"
 import {
@@ -305,6 +306,15 @@ const IndicatorGrid = ({ datos = {} }) => {
 
         {/* Empty placeholder for symmetry, or could add another indicator */}
         <div />
+      </div>
+
+      {/* 5.5 Liquidity Bubble Map (Order Book Depth) */}
+      <div className="grid grid-cols-1 gap-4">
+        <LiquidityBubbleMap
+          depthRaw={datos.depthRaw}
+          precio={datos.precio}
+          decimales={dec}
+        />
       </div>
 
       {/* 6. Support and Resistance Levels */}

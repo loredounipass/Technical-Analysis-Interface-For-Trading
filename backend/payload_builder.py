@@ -212,6 +212,7 @@ def build_payload(symbol, interval_str, market, klines, vol_24h=None):
     buyer_percent = None
     ob_source = None
 
+    depth_raw = None
     if market == 'crypto':
         try:
             depth = fetch_order_book_depth(symbol)
@@ -223,6 +224,11 @@ def build_payload(symbol, interval_str, market, klines, vol_24h=None):
                 best_bid = bids[0][0]
                 best_ask = asks[0][0]
                 ob_source = 'order_book'
+                # Guardar depth raw para el bubble map de liquidez
+                depth_raw = {
+                    'bids': [[p, q] for p, q in bids[:40]],
+                    'asks': [[p, q] for p, q in asks[:40]],
+                }
         except Exception as e:
             logger.warning(f"[TradingData] order book fallo para {symbol}: {e}")
 
@@ -286,6 +292,7 @@ def build_payload(symbol, interval_str, market, klines, vol_24h=None):
         'bestBid': best_bid,
         'bestAsk': best_ask,
         'orderBookSource': ob_source,
+        'depthRaw': depth_raw,
         'timeframe': interval_str,
         'history': history
     }
