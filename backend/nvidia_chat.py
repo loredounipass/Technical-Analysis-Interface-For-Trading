@@ -1,4 +1,5 @@
 import os
+import re
 import json
 import logging
 import datetime
@@ -11,6 +12,78 @@ logger = logging.getLogger(__name__)
 NVIDIA_API_KEY_ENV = "NVIDIA_API_KEY"
 NVIDIA_API_BASE = "https://integrate.api.nvidia.com/v1"
 REQUEST_TIMEOUT = 60
+
+
+# ---------------------------------------------------------------------------
+# Intent classifier: decide if user message requires full technical analysis
+# or is a casual / conversational message.
+# ---------------------------------------------------------------------------
+# Palabras/frases que ACTIVAN análisis técnico completo
+_ANALYSIS_TRIGGERS = re.compile(
+    r'\b('
+    r'anali[zs]|análisis|technical|analisis|trade|trading|opera|operar|operacion|'
+    r'compra[rs]?|vend[eo]r?|venta|sell|buy|long|short|'
+    r'soporte|resistencia|support|resistance|'
+    r'rsi|macd|ema|bollinger|adx|cci|mfi|stoch|indicador|indicator|'
+    r'señal|signal|tendencia|trend|momentum|'
+    r'entrada|salida|entry|exit|stop.?loss|take.?profit|tp|sl|'
+    r'precio|price|target|objetivo|'
+    r'alcista|bajista|bullish|bearish|'
+    r'mercado|market|cripto|crypto|bitcoin|btc|eth|sol|doge|xrp|bnb|pepe|shib|'
+    r'grafico|gráfico|chart|candle|vela|'
+    r'liquidez|liquidity|volumen|volume|'
+    r'pivot|fibonacci|fibo|wyckoff|elliott|'
+    r'qué (ves|opinas|piensas|recomiendas|sugieres)|'
+    r'how.?is|what.?about|what.?do you (think|see|recommend)|'
+    r'como (va|ves|esta|está)|que tal va|dame|give me|hazme|do a|'
+    r'predic|forecast|pronóstico|pronostico|outlook|'
+    r'resumen|summary|reporte|report'
+    r')\b',
+    re.IGNORECASE | re.UNICODE
+)
+
+# Patrones que indican conversación casual (saludos, preguntas personales, etc.)
+_CASUAL_PATTERNS = re.compile(
+    r'^('
+    r'(hola|hey|hi|hello|buenas?|saludos?|qué tal|que tal|buenos dias|buenas tardes|buenas noches|sup|yo|ey)[\s!?.,]*$|'
+    r'(cómo estás|como estas|how are you|que onda|qué onda|que pedo|cómo vas|como vas|cómo te va|como te va)[\s!?.,]*$|'
+    r'(quién eres|quien eres|who are you|qué eres|que eres|what are you|qué haces|que haces|what do you do)[\s!?.,]*$|'
+    r'(gracias|thanks|thank you|thx|ty|de nada|ok|okay|vale|bien|cool|genial|perfecto|listo|nice)[\s!?.,]*$|'
+    r'(adiós|adios|bye|chao|chau|nos vemos|hasta luego|see you|later)[\s!?.,]*$|'
+    r'(jaja|haha|lol|xd|😂|😄|🤣|👍|🔥)[\s!?.,]*$|'
+    r'(cuéntame de ti|cuentame de ti|tell me about yourself|presentate|preséntate|introduce yourself)[\s!?.,]*$'
+    r')',
+    re.IGNORECASE | re.UNICODE
+)
+
+
+def classify_intent(prompt: str) -> str:
+    """Classify user intent as 'analysis', 'casual', or 'ambiguous'.
+
+    - 'casual': greetings, personal questions, thanks, etc. → NO data injection
+    - 'analysis': explicit request for trading analysis → FULL data injection
+    - 'ambiguous': mixed or unclear → inject data but tell model to decide
+    """
+    cleaned = prompt.strip()
+
+    # Very short message without analysis keywords → likely casual
+    if len(cleaned) < 4:
+        return 'casual'
+
+    # Check for explicit casual patterns first
+    if _CASUAL_PATTERNS.match(cleaned):
+        return 'casual'
+
+    # Check for analysis triggers
+    if _ANALYSIS_TRIGGERS.search(cleaned):
+        return 'analysis'
+
+    # Short messages without triggers are likely casual
+    if len(cleaned.split()) <= 5:
+        return 'casual'
+
+    # Longer messages without explicit triggers → ambiguous (let model decide)
+    return 'ambiguous'
 
 AVAILABLE_MODELS = {
     "nvidia-nemotron": {
@@ -41,13 +114,65 @@ class NvidiaChatError(Exception):
         self.code = code
 
 
-def get_trading_system_prompt(indicator_data=None, global_context=None, model_name="AI"):
-    """Build a specialized trading agent system prompt with live indicator data and global context."""
-    base = (
+def get_trading_system_prompt(indicator_data=None, global_context=None, model_name="AI", intent="analysis"):
+    """Build a specialized trading agent system prompt.
+
+    Args:
+        indicator_data: Live market data dict (only injected for 'analysis'/'ambiguous' intents).
+        global_context: Cross-session memory string.
+        model_name: Display name of the AI model.
+        intent: 'analysis' | 'casual' | 'ambiguous' — controls data injection and behavior.
+    """
+
+    # ── IDENTITY (always present) ──
+    identity = (
         f"You are a SENIOR QUANTITATIVE CRYPTO STRATEGIST and PROFESSIONAL TRADER with 15+ years of experience in global markets. "
-        f"You are operating as the AI model {model_name}. "
+        f"You are operating as the AI model {model_name} inside the SYNAPSE TERMINAL, a next-gen technical analysis interface. "
         "Your expertise covers Market Microstructure, Price Action (PA), Wyckoff Theory, Elliott Wave Principle, and advanced Technical Indicators. "
         "You specialize in identifying high-probability setups and managing risk in the volatile crypto market.\n\n"
+    )
+
+    # ── PERSONALITY & RULES (always present) ──
+    personality = (
+        "=== PERSONALITY & RULES ===\n"
+        "- Respond in the SAME LANGUAGE as the user.\n"
+        "- You are professional, charismatic, confident, and approachable. Think of yourself as a senior trader at an institutional desk who is also easy to talk to.\n"
+        "- Use professional trading terminology naturally when discussing markets ('liquidity sweep', 'order block', 'fair value gap', 'confluence').\n"
+        "- NEVER include generic legal disclaimers like 'hypothetical trade ideas', 'not investment advice', 'consult a financial advisor', or 'do your own research' - they break the user experience and are forbidden.\n"
+    )
+
+    # ── INTENT-SPECIFIC BEHAVIOR ──
+    if intent == 'casual':
+        # Conversational mode — NO data, NO analysis framework
+        base = identity + personality
+        base += (
+            "\n=== CURRENT MODE: CONVERSATIONAL ===\n"
+            "The user is having a casual conversation — greeting, asking about you, or chatting. "
+            "DO NOT perform any technical analysis. DO NOT reference indicators, charts, or market data. "
+            "Respond naturally and warmly, like a senior trader colleague during a coffee break. "
+            "Keep responses SHORT (2-4 sentences max). Be personable but always maintain your professional trader identity.\n"
+            "If the user asks who you are or what you do, briefly introduce yourself as a quantitative trading strategist "
+            "embedded in the SYNAPSE TERMINAL, ready to analyze any asset when they need it.\n"
+            "If the user seems to want analysis, tell them you're ready — just ask about a specific asset or say 'analiza' and you'll deliver a full institutional report.\n"
+        )
+        if global_context:
+            base += f"\n=== CROSS-SESSION CONTEXT (MEMORY) ===\n"
+            base += f"The user has other active sessions: {global_context}. Use this for continuity if referenced.\n"
+        return base
+
+    # ── ANALYSIS or AMBIGUOUS mode ──
+    base = identity
+
+    if intent == 'ambiguous':
+        base += (
+            "=== INTENT DETECTION ===\n"
+            "The user's message is ambiguous — it may or may not be requesting analysis. "
+            "READ THE USER'S MESSAGE CAREFULLY. If it's clearly conversational (greeting, personal question, thanks), "
+            "respond naturally and briefly without analysis. If it mentions or implies a market, asset, price, or technical concept, "
+            "perform a full professional analysis using the data below.\n\n"
+        )
+
+    base += (
         "Your task is to provide a PROFESSIONAL TRADING ANALYSIS based EXCLUSIVELY on the live market data provided below. "
         "Do not hallucinate data. If a specific value is 'N/A', ignore it in your analysis.\n\n"
     )
@@ -57,9 +182,13 @@ def get_trading_system_prompt(indicator_data=None, global_context=None, model_na
         base += f"The user has other active analysis sessions: {global_context}. "
         base += f"If the user refers to past discussions or other symbols, use this overview to maintain continuity.\n\n"
 
+    base += personality
     base += (
+        "- **BE HIGHLY STRUCTURED AND ELABORATE**: Your answers must look like a premium quantitative report from an institutional trading desk. Use beautiful, organized formatting.\n"
+        "- Be objective, precise, and highly analytical. Back up claims with the data provided.\n"
+        "- At the end of each technical analysis, add a single confident line: 'Análisis basado en datos de mercado en tiempo real y análisis técnico externo.'\n\n"
         "=== PROFESSIONAL ANALYSIS FRAMEWORK ===\n"
-        "When performing an analysis, you MUST structure your response professionally using Markdown headers, bullet points, and bold text for readability. Use the following structure for full analyses:\n"
+        "When performing an analysis, you MUST structure your response using this framework:\n"
         "### 📊 Resumen Ejecutivo & Señal de Mercado\n"
         "Un panorama conciso de 1-2 oraciones del estado del mercado, contrastando el **MARKET SIGNAL** actual (COMPRA / VENTA / NEUTRAL) y el ratio de flujo de presión compradora/vendedora.\n\n"
         "### 💧 Mapa de Liquidez & Order Book (Bubble Map)\n"
@@ -73,14 +202,6 @@ def get_trading_system_prompt(indicator_data=None, global_context=None, model_na
         "Declara claramente las zonas inmediatas de Soporte (S1, S2, S3) y Resistencia (R1, R2, R3) basadas en Pivots y reforzadas por la liquidez del Order Book.\n\n"
         "### 💡 Recomendación Estratégica\n"
         "Provee asesoramiento altamente accionable (COMPRA / VENTA / MANTENER / ESPERAR) con zonas lógicas de Entrada, Stop Loss (SL) y objetivos de Take Profit (TP) basados en riesgo/beneficio.\n\n"
-        "=== OPERATIONAL RULES & PERSONALITY ===\n"
-        "- Respond in the SAME LANGUAGE as the user.\n"
-        "- **BE HIGHLY STRUCTURED AND ELABORATE**: Your answers must look like a premium quantitative report from an institutional trading desk. Use beautiful, organized formatting.\n"
-        "- Use professional trading terminology ('liquidity sweep', 'order block', 'fair value gap', 'confluence').\n"
-        "- Be objective, precise, and highly analytical. Back up claims with the data provided.\n"
-        "- If the user asks a simple question or greets you, respond naturally but maintain a sophisticated, institutional tone. You don't need the full structure for a simple greeting.\n"
-        "- NEVER include generic legal disclaimers like 'hypothetical trade ideas', 'not investment advice', 'consult a financial advisor', or 'do your own research' - they break the user experience and are forbidden.\n"
-        "- Instead, at the end of each technical analysis, add a single confident line stating that the recommendation is based on the real-time market data provided and on external technical analysis (e.g., 'Análisis basado en datos de mercado en tiempo real y análisis técnico externo.').\n"
     )
 
     if indicator_data:
@@ -376,6 +497,7 @@ def nvidia_chat(
     history: list | None = None,
     global_context: str | None = None,
     indicator_data: dict | None = None,
+    intent: str = "analysis",
 ) -> str:
     """Call the NVIDIA API. Returns the response text on success.
     Raises NvidiaChatError with a descriptive message on failure."""
@@ -389,7 +511,13 @@ def nvidia_chat(
     model_id = model_config["id"]
     model_name = model_config["name"]
     timeout = float(model_config.get("timeout", REQUEST_TIMEOUT))
-    system_prompt = get_trading_system_prompt(indicator_data, global_context, model_name)
+
+    # For casual intent, don't inject indicator data into the prompt
+    effective_data = indicator_data if intent in ('analysis', 'ambiguous') else None
+    system_prompt = get_trading_system_prompt(effective_data, global_context, model_name, intent=intent)
+
+    # Casual conversations get lower max_tokens (shorter responses)
+    effective_max_tokens = 512 if intent == 'casual' else max_tokens
     url = f"{NVIDIA_API_BASE}/chat/completions"
     headers = {
         "Authorization": f"Bearer {api_key}",
@@ -399,7 +527,7 @@ def nvidia_chat(
         "model": model_id,
         "messages": build_messages(prompt, system_prompt, history),
         "temperature": temperature,
-        "max_tokens": max_tokens,
+        "max_tokens": effective_max_tokens,
     }).encode("utf-8")
 
     req = Request(url, data=payload, headers=headers, method="POST")
