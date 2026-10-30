@@ -297,4 +297,15 @@ def build_payload(symbol, interval_str, market, klines, vol_24h=None):
 def fetch_trading_data(symbol, interval_str='15m', market='crypto'):
     """ENTRY POINT REST/SOCKET: KLINES + VOLUMEN + INDICADORES COMPLETOS."""
     klines, vol_24h = fetch_klines_and_volume(symbol, interval_str, market)
-    return build_payload(symbol, interval_str, market, klines, vol_24h)
+    payload = build_payload(symbol, interval_str, market, klines, vol_24h)
+    # Precio principal: ticker EN VIVO de Coinbase. El cierre de la ultima vela
+    # REST puede llevar unos segundos de retraso (paginacion de klines), asi que
+    # para el precio mostrado usamos siempre el ticker mas fresco.
+    if market == 'crypto' and klines:
+        try:
+            live_price = fetch_last_price(symbol, market)
+            if live_price and live_price > 0:
+                payload['precio'] = live_price
+        except Exception as e:
+            logger.warning(f"[TradingData] ticker en vivo fallo para {symbol}: {e}")
+    return payload
