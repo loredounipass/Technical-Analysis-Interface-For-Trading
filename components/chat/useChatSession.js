@@ -347,11 +347,13 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
     setTypingText("")
     const words = fullText.split(/( )/)
     let idx = 0
-    const speed = 16
+    // Velocidad adaptativa para revelar el informe completo con fluidez sin cortes
+    const stepSize = words.length > 500 ? 8 : words.length > 200 ? 4 : 2
+    const speed = 12
 
     typingRef.current = setInterval(() => {
-      const chunk = words.slice(0, idx + 2).join("")
-      idx += 2
+      const chunk = words.slice(0, idx + stepSize).join("")
+      idx += stepSize
       setTypingText(chunk)
 
       if (idx >= words.length) {

@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 NVIDIA_API_KEY_ENV = "NVIDIA_API_KEY"
 NVIDIA_API_BASE = "https://integrate.api.nvidia.com/v1"
-REQUEST_TIMEOUT = 60
+REQUEST_TIMEOUT = 180
 
 
 # ---------------------------------------------------------------------------
@@ -92,18 +92,21 @@ AVAILABLE_MODELS = {
         "name": "Nemotron 3 Nano Omni",
         "provider": "NVIDIA",
         "free": True,
+        "timeout": 180,
     },
     "meta-muse": {
         "id": "meta/muse-glimmer-30b",
         "name": "Muse Glimmer 30B",
         "provider": "Meta",
         "free": True,
+        "timeout": 180,
     },
     "google-diffusiongemma": {
         "id": "google/diffusiongemma-26b-a4b-it",
         "name": "DiffusionGemma 26B",
         "provider": "Google",
         "free": True,
+        "timeout": 180,
     },
 }
 
@@ -189,6 +192,7 @@ def get_trading_system_prompt(indicator_data=None, global_context=None, model_na
         "- Be objective, precise, and highly analytical. Back up claims with the data provided.\n"
         "- NEVER use emojis in technical analyses, headers, tables, or strategies. Keep an austere, institutional terminal style.\n"
         "- **STEP-BY-STEP ADHERENCE**: If the user's prompt specifies a step-by-step structure (e.g. '### PASO 1:', '### PASO 2:', etc.), ALWAYS FOLLOW THE EXACT STEP-BY-STEP STRUCTURE REQUESTED BY THE USER, rendering each step clearly with its header, bullet points, and quantitative data.\n"
+        "- **COMPLETE RESPONSES**: Deliver your full, comprehensive analysis without cutting off prematurely. Finish every single step, formula, pivot level, and strategic recommendation completely before concluding.\n"
         "- At the end of each technical analysis, add a single confident line: 'Análisis basado en datos de mercado en tiempo real y análisis técnico externo.'\n\n"
         "=== PROFESSIONAL ANALYSIS FRAMEWORK ===\n"
         "When performing an analysis without a custom requested structure, you MUST structure your response using this default framework (NO emojis):\n"
@@ -542,7 +546,10 @@ def nvidia_chat(
             if not choices:
                 logger.error(f"NVIDIA API returned no choices: {data}")
                 raise NvidiaChatError("El modelo no devolvió respuesta. Intenta de nuevo.", code="NO_CHOICES")
-            content = choices[0].get("message", {}).get("content", "")
+            choice0 = choices[0]
+            finish_reason = choice0.get("finish_reason", "unknown")
+            logger.info(f"[NvidiaChat] Completed response from {model_name} (finish_reason: {finish_reason})")
+            content = choice0.get("message", {}).get("content", "")
             if not content or not content.strip():
                 raise NvidiaChatError("El modelo devolvió una respuesta vacía.", code="EMPTY_RESPONSE")
             return content.strip()
