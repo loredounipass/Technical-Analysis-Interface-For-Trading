@@ -85,8 +85,8 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
     const badgeColor = isOB
       ? "bg-[#ff3b69]/15 border border-[#ff3b69]/40 text-[#ff3b69]"
       : isOS
-      ? "bg-[#00f5c4]/15 border border-[#00f5c4]/40 text-[#00f5c4]"
-      : "bg-[#00f5c4]/10 border border-[#00f5c4]/30 text-[#00f5c4]"
+        ? "bg-[#00f5c4]/15 border border-[#00f5c4]/40 text-[#00f5c4]"
+        : "bg-[#00f5c4]/10 border border-[#00f5c4]/30 text-[#00f5c4]"
 
     return (
       <div className="synapse-card p-3.5 flex flex-col justify-between">
@@ -309,13 +309,12 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
             <span>{title || "BOLLINGER BANDS (20, 2σ)"}</span>
           </div>
           <div
-            className={`px-2 py-0.5 rounded-full text-[10px] font-bold font-mono ${
-              isAbove
+            className={`px-2 py-0.5 rounded-full text-[10px] font-bold font-mono ${isAbove
                 ? "bg-[#ff3b69]/15 border border-[#ff3b69]/40 text-[#ff3b69]"
                 : isBelow
-                ? "bg-[#00f5c4]/15 border border-[#00f5c4]/40 text-[#00f5c4]"
-                : "bg-slate-800 text-slate-300 border border-slate-700"
-            }`}
+                  ? "bg-[#00f5c4]/15 border border-[#00f5c4]/40 text-[#00f5c4]"
+                  : "bg-slate-800 text-slate-300 border border-slate-700"
+              }`}
           >
             {isAbove ? "Upper Break" : isBelow ? "Lower Break" : "In Band"}
           </div>
@@ -383,11 +382,10 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
             <span>{title || "MOVING AVERAGES (50/100/200)"}</span>
           </div>
           <div
-            className={`px-2 py-0.5 rounded-full text-[10px] font-bold font-mono ${
-              isBullTrend
+            className={`px-2 py-0.5 rounded-full text-[10px] font-bold font-mono ${isBullTrend
                 ? "bg-[#00f5c4]/15 border border-[#00f5c4]/40 text-[#00f5c4]"
                 : "bg-[#ff3b69]/15 border border-[#ff3b69]/40 text-[#ff3b69]"
-            }`}
+              }`}
           >
             {isBullTrend ? "Bullish Trend" : "Bearish / Range"}
           </div>

@@ -33,8 +33,8 @@ export default function RecommendationCard({
   const summaryText = isVenta
     ? "Predominancia bajista de corto plazo"
     : isCompra
-    ? "Predominancia alcista de corto plazo"
-    : "Consolidación neutral de mercado"
+      ? "Predominancia alcista de corto plazo"
+      : "Consolidación neutral de mercado"
 
   return (
     <div className="synapse-card p-4 relative overflow-hidden flex flex-col justify-between min-h-[160px] group transition-all duration-300">
@@ -45,13 +45,12 @@ export default function RecommendationCard({
             MARKET SIGNAL
           </span>
           <span
-            className={`w-1.5 h-1.5 rounded-full ${
-              isVenta
+            className={`w-1.5 h-1.5 rounded-full ${isVenta
                 ? "bg-[#ff3b69] shadow-[0_0_8px_#ff3b69]"
                 : isCompra
-                ? "bg-[#00f5c4] shadow-[0_0_8px_#00f5c4]"
-                : "bg-amber-400 shadow-[0_0_8px_#fbbf24]"
-            }`}
+                  ? "bg-[#00f5c4] shadow-[0_0_8px_#00f5c4]"
+                  : "bg-amber-400 shadow-[0_0_8px_#fbbf24]"
+              }`}
           />
         </div>
 
@@ -68,18 +67,16 @@ export default function RecommendationCard({
         <div className="flex items-center gap-2.5">
           {/* Signal Badge */}
           <div
-            className={`px-3 py-1 rounded-full text-xs font-bold font-mono tracking-wider flex items-center gap-1.5 ${
-              isVenta
+            className={`px-3 py-1 rounded-full text-xs font-bold font-mono tracking-wider flex items-center gap-1.5 ${isVenta
                 ? "bg-[#ff3b69]/15 border border-[#ff3b69]/40 text-[#ff3b69] shadow-[0_0_12px_rgba(255,59,105,0.25)]"
                 : isCompra
-                ? "bg-[#00f5c4]/15 border border-[#00f5c4]/40 text-[#00f5c4] shadow-[0_0_12px_rgba(0,245,196,0.25)]"
-                : "bg-amber-500/15 border border-amber-500/40 text-amber-400"
-            }`}
+                  ? "bg-[#00f5c4]/15 border border-[#00f5c4]/40 text-[#00f5c4] shadow-[0_0_12px_rgba(0,245,196,0.25)]"
+                  : "bg-amber-500/15 border border-amber-500/40 text-amber-400"
+              }`}
           >
             <span
-              className={`w-1.5 h-1.5 rounded-full ${
-                isVenta ? "bg-[#ff3b69]" : isCompra ? "bg-[#00f5c4]" : "bg-amber-400"
-              }`}
+              className={`w-1.5 h-1.5 rounded-full ${isVenta ? "bg-[#ff3b69]" : isCompra ? "bg-[#00f5c4]" : "bg-amber-400"
+                }`}
             />
             <span>{recomendacion}</span>
           </div>
