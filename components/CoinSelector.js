@@ -14,7 +14,7 @@ export default function CoinSelector({ monedas, acciones, onSelect }) {
     setMounted(true)
     const updateTime = () => {
       const now = new Date()
-      setTime(now.toLocaleTimeString("en-US", { hour12: false }))
+      setTime(now.toLocaleTimeString("en-US", { hour12: false, timeZone: "America/Chicago" }))
     }
     updateTime()
     const interval = setInterval(updateTime, 1000)
@@ -32,6 +32,7 @@ export default function CoinSelector({ monedas, acciones, onSelect }) {
       "BNBUSDT": { from: "#fbbf24", to: "#b45309", glow: "rgba(251, 191, 36, 0.25)" },
       "DOGEUSDT": { from: "#eab308", to: "#854d0e", glow: "rgba(234, 179, 8, 0.25)" },
       "XRPUSDT": { from: "#38bdf8", to: "#0284c7", glow: "rgba(56, 189, 248, 0.25)" },
+      "SHIBUSDT": { from: "#ff6b35", to: "#c2410c", glow: "rgba(255, 107, 53, 0.25)" },
       "AAPL": { from: "#94a3b8", to: "#475569", glow: "rgba(148, 163, 184, 0.25)" },
       "MSFT": { from: "#00a4ef", to: "#0369a1", glow: "rgba(0, 164, 239, 0.25)" },
       "NVDA": { from: "#76b900", to: "#4d7c0f", glow: "rgba(118, 185, 0, 0.25)" },
@@ -98,7 +99,7 @@ export default function CoinSelector({ monedas, acciones, onSelect }) {
           </div>
 
           <div className="flex items-center gap-4 text-[11px]">
-            <span className="text-slate-400">UTC {time}</span>
+            <span className="text-slate-400">CT {time}</span>
             <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[#0c1420] border border-[#16283d]">
               <Radio className="w-3 h-3 text-[#00f5c4]" />
               <span className="text-[10px] text-slate-300 font-bold">LIVE</span>

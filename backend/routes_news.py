@@ -21,6 +21,7 @@ NEWS_CATEGORIES = {
     "SOLUSDT": "SOL",
     "PEPEUSDT": "PEPE",
     "DOGEUSDT": "DOGE",
+    "SHIBUSDT": "SHIB",
 }
 
 NEWS_CACHE = {}

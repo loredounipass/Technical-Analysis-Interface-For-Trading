@@ -129,7 +129,7 @@ def rate_limited(ip):
 
 # Whitelist de activos soportados: evita que simbolos invalidos lleguen a las
 # fuentes de datos (p.ej. USDTUSDT) y quemen rate limit
-CRYPTO_SYMBOLS = {"BTCUSDT", "ETHUSDT", "SOLUSDT", "PEPEUSDT", "BNBUSDT", "DOGEUSDT", "XRPUSDT"}
+CRYPTO_SYMBOLS = {"BTCUSDT", "ETHUSDT", "SOLUSDT", "PEPEUSDT", "BNBUSDT", "DOGEUSDT", "XRPUSDT", "SHIBUSDT"}
 STOCK_SYMBOLS = {"AAPL", "MSFT", "NVDA", "TSLA", "AMZN", "GOOGL", "META", "NFLX", "AMD", "INTC", "LMT"}
 
 

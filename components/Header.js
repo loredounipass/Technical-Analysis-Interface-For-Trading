@@ -131,7 +131,7 @@ export default function Header({
           </div>
 
           <div className="text-slate-300 font-semibold tracking-wider">
-            UTC <span className="text-white font-bold">{time || "18:14:02"}</span>
+            CT <span className="text-white font-bold">{time || "18:14:02"}</span>
           </div>
         </div>
       </div>
