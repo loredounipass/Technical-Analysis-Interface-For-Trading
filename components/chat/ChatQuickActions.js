@@ -14,6 +14,10 @@ import {
   Radar,
   Layers,
   ChevronRight,
+  PiggyBank,
+  LayoutGrid,
+  ArrowUpRight,
+  Flame,
 } from "lucide-react"
 
 /**
@@ -68,6 +72,34 @@ export default function ChatQuickActions({ symbol, interval, onSendQuickAction, 
       title: "Tendencia con ADX",
       desc: "Seguimiento de tendencia con filtro ADX > 25",
       prompt: `Estrategia de seguimiento de tendencia con ADX y SAR parabólico en ${symbol}`,
+    },
+    {
+      icon: PiggyBank,
+      iconColor: "text-emerald-400",
+      title: "DCA (Promediar costo)",
+      desc: "Compras periódicas para promediar el costo de entrada",
+      prompt: `Estrategia DCA (dollar cost averaging) para promediar el costo de ${symbol}: plan de compras periódicas y niveles`,
+    },
+    {
+      icon: LayoutGrid,
+      iconColor: "text-cyan-400",
+      title: "Grid trading",
+      desc: "Órdenes escalonadas de compra/venta en rango",
+      prompt: `Estrategia grid trading en rango para ${symbol} en ${interval}: niveles escalonados de compra y venta`,
+    },
+    {
+      icon: ArrowUpRight,
+      iconColor: "text-amber-400",
+      title: "Cruce dorado EMA 50/200",
+      desc: "Cambio de tendencia con medias exponenciales",
+      prompt: `Estrategia de cruce dorado y cruce de la muerte con EMA 50/200 para ${symbol} en ${interval}`,
+    },
+    {
+      icon: Flame,
+      iconColor: "text-rose-400",
+      title: "Momentum con volumen",
+      desc: "Rupturas con volumen y RSI confirmando",
+      prompt: `Estrategia momentum con confirmación de volumen y RSI para ${symbol} en ${interval}`,
     },
   ]
 
