@@ -7,7 +7,7 @@ import { MicIcon } from "../VoiceTTS"
 /**
  * Barra de comandos inferior:
  * Símbolo de prompt verde '>', campo de entrada de texto, botón de micrófono/TTS,
- * botón de envío o detención de respuesta y pie de página de aviso legal.
+ * y botón de envío o detención de respuesta.
  */
 export default function ChatCommandBar({
   input,
@@ -24,15 +24,8 @@ export default function ChatCommandBar({
   interval,
   selectedModel,
 }) {
-  const modelEngine =
-    selectedModel === "meta-muse"
-      ? "MUSE-GLIMMER-30B"
-      : selectedModel === "google-diffusiongemma"
-      ? "DIFFUSIONGEMMA-26B"
-      : "NEMOTRON-3"
-
   return (
-    <div className="px-5 py-3 sm:px-6 bg-[#050c10]/70 backdrop-blur-md border-t border-emerald-500/15 space-y-2 z-10">
+    <div className="px-5 py-3 sm:px-6 bg-[#050c10]/70 backdrop-blur-md border-t border-emerald-500/15 z-10">
       <div className="relative bg-[#040a0e]/80 border border-emerald-500/30 focus-within:border-emerald-400/80 rounded-xl px-4 py-2.5 flex items-center gap-3 shadow-[0_0_20px_rgba(0,255,178,0.06)] transition-all">
         {/* Símbolo de prompt verde `>` */}
         <span className="text-emerald-400 font-mono font-bold text-base select-none">&gt;</span>
@@ -82,16 +75,6 @@ export default function ChatCommandBar({
             <ArrowRight className="w-4 h-4 stroke-[2.5]" />
           </button>
         )}
-      </div>
-
-      {/* Pie de Página (Footer) */}
-      <div className="flex items-center justify-between text-[9px] font-mono text-slate-500 px-1 pt-1 tracking-wider uppercase">
-        <span>
-          WOODY AGENT — {symbol} @ {interval} • ENGINE: {modelEngine}
-        </span>
-        <span className="hidden sm:inline">
-          NOT FINANCIAL ADVICE • FOR ALGORITHMIC RESEARCH ONLY
-        </span>
       </div>
     </div>
   )
