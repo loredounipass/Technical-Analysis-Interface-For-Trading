@@ -1,13 +1,14 @@
 "use client"
 
 import React from "react"
-import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Radio } from "lucide-react"
+import { ChevronsLeft, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Radio } from "lucide-react"
 
 /**
  * Botones compactos de navegacion (pan atras/adelante, zoom, volver al vivo)
  * compartidos por el grafico principal y las tarjetas de indicadores.
  */
 export default function ChartNavControls({
+  onGoStart,
   onPanLeft,
   onPanRight,
   onZoomIn,
@@ -20,6 +21,11 @@ export default function ChartNavControls({
 
   return (
     <div className="flex items-center gap-0.5 bg-[#09111b] border border-[#16283d] rounded-lg px-1 py-0.5">
+      {onGoStart && (
+        <button onClick={onGoStart} className={navBtnClass} title="Ir al inicio del historial">
+          <ChevronsLeft className="w-3.5 h-3.5" />
+        </button>
+      )}
       <button onClick={onPanLeft} className={navBtnClass} title="Ir atrás en el tiempo">
         <ChevronLeft className="w-3.5 h-3.5" />
       </button>

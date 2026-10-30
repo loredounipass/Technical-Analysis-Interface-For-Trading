@@ -95,6 +95,8 @@ export default function useChartWindow(total, { defaultCount = 60, minCount = 12
     setEnd(newEnd >= total ? null : newEnd)
   }
   const goLive = () => setEnd(null)
+  // Ir al punto mas antiguo del historial (inicio absoluto)
+  const goStart = () => setEnd(effCount)
 
   return {
     containerRef,
@@ -106,6 +108,7 @@ export default function useChartWindow(total, { defaultCount = 60, minCount = 12
     zoomBy,
     panBy,
     goLive,
+    goStart,
     pointerHandlers: {
       onPointerDown,
       onPointerMove,

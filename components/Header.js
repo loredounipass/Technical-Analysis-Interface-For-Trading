@@ -17,6 +17,11 @@ export default function Header({
   const router = useRouter()
   const timeframes = ["1m", "5m", "15m", "1h", "4h", "1d"]
 
+  // Par formateado con slash: ETHUSDT -> ETH/USDT (stocks quedan igual)
+  const rawSymbol = moneda?.symbol || "ETHUSDT"
+  const pairLabel =
+    moneda?.market === "stock" ? rawSymbol : rawSymbol.replace(/(USDT|USDC)$/, "/$1")
+
   return (
     <header className="w-full bg-[#070c14]/95 border-b border-[#142335] sticky top-0 z-40 backdrop-blur-md px-3 sm:px-6 py-2.5 mb-5 shadow-lg shadow-black/40">
       <div className="max-w-[1600px] mx-auto flex flex-wrap items-center justify-between gap-y-2.5 gap-x-3 text-xs font-mono">
@@ -47,7 +52,8 @@ export default function Header({
             className="group flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#09111b] border border-[#1d3856] hover:border-[#00f5c4]/50 transition-all shadow-sm"
           >
             <Diamond className="w-3 h-3 text-[#00f5c4] fill-[#00f5c4]/30" />
-            <span className="font-bold text-white tracking-wide">{moneda?.symbol || "ETHUSDT"}</span>
+            <span className="font-bold text-white tracking-wide">{pairLabel}</span>
+            <span className="text-slate-600 px-0.5">|</span>
             <span className="text-[9px] px-1.5 py-0.2 rounded bg-[#00f5c4]/15 text-[#00f5c4] font-bold uppercase">
               {moneda?.market === "stock" ? (moneda?.badge || "STOCK") : "SPOT"}
             </span>

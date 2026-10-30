@@ -15,6 +15,7 @@ import {
 } from "recharts"
 import useChartWindow from "@/components/indicators/useChartWindow"
 import ChartNavControls from "@/components/indicators/ChartNavControls"
+import { CandlestickChart } from "lucide-react"
 
 export default function CandleChart({
   data = [],
@@ -131,7 +132,7 @@ export default function CandleChart({
         {/* Left: LIVE MARKET PRICE ACTION + OHLC */}
         <div className="flex flex-wrap items-center gap-2 sm:gap-4">
           <div className="flex items-center gap-1.5 text-[#00f5c4] font-bold text-xs tracking-wider">
-            <span>📈</span>
+            <CandlestickChart className="w-4 h-4" />
             <span>LIVE MARKET PRICE ACTION</span>
           </div>
 
@@ -180,6 +181,7 @@ export default function CandleChart({
 
           {/* Controles de navegación del gráfico */}
           <ChartNavControls
+            onGoStart={win.goStart}
             onPanLeft={() => win.panBy(-Math.max(1, Math.round(win.effCount / 4)))}
             onPanRight={() => win.panBy(Math.max(1, Math.round(win.effCount / 4)))}
             onZoomIn={() => win.zoomBy(-100, 0.5)}
@@ -248,7 +250,7 @@ export default function CandleChart({
                 label={{
                   value: `$${fmt(currentPrice)}`,
                   position: "right",
-                  fill: "#070c14",
+                  fill: "#ffffff",
                   fontSize: 10,
                   fontWeight: "bold",
                   className: "current-price-badge",
