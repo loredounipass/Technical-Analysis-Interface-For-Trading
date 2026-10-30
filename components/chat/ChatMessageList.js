@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useEffect, useMemo, useState } from "react"
-import { User, CheckCircle2, Circle } from "lucide-react"
+import { User, CheckCircle2, Circle, Bot, ChevronDown, ChevronUp } from "lucide-react"
 import { renderMarkdown } from "./MarkdownRenderer"
 import DiagnosticCard from "./DiagnosticCard"
 import { INTERVAL_LABELS } from "./useChatSession"
@@ -132,16 +132,72 @@ export default function ChatMessageList({
       {/* Lista de Mensajes */}
       {messages.map((msg, idx) => {
         if (msg.role === "user") {
+          const meta = msg.meta
           /* Mensaje del Usuario */
           return (
             <div key={idx} className="w-full">
               <div className="flex flex-col items-end gap-1.5 my-2">
-                <div className="relative group max-w-[85%] sm:max-w-[75%]">
+                <div className="relative group max-w-[95%] sm:max-w-[85%] md:max-w-[78%]">
                   {/* Punto verde de acento en la esquina superior derecha */}
-                  <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_#10b981]" />
-                  <div className="bg-[#092222]/80 backdrop-blur-sm border border-emerald-500/40 text-white px-4 py-2.5 rounded-2xl rounded-tr-sm text-[13.5px] sm:text-sm font-sans font-medium shadow-lg leading-relaxed">
-                    {msg.content}
-                  </div>
+                  <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_8px_#10b981] z-10" />
+
+                  {meta ? (
+                    /* Tarjeta Estructurada Paso a Paso para Acciones Rápidas */
+                    <div className="bg-[#07171d]/90 backdrop-blur-md border border-emerald-500/40 text-white p-4 sm:p-5 rounded-2xl rounded-tr-sm shadow-[0_10px_30px_rgba(0,0,0,0.5),0_0_20px_rgba(16,185,129,0.12)]">
+                      {/* Cabecera de la Acción */}
+                      <div className="flex items-center justify-between gap-3 border-b border-emerald-500/20 pb-3 mb-3.5">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="w-8 h-8 rounded-lg bg-emerald-950/70 border border-emerald-500/40 flex items-center justify-center flex-shrink-0 text-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.2)]">
+                            <Bot className="w-4 h-4 text-cyan-300" />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="text-xs sm:text-[13px] font-mono font-bold text-white tracking-wide truncate">
+                              {meta.title}
+                            </div>
+                            <div className="text-[10px] font-mono text-slate-400 flex items-center gap-1.5 mt-0.5">
+                              <span className="text-cyan-400 font-semibold">{symbol}</span>
+                              <span className="text-slate-600">•</span>
+                              <span>Timeframe {intervalLabel}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <span className="text-[9px] font-mono px-2.5 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 uppercase tracking-wider font-semibold whitespace-nowrap">
+                          {meta.category || "COMANDO RÁPIDO"}
+                        </span>
+                      </div>
+
+                      {/* Guía Paso a Paso */}
+                      {meta.steps && meta.steps.length > 0 && (
+                        <div className="space-y-2">
+                          <div className="text-[10.5px] font-mono font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2 mb-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_6px_#00f5c4]" />
+                            <span>Estructura de Análisis Paso a Paso:</span>
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            {meta.steps.map((st, sIdx) => (
+                              <div
+                                key={sIdx}
+                                className="bg-[#050f14]/80 border border-slate-700/60 rounded-xl p-2.5 hover:border-emerald-500/40 transition-colors"
+                              >
+                                <div className="text-[11px] font-mono font-bold text-cyan-300 flex items-center gap-1.5">
+                                  <span className="text-[9.5px] font-semibold text-emerald-400/80">0{sIdx + 1} ·</span>
+                                  <span>{st.title}</span>
+                                </div>
+                                <div className="text-[10px] font-sans text-slate-400 mt-1 leading-snug">
+                                  {st.desc}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    /* Mensaje de Usuario Estándar con Markdown y Espaciado Limpio */
+                    <div className="bg-[#092222]/80 backdrop-blur-sm border border-emerald-500/40 text-white px-4 py-2.5 rounded-2xl rounded-tr-sm text-[13.5px] sm:text-sm font-sans shadow-lg leading-relaxed whitespace-pre-wrap break-words">
+                      {renderMarkdown(msg.content, symbol, intervalLabel)}
+                    </div>
+                  )}
                 </div>
                 {/* Timestamp + TÚ + Avatar */}
                 <div className="flex items-center gap-2 text-[10px] font-mono text-slate-400 pr-1">

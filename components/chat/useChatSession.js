@@ -368,12 +368,17 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
     }, speed)
   }
 
-  const sendMessage = async (customPrompt) => {
+  const sendMessage = async (customPrompt, meta = null) => {
     const textToSend = typeof customPrompt === "string" ? customPrompt : input
     const trimmed = textToSend.trim()
     if (!trimmed || loading) return
 
-    const userMsg = { role: "user", content: trimmed, timestamp: Date.now() }
+    const userMsg = {
+      role: "user",
+      content: trimmed,
+      timestamp: Date.now(),
+      meta: typeof meta === "object" && meta ? meta : null,
+    }
     setMessages((prev) => [...prev, userMsg])
     setInput("")
     setLoading(true)
