@@ -57,7 +57,7 @@ export default function RecommendationCard({
         <div className="text-slate-400">
           TOTAL SIGNALS:{" "}
           <span className="text-white font-bold tabular-nums">
-            {totalSignals || 11}
+            {totalSignals || 0}
           </span>
         </div>
       </div>

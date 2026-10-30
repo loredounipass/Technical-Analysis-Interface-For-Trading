@@ -65,6 +65,23 @@ def log_request_info():
     logger.info("----------------------")
 
 
+@app.after_request
+def set_security_headers(response):
+    response.headers['Content-Security-Policy'] = (
+        "default-src 'self'; "
+        "script-src 'self'; "
+        "style-src 'self' 'unsafe-inline'; "
+        "img-src 'self' data: https:; "
+        "connect-src 'self' wss: https:; "
+        "font-src 'self'; "
+        "frame-ancestors 'none'"
+    )
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'DENY'
+    response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+    return response
+
+
 # ─────────────────────────────────────────────────────────────────────
 # Cache wrapper (inyecta fetch_trading_data para evitar imports circulares)
 # ─────────────────────────────────────────────────────────────────────

@@ -27,7 +27,7 @@ export default function Dashboard({ moneda, market = "crypto", onCambiarMoneda }
     setMounted(true)
     const updateTime = () => {
       const now = new Date()
-      setTime(now.toLocaleTimeString("en-US", { hour12: false }))
+      setTime(now.toLocaleTimeString("en-US", { hour12: false, timeZone: "America/Chicago" }))
     }
     updateTime()
     const interval = setInterval(updateTime, 1000)
@@ -178,6 +178,14 @@ export default function Dashboard({ moneda, market = "crypto", onCambiarMoneda }
           mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
         }`}
       >
+        {/* Synthetic data warning banner */}
+        {datos.synthetic && (
+          <div className="mb-4 px-4 py-2.5 rounded-lg bg-amber-500/10 border border-amber-500/40 flex items-center gap-2 font-mono text-xs text-amber-400">
+            <span className="text-base">⚠️</span>
+            <span className="font-bold tracking-wider uppercase">DATOS SINTÉTICOS</span>
+            <span className="text-amber-400/70">— Las APIs de mercado no respondieron. Los indicadores mostrados son aproximaciones, no datos reales.</span>
+          </div>
+        )}
         {/* Top Row: Current Price Card & Market Signal Card */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <PriceCard

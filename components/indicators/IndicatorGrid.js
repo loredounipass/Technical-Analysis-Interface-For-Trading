@@ -70,6 +70,7 @@ const IndicatorGrid = ({ datos = {} }) => {
       const t = new Date(datos.history.times[i]).toLocaleTimeString([], {
         hour: "2-digit",
         minute: "2-digit",
+        timeZone: "America/Chicago",
       })
 
       candleData.push({
@@ -100,9 +101,9 @@ const IndicatorGrid = ({ datos = {} }) => {
   const buyerRatio =
     totalSignals > 0
       ? (((datos.buySignals || 0) / totalSignals) * 100).toFixed(1)
-      : "52.8"
+      : "—"
 
-  const adxVal = Number(datos.adx) || 39.23
+  const adxVal = Number(datos.adx) || 0
 
   return (
     <div className="space-y-4">
@@ -146,7 +147,7 @@ const IndicatorGrid = ({ datos = {} }) => {
               <span>24H VOLUME & ADX</span>
             </div>
             <div className="px-2.5 py-0.5 rounded-full text-[10px] font-bold font-mono tracking-wider bg-amber-500/15 border border-amber-500/40 text-amber-400">
-              ADX: {fmt(adxVal)} Trend
+              ADX: {adxVal > 0 ? fmt(adxVal) : "—"} Trend
             </div>
           </div>
 
