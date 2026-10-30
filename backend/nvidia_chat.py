@@ -138,11 +138,11 @@ def get_trading_system_prompt(indicator_data=None, global_context=None, model_na
         data_block += f"| Current Spot Price | ${_fmt(indicator_data.get('precio'))} | Live Spot Price |\n"
         data_block += f"| 24h Volume | {_format_compact(indicator_data.get('volumen'))} | {'USDT turnover' if market == 'crypto' else 'Shares volume'} |\n"
         data_block += f"| MARKET SIGNAL | **{market_signal}** | {market_signal_summary} |\n"
-        data_block += f"| Signal Counts | {buy_sig} BUY \| {neutral_sig} HOLD \| {sell_sig} SELL | Total Signals: {total_sig} |\n"
-        data_block += f"| Flow Ratio | {bullish_flow:.1f}% Bullish Flow \| {bearish_pressure:.1f}% Bearish Pressure | Order flow pressure |\n"
+        data_block += f"| Signal Counts | {buy_sig} BUY | {neutral_sig} HOLD | {sell_sig} SELL | Total Signals: {total_sig} |\n"
+        data_block += f"| Flow Ratio | {bullish_flow:.1f}% Bullish Flow | {bearish_pressure:.1f}% Bearish Pressure | Order flow pressure |\n"
         data_block += f"| LIQUIDITY BUBBLE MAP | Buyer Dominance: {buyer_pct_str} | Depth Source: {ob_source} |\n"
         if bid_vol is not None and ask_vol is not None:
-            data_block += f"| Order Book Bid/Ask Vol | Bids: {_format_compact(bid_vol)} USDT \| Asks: {_format_compact(ask_vol)} USDT | Aggregate 40-level depth |\n"
+            data_block += f"| Order Book Bid/Ask Vol | Bids: {_format_compact(bid_vol)} USDT | Asks: {_format_compact(ask_vol)} USDT | Aggregate 40-level depth |\n"
         if best_bid is not None and best_ask is not None:
             data_block += f"| Best Bid / Best Ask | ${_fmt(best_bid)} / ${_fmt(best_ask)} | Spread: {abs(float(best_ask) - float(best_bid)):.4f} USDT |\n"
         if liquidity_walls:
@@ -153,14 +153,14 @@ def get_trading_system_prompt(indicator_data=None, global_context=None, model_na
         data_block += f"| Stoch RSI (14, 3, 3) | {_fmt(indicator_data.get('rsiStoch'))} | Stochastic RSI (OS <20, OB >80) |\n"
         data_block += f"| Stochastic (14, 3, 3) | %K: {_fmt(indicator_data.get('stochK'))} / %D: {_fmt(indicator_data.get('stochD'))} | Fast/Slow Stochastic Oscillator |\n"
         data_block += f"| CCI (20) | {_fmt(indicator_data.get('cci'))} | Commodity Channel Index (OS <-100, OB >100) |\n"
-        data_block += f"| MACD (12, 26, 9) | Line: {_fmt(indicator_data.get('macdValue'))} \| Signal: {_fmt(indicator_data.get('macdSignal'))} | MACD trend line & trigger line |\n"
+        data_block += f"| MACD (12, 26, 9) | Line: {_fmt(indicator_data.get('macdValue'))} | Signal: {_fmt(indicator_data.get('macdSignal'))} | MACD trend line & trigger line |\n"
         data_block += f"| MACD Histogram (12, 26, 9)| {_fmt(indicator_data.get('macdHistogram'))} | Momentum acceleration (>0 Bullish, <0 Bearish) |\n"
         data_block += f"| ADX (14) Trend Strength | {_fmt(indicator_data.get('adx'))} | Trend Strength (>25 Trend, <25 Consolidation) |\n"
         data_block += f"| ADX Directional Force | +DI: {_fmt(indicator_data.get('plusDi'))} / -DI: {_fmt(indicator_data.get('minusDi'))} | Directional Movement Index |\n"
-        data_block += f"| Bollinger Bands (20, 2σ) | Upper: ${_fmt(indicator_data.get('bbUpper'))} \| Mid: ${_fmt(indicator_data.get('bbMiddle'))} \| Lower: ${_fmt(indicator_data.get('bbLower'))} | Volatility envelope |\n"
-        data_block += f"| Moving Averages | EMA50: ${_fmt(indicator_data.get('ema50'))} \| EMA100: ${_fmt(indicator_data.get('ema100'))} \| EMA200: ${_fmt(indicator_data.get('ema200'))} | Trend bias & dynamic S/R |\n"
-        data_block += f"| Support Levels (Pivots) | S1: ${_fmt(indicator_data.get('s1'))} \| S2: ${_fmt(indicator_data.get('s2'))} \| S3: ${_fmt(indicator_data.get('s3'))} | Key dynamic support floors |\n"
-        data_block += f"| Resistance Levels (Pivots)| R1: ${_fmt(indicator_data.get('r1'))} \| R2: ${_fmt(indicator_data.get('r2'))} \| R3: ${_fmt(indicator_data.get('r3'))} | Key dynamic resistance ceilings |\n"
+        data_block += f"| Bollinger Bands (20, 2σ) | Upper: ${_fmt(indicator_data.get('bbUpper'))} | Mid: ${_fmt(indicator_data.get('bbMiddle'))} | Lower: ${_fmt(indicator_data.get('bbLower'))} | Volatility envelope |\n"
+        data_block += f"| Moving Averages | EMA50: ${_fmt(indicator_data.get('ema50'))} | EMA100: ${_fmt(indicator_data.get('ema100'))} | EMA200: ${_fmt(indicator_data.get('ema200'))} | Trend bias & dynamic S/R |\n"
+        data_block += f"| Support Levels (Pivots) | S1: ${_fmt(indicator_data.get('s1'))} | S2: ${_fmt(indicator_data.get('s2'))} | S3: ${_fmt(indicator_data.get('s3'))} | Key dynamic support floors |\n"
+        data_block += f"| Resistance Levels (Pivots)| R1: ${_fmt(indicator_data.get('r1'))} | R2: ${_fmt(indicator_data.get('r2'))} | R3: ${_fmt(indicator_data.get('r3'))} | Key dynamic resistance ceilings |\n"
         
         data_block += "\nUse THESE EXACT VALUES for your analysis. You MUST synthesize the MARKET SIGNAL and the LIQUIDITY BUBBLE MAP along with ALL technical indicators above.\n"
         base += data_block
