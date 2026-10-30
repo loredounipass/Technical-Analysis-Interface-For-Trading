@@ -51,7 +51,7 @@ export default function AiChat({ symbol, datos, interval = "15m", market = "cryp
       <div
         className="relative flex flex-col w-full max-w-[940px] h-[92vh] sm:h-[86vh] max-h-[820px] rounded-2xl overflow-hidden shadow-[0_25px_60px_-15px_rgba(0,0,0,0.85),0_0_35px_rgba(0,255,178,0.12)] border border-emerald-500/30 font-sans backdrop-blur-xl"
         style={{
-          background: "linear-gradient(180deg, rgba(8, 18, 25, 0.76) 0%, rgba(5, 12, 17, 0.80) 100%)",
+          background: "linear-gradient(180deg, rgba(8, 18, 25, 0.52) 0%, rgba(5, 12, 17, 0.58) 100%)",
         }}
       >
         {/* Scanline sutil para ambiente cyber */}

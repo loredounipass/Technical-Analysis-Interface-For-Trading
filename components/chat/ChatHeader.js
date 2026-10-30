@@ -24,7 +24,7 @@ export default function ChatHeader({
 }) {
   return (
     <>
-      <div className="relative px-5 py-3.5 sm:px-6 sm:py-4 bg-[#071116]/75 backdrop-blur-md border-b border-emerald-500/15 flex items-center justify-between z-10">
+      <div className="relative px-5 py-3.5 sm:px-6 sm:py-4 bg-[#071116]/50 backdrop-blur-md border-b border-emerald-500/15 flex items-center justify-between z-10">
         {/* Lado Izquierdo: Icono + Título + Subtítulo */}
         <div className="flex items-center gap-3.5">
           {/* Avatar Cuadrado con Icono de Matraz / Quant */}
@@ -100,7 +100,7 @@ export default function ChatHeader({
 
       {/* Menú Desplegable Selector de Modelos */}
       {showModelSelect && (
-        <div className="px-6 py-2 bg-[#061016] border-b border-emerald-500/20 z-20 flex items-center gap-2 flex-wrap">
+        <div className="px-6 py-2 bg-[#061016]/70 backdrop-blur-md border-b border-emerald-500/20 z-20 flex items-center gap-2 flex-wrap">
           <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider flex items-center gap-1">
             <Cpu className="w-3 h-3 text-emerald-400" /> MODELO:
           </span>

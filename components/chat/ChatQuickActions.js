@@ -128,7 +128,7 @@ export default function ChatQuickActions({ symbol, interval, onSendQuickAction, 
   return (
     <>
       {/* Barra inferior con acceso a la ventana emergente */}
-      <div className="px-5 py-2.5 sm:px-6 bg-[#050d12]/60 backdrop-blur-sm border-t border-emerald-500/10 flex items-center gap-3 z-10">
+      <div className="px-5 py-2.5 sm:px-6 bg-[#050d12]/40 backdrop-blur-sm border-t border-emerald-500/10 flex items-center gap-3 z-10">
         <div className="flex items-center gap-1.5 text-[11px] font-mono text-slate-400 font-semibold flex-shrink-0">
           <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
           <span>Acciones Rápidas:</span>
@@ -156,12 +156,12 @@ export default function ChatQuickActions({ symbol, interval, onSendQuickAction, 
             className="relative w-full max-w-[640px] max-h-[82vh] overflow-y-auto cyber-scrollbar rounded-2xl border border-emerald-500/30 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.9),0_0_35px_rgba(0,255,178,0.15)] animate-in zoom-in-95 duration-200"
             style={{
               background:
-                "linear-gradient(180deg, rgba(8, 18, 25, 0.98) 0%, rgba(5, 12, 17, 0.98) 100%)",
+                "linear-gradient(180deg, rgba(8, 18, 25, 0.90) 0%, rgba(5, 12, 17, 0.92) 100%)",
             }}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Encabezado de la Ventana Emergente */}
-            <div className="sticky top-0 z-10 px-5 py-4 bg-[#071116]/95 backdrop-blur-md border-b border-emerald-500/20 flex items-center justify-between">
+            <div className="sticky top-0 z-10 px-5 py-4 bg-[#071116]/80 backdrop-blur-md border-b border-emerald-500/20 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-xl bg-emerald-950/40 border border-emerald-500/40 flex items-center justify-center shadow-[0_0_12px_rgba(16,185,129,0.15)]">
                   <Sparkles className="w-4 h-4 text-cyan-300" />

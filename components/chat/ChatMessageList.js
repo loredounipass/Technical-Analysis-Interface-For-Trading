@@ -64,9 +64,9 @@ const LOADING_STEPS = [
 function AgentPanel({ modelBadge, statusLabel, statusPulse, steps, children, footer }) {
   return (
     <div className="w-full my-2">
-      <div className="relative w-full overflow-hidden rounded-xl border border-cyan-500/25 bg-[#071218]/85 backdrop-blur-sm shadow-xl">
+      <div className="relative w-full overflow-hidden rounded-xl border border-cyan-500/25 bg-[#071218]/55 backdrop-blur-md shadow-xl">
         {/* Barra de título estilo terminal */}
-        <div className="flex items-center justify-between gap-2 px-4 py-2.5 border-b border-slate-800/70 bg-[#081820]/95 flex-wrap">
+        <div className="flex items-center justify-between gap-2 px-4 py-2.5 border-b border-slate-800/70 bg-[#081820]/70 flex-wrap">
           <div className="flex items-center gap-2.5">
             <div className="flex items-center gap-1.5">
               <span className="w-2.5 h-2.5 rounded-full bg-rose-500/70" />
@@ -111,7 +111,7 @@ function AgentPanel({ modelBadge, statusLabel, statusPulse, steps, children, foo
 
         {/* Pie con metadata de ejecución */}
         {footer && (
-          <div className="flex items-center justify-between px-4 py-2 border-t border-slate-800/60 bg-[#050d12]/70 text-[9px] font-mono text-slate-500 flex-wrap gap-x-3 gap-y-1">
+          <div className="flex items-center justify-between px-4 py-2 border-t border-slate-800/60 bg-[#050d12]/50 text-[9px] font-mono text-slate-500 flex-wrap gap-x-3 gap-y-1">
             {footer}
           </div>
         )}
@@ -145,7 +145,7 @@ export default function ChatMessageList({
       ref={chatContainerRef}
       onScroll={onScroll}
       className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5 space-y-5 cyber-scrollbar relative z-10"
-      style={{ background: "rgba(4, 9, 14, 0.45)" }}
+      style={{ background: "rgba(4, 9, 14, 0.25)" }}
     >
       {/* Píldora de Sesión Iniciada centrada */}
       <div className="flex justify-center my-1">

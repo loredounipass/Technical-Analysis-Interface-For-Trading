@@ -25,8 +25,8 @@ export default function ChatCommandBar({
   selectedModel,
 }) {
   return (
-    <div className="px-5 py-3 sm:px-6 bg-[#050c10]/70 backdrop-blur-md border-t border-emerald-500/15 z-10">
-      <div className="relative bg-[#040a0e]/80 border border-emerald-500/30 focus-within:border-emerald-400/80 rounded-xl px-4 py-2.5 flex items-center gap-3 shadow-[0_0_20px_rgba(0,255,178,0.06)] transition-all">
+    <div className="px-5 py-3 sm:px-6 bg-[#050c10]/45 backdrop-blur-md border-t border-emerald-500/15 z-10">
+      <div className="relative bg-[#040a0e]/60 border border-emerald-500/30 focus-within:border-emerald-400/80 rounded-xl px-4 py-2.5 flex items-center gap-3 shadow-[0_0_20px_rgba(0,255,178,0.06)] transition-all">
         {/* Símbolo de prompt verde `>` */}
         <span className="text-emerald-400 font-mono font-bold text-base select-none">&gt;</span>
 
