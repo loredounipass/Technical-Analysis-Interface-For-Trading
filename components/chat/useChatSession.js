@@ -210,9 +210,15 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
     }
   }, [])
 
+  // Al abrir el chat (o cambiar de sesión): enfocar el input, reactivar el
+  // auto-scroll y posicionar la conversación siempre hasta abajo.
   useEffect(() => {
     if (isOpen && !isSidebarOpen) {
-      setTimeout(() => inputRef.current?.focus(), 200)
+      isAutoScrollPausedRef.current = false
+      setTimeout(() => {
+        inputRef.current?.focus()
+        scrollChatToBottom("auto")
+      }, 250)
     }
   }, [isOpen, activeSessionId, isSidebarOpen])
 
