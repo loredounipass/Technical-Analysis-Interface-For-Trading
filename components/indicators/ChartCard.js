@@ -8,7 +8,6 @@ import {
   Line,
   Bar,
   Cell,
-  XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
@@ -16,7 +15,7 @@ import {
 } from "recharts"
 
 const ChartCard = ({ title, icon, type, datos = {} }) => {
-  // Common Dark Tooltip Style
+  // Dark Tooltip Style matching Synapse Terminal
   const TOOLTIP_STYLE = {
     backgroundColor: "rgba(8, 18, 28, 0.95)",
     border: "1px solid #16283d",
@@ -111,7 +110,6 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
                 <Tooltip contentStyle={TOOLTIP_STYLE} />
                 <ReferenceLine y={70} stroke="#ff3b69" strokeDasharray="3 3" strokeOpacity={0.3} />
                 <ReferenceLine y={30} stroke="#00f5c4" strokeDasharray="3 3" strokeOpacity={0.3} />
-                {/* Cyan continuous curve */}
                 <Line
                   type="monotone"
                   dataKey="rsi"
@@ -121,7 +119,6 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
                   connectNulls={true}
                   isAnimationActive={false}
                 />
-                {/* Pink/Coral dotted signal curve */}
                 <Line
                   type="monotone"
                   dataKey="rsiSignal"
@@ -271,7 +268,7 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
     )
   }
 
-  // 3. BOLLINGER BANDS
+  // 3. BOLLINGER BANDS (20, 2σ) - With dynamic auto Y-Axis scaling to show real wave action
   if (type === "bollinger") {
     let bbChartData = []
     if (datos.history && Array.isArray(datos.history.closes) && datos.history.closes.length > 0) {
@@ -288,15 +285,24 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
           const last = bbChartData.length - 1
           bbChartData[last] = {
             name: `${last}`,
-            upper: datos.bbUpper,
-            middle: datos.bbMiddle,
-            lower: datos.bbLower,
+            upper: datos.bbUpper ?? bbChartData[last].upper,
+            middle: datos.bbMiddle ?? bbChartData[last].middle,
+            lower: datos.bbLower ?? bbChartData[last].lower,
             price: datos.precio,
           }
         }
       }
     }
     bbChartData = ensureMinPoints(bbChartData)
+
+    // Compute dynamic Y-axis domain so Bollinger Bands use full vertical resolution
+    const bbValues = bbChartData
+      .flatMap((d) => [d.upper, d.middle, d.lower, d.price])
+      .filter((v) => Number.isFinite(v))
+    const minBb = bbValues.length > 0 ? Math.min(...bbValues) : 0
+    const maxBb = bbValues.length > 0 ? Math.max(...bbValues) : 100
+    const padBb = Math.max((maxBb - minBb) * 0.1, 0.001)
+    const bbDomain = [minBb - padBb, maxBb + padBb]
 
     const isAbove = datos.precio > datos.bbUpper
     const isBelow = datos.precio < datos.bbLower
@@ -309,12 +315,13 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
             <span>{title || "BOLLINGER BANDS (20, 2σ)"}</span>
           </div>
           <div
-            className={`px-2 py-0.5 rounded-full text-[10px] font-bold font-mono ${isAbove
+            className={`px-2 py-0.5 rounded-full text-[10px] font-bold font-mono ${
+              isAbove
                 ? "bg-[#ff3b69]/15 border border-[#ff3b69]/40 text-[#ff3b69]"
                 : isBelow
-                  ? "bg-[#00f5c4]/15 border border-[#00f5c4]/40 text-[#00f5c4]"
-                  : "bg-slate-800 text-slate-300 border border-slate-700"
-              }`}
+                ? "bg-[#00f5c4]/15 border border-[#00f5c4]/40 text-[#00f5c4]"
+                : "bg-slate-800 text-slate-300 border border-slate-700"
+            }`}
           >
             {isAbove ? "Upper Break" : isBelow ? "Lower Break" : "In Band"}
           </div>
@@ -325,10 +332,60 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={bbChartData} margin={{ top: 5, right: 10, left: 10, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="2 2" stroke="#132235" vertical={false} />
-                <Tooltip contentStyle={TOOLTIP_STYLE} />
-                <Line type="monotone" dataKey="upper" stroke="#ff3b69" strokeWidth={1.5} dot={false} isAnimationActive={false} />
-                <Line type="monotone" dataKey="middle" stroke="#f59e0b" strokeWidth={1.5} dot={false} isAnimationActive={false} />
-                <Line type="monotone" dataKey="lower" stroke="#00f5c4" strokeWidth={1.5} dot={false} isAnimationActive={false} />
+                <YAxis domain={bbDomain} hide={true} />
+                <Tooltip
+                  contentStyle={TOOLTIP_STYLE}
+                  formatter={(value, name) => {
+                    const val = `$${safeToFixed(value, datos.decimales)}`
+                    if (name === "upper") return [val, "Upper (+2σ)"]
+                    if (name === "middle") return [val, "Middle (SMA 20)"]
+                    if (name === "lower") return [val, "Lower (-2σ)"]
+                    if (name === "price") return [val, "Price"]
+                    return [val, name]
+                  }}
+                />
+                {/* Upper Band: Coral red */}
+                <Line
+                  type="monotone"
+                  dataKey="upper"
+                  stroke="#ff3b69"
+                  strokeWidth={1.5}
+                  dot={false}
+                  connectNulls={true}
+                  isAnimationActive={false}
+                />
+                {/* Middle Band: Amber dashed */}
+                <Line
+                  type="monotone"
+                  dataKey="middle"
+                  stroke="#f59e0b"
+                  strokeWidth={1.5}
+                  strokeDasharray="3 3"
+                  dot={false}
+                  connectNulls={true}
+                  isAnimationActive={false}
+                />
+                {/* Lower Band: Neon Cyan */}
+                <Line
+                  type="monotone"
+                  dataKey="lower"
+                  stroke="#00f5c4"
+                  strokeWidth={1.5}
+                  dot={false}
+                  connectNulls={true}
+                  isAnimationActive={false}
+                />
+                {/* Actual Price Path: White subtle curve */}
+                <Line
+                  type="monotone"
+                  dataKey="price"
+                  stroke="#f1f5f9"
+                  strokeWidth={1}
+                  strokeOpacity={0.6}
+                  dot={false}
+                  connectNulls={true}
+                  isAnimationActive={false}
+                />
               </LineChart>
             </ResponsiveContainer>
           ) : (
@@ -339,15 +396,15 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
         </div>
 
         <div className="flex items-center justify-between pt-2 border-t border-[#142335] text-[10px] font-mono tracking-wider text-slate-400">
-          <span>U: <span className="text-[#ff3b69]">${safeToFixed(datos.bbUpper, datos.decimales)}</span></span>
-          <span>M: <span className="text-amber-400">${safeToFixed(datos.bbMiddle, datos.decimales)}</span></span>
-          <span>L: <span className="text-[#00f5c4]">${safeToFixed(datos.bbLower, datos.decimales)}</span></span>
+          <span>U: <span className="text-[#ff3b69] font-medium">${safeToFixed(datos.bbUpper, datos.decimales)}</span></span>
+          <span>M: <span className="text-amber-400 font-medium">${safeToFixed(datos.bbMiddle, datos.decimales)}</span></span>
+          <span>L: <span className="text-[#00f5c4] font-medium">${safeToFixed(datos.bbLower, datos.decimales)}</span></span>
         </div>
       </div>
     )
   }
 
-  // 4. MOVING AVERAGES (EMA)
+  // 4. MOVING AVERAGES (EMA 50 / 100 / 200) - With dynamic auto Y-Axis scaling
   if (type === "ema") {
     let emaChartData = []
     if (datos.history && Array.isArray(datos.history.closes) && datos.history.closes.length > 0) {
@@ -358,6 +415,7 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
           ema50: datos.history.ema50?.[idx] ?? null,
           ema100: datos.history.ema100?.[idx] ?? null,
           ema200: datos.history.ema200?.[idx] ?? null,
+          price: datos.history.closes[idx],
         }))
         if (datos.precio !== null && datos.precio !== undefined && emaChartData.length > 0) {
           const last = emaChartData.length - 1
@@ -366,11 +424,21 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
             ema50: datos.ema50 ?? emaChartData[last].ema50,
             ema100: datos.ema100 ?? emaChartData[last].ema100,
             ema200: datos.ema200 ?? emaChartData[last].ema200,
+            price: datos.precio,
           }
         }
       }
     }
     emaChartData = ensureMinPoints(emaChartData)
+
+    // Compute dynamic Y-axis domain so the 3 EMAs are clearly differentiated vertically
+    const emaValues = emaChartData
+      .flatMap((d) => [d.ema50, d.ema100, d.ema200, d.price])
+      .filter((v) => Number.isFinite(v))
+    const minEma = emaValues.length > 0 ? Math.min(...emaValues) : 0
+    const maxEma = emaValues.length > 0 ? Math.max(...emaValues) : 100
+    const padEma = Math.max((maxEma - minEma) * 0.15, 0.001)
+    const emaDomain = [minEma - padEma, maxEma + padEma]
 
     const isBullTrend = datos.precio > datos.ema50 && datos.ema50 > datos.ema200
 
@@ -382,10 +450,11 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
             <span>{title || "MOVING AVERAGES (50/100/200)"}</span>
           </div>
           <div
-            className={`px-2 py-0.5 rounded-full text-[10px] font-bold font-mono ${isBullTrend
+            className={`px-2 py-0.5 rounded-full text-[10px] font-bold font-mono ${
+              isBullTrend
                 ? "bg-[#00f5c4]/15 border border-[#00f5c4]/40 text-[#00f5c4]"
                 : "bg-[#ff3b69]/15 border border-[#ff3b69]/40 text-[#ff3b69]"
-              }`}
+            }`}
           >
             {isBullTrend ? "Bullish Trend" : "Bearish / Range"}
           </div>
@@ -396,10 +465,48 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={emaChartData} margin={{ top: 5, right: 10, left: 10, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="2 2" stroke="#132235" vertical={false} />
-                <Tooltip contentStyle={TOOLTIP_STYLE} />
-                <Line type="monotone" dataKey="ema50" stroke="#00f5c4" strokeWidth={1.5} dot={false} isAnimationActive={false} />
-                <Line type="monotone" dataKey="ema100" stroke="#f1f5f9" strokeWidth={1.5} dot={false} isAnimationActive={false} />
-                <Line type="monotone" dataKey="ema200" stroke="#ff3b69" strokeWidth={1.5} dot={false} isAnimationActive={false} />
+                <YAxis domain={emaDomain} hide={true} />
+                <Tooltip
+                  contentStyle={TOOLTIP_STYLE}
+                  formatter={(value, name) => {
+                    const val = `$${safeToFixed(value, datos.decimales)}`
+                    if (name === "ema50") return [val, "EMA 50 (Fast)"]
+                    if (name === "ema100") return [val, "EMA 100 (Mid)"]
+                    if (name === "ema200") return [val, "EMA 200 (Slow)"]
+                    if (name === "price") return [val, "Price"]
+                    return [val, name]
+                  }}
+                />
+                {/* EMA 50: Neon Cyan */}
+                <Line
+                  type="monotone"
+                  dataKey="ema50"
+                  stroke="#00f5c4"
+                  strokeWidth={2}
+                  dot={false}
+                  connectNulls={true}
+                  isAnimationActive={false}
+                />
+                {/* EMA 100: Electric Sky Blue */}
+                <Line
+                  type="monotone"
+                  dataKey="ema100"
+                  stroke="#38bdf8"
+                  strokeWidth={1.5}
+                  dot={false}
+                  connectNulls={true}
+                  isAnimationActive={false}
+                />
+                {/* EMA 200: Coral Pink */}
+                <Line
+                  type="monotone"
+                  dataKey="ema200"
+                  stroke="#ff3b69"
+                  strokeWidth={1.5}
+                  dot={false}
+                  connectNulls={true}
+                  isAnimationActive={false}
+                />
               </LineChart>
             </ResponsiveContainer>
           ) : (
@@ -410,9 +517,9 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
         </div>
 
         <div className="flex items-center justify-between pt-2 border-t border-[#142335] text-[10px] font-mono tracking-wider text-slate-400">
-          <span>EMA50: <span className="text-[#00f5c4]">${safeToFixed(datos.ema50, datos.decimales)}</span></span>
-          <span>EMA100: <span className="text-white">${safeToFixed(datos.ema100, datos.decimales)}</span></span>
-          <span>EMA200: <span className="text-[#ff3b69]">${safeToFixed(datos.ema200, datos.decimales)}</span></span>
+          <span>EMA50: <span className="text-[#00f5c4] font-medium">${safeToFixed(datos.ema50, datos.decimales)}</span></span>
+          <span>EMA100: <span className="text-[#38bdf8] font-medium">${safeToFixed(datos.ema100, datos.decimales)}</span></span>
+          <span>EMA200: <span className="text-[#ff3b69] font-medium">${safeToFixed(datos.ema200, datos.decimales)}</span></span>
         </div>
       </div>
     )

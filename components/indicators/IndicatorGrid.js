@@ -7,8 +7,6 @@ import CandleChart from "@/components/indicators/CandleChart"
 import {
   Shield,
   Target,
-  ArrowUpDown,
-  CandlestickChart,
   Gauge,
   Crosshair,
   Percent,
@@ -189,7 +187,7 @@ const IndicatorGrid = ({ datos = {} }) => {
         </div>
       </div>
 
-      {/* 3. Secondary Indicators Row (Bollinger Bands & Moving Averages) */}
+      {/* 3. Secondary Indicators Row (Bollinger Bands & Moving Averages with dynamic Y-axis scaling) */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <ChartCard
           title="BOLLINGER BANDS (20, 2σ)"
@@ -213,13 +211,13 @@ const IndicatorGrid = ({ datos = {} }) => {
           icon={<Percent className="w-3.5 h-3.5 text-[#00f5c4]" />}
           badge={
             <span
-              className={
+              className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold font-mono tracking-wider ${
                 datos.stochK > 80
-                  ? "text-[#ff3b69]"
+                  ? "bg-[#ff3b69]/15 border border-[#ff3b69]/40 text-[#ff3b69]"
                   : datos.stochK < 20
-                  ? "text-[#00f5c4]"
-                  : "text-cyan-400"
-              }
+                  ? "bg-[#00f5c4]/15 border border-[#00f5c4]/40 text-[#00f5c4]"
+                  : "bg-cyan-500/10 border border-cyan-500/30 text-cyan-400"
+              }`}
             >
               {datos.stochK > 80 ? "Overbought" : datos.stochK < 20 ? "Oversold" : "Neutral"}
             </span>
@@ -227,14 +225,14 @@ const IndicatorGrid = ({ datos = {} }) => {
         >
           <div className="space-y-2.5 font-mono">
             <div className="grid grid-cols-2 gap-3">
-              <div className="bg-[#09111b] p-2 rounded-md border border-[#16283d]">
-                <div className="text-[10px] text-slate-400 uppercase">%K Line</div>
+              <div className="bg-[#09111b] p-2.5 rounded-md border border-[#16283d]">
+                <div className="text-[10px] text-slate-400 uppercase tracking-wider">%K Line</div>
                 <div className="text-base font-bold text-cyan-400 tabular-nums">
                   {fmt(datos.stochK)}
                 </div>
               </div>
-              <div className="bg-[#09111b] p-2 rounded-md border border-[#16283d]">
-                <div className="text-[10px] text-slate-400 uppercase">%D Line</div>
+              <div className="bg-[#09111b] p-2.5 rounded-md border border-[#16283d]">
+                <div className="text-[10px] text-slate-400 uppercase tracking-wider">%D Line</div>
                 <div className="text-base font-bold text-[#00f5c4] tabular-nums">
                   {fmt(datos.stochD)}
                 </div>
@@ -243,7 +241,7 @@ const IndicatorGrid = ({ datos = {} }) => {
             {/* Progress gauge */}
             <div className="w-full bg-[#08111a] rounded-full h-1.5 overflow-hidden flex">
               <div
-                className="bg-[#00f5c4] h-full transition-all duration-300"
+                className="bg-[#00f5c4] h-full transition-all duration-300 shadow-[0_0_8px_#00f5c4]"
                 style={{ width: `${Math.min(100, Math.max(0, datos.stochK || 50))}%` }}
               />
             </div>
@@ -256,21 +254,21 @@ const IndicatorGrid = ({ datos = {} }) => {
           icon={<Compass className="w-3.5 h-3.5 text-amber-400" />}
           badge={
             <span
-              className={
+              className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold font-mono tracking-wider ${
                 datos.cci > 100
-                  ? "text-[#ff3b69]"
+                  ? "bg-[#ff3b69]/15 border border-[#ff3b69]/40 text-[#ff3b69]"
                   : datos.cci < -100
-                  ? "text-[#00f5c4]"
-                  : "text-amber-400"
-              }
+                  ? "bg-[#00f5c4]/15 border border-[#00f5c4]/40 text-[#00f5c4]"
+                  : "bg-amber-500/15 border border-amber-500/40 text-amber-400"
+              }`}
             >
               {datos.cci > 100 ? "OB (+100)" : datos.cci < -100 ? "OS (-100)" : "Range"}
             </span>
           }
         >
           <div className="space-y-2.5 font-mono">
-            <div className="flex justify-between items-center bg-[#09111b] p-2 rounded-md border border-[#16283d]">
-              <span className="text-[10px] text-slate-400 uppercase">Commodity Channel Index</span>
+            <div className="flex justify-between items-center bg-[#09111b] p-2.5 rounded-md border border-[#16283d]">
+              <span className="text-[10px] text-slate-400 uppercase tracking-wider">Commodity Channel Index</span>
               <span
                 className={`text-lg font-bold tabular-nums ${
                   datos.cci > 100
@@ -288,9 +286,9 @@ const IndicatorGrid = ({ datos = {} }) => {
               <div
                 className={`h-full transition-all duration-300 ${
                   datos.cci > 100
-                    ? "bg-[#ff3b69]"
+                    ? "bg-[#ff3b69] shadow-[0_0_8px_#ff3b69]"
                     : datos.cci < -100
-                    ? "bg-[#00f5c4]"
+                    ? "bg-[#00f5c4] shadow-[0_0_8px_#00f5c4]"
                     : "bg-amber-400"
                 }`}
                 style={{
