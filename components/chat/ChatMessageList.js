@@ -1,6 +1,6 @@
 "use client"
 
-import React from "react"
+import React, { useEffect, useMemo, useState } from "react"
 import { User, CheckCircle2, Circle } from "lucide-react"
 import { renderMarkdown } from "./MarkdownRenderer"
 import DiagnosticCard from "./DiagnosticCard"
@@ -54,6 +54,38 @@ const LOADING_STEPS = [
   { label: "INFERENCIA", done: false },
   { label: "INFORME", done: false },
 ]
+
+/**
+ * Mensaje de estado profesional que rota mientras el agente procesa
+ * la consulta: describe cada fase del análisis en curso.
+ */
+function ProcessingStatus({ symbol }) {
+  const phases = useMemo(
+    () => [
+      `Analizando datos de mercado de ${symbol}...`,
+      `Calculando indicadores técnicos (RSI, MACD, ADX)...`,
+      `Evaluando estructura de precio y niveles clave...`,
+      `Procesando flujo de órdenes del libro de compra/venta...`,
+      `Sintetizando informe cuantitativo...`,
+    ],
+    [symbol]
+  )
+
+  const [phase, setPhase] = useState(0)
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setPhase((p) => (p + 1) % phases.length)
+    }, 1500)
+    return () => clearInterval(timer)
+  }, [phases.length])
+
+  return (
+    <span className="text-xs font-mono text-slate-400">
+      {phases[phase]}
+    </span>
+  )
+}
 
 /**
  * Panel de salida del agente estilo terminal:
@@ -243,16 +275,14 @@ export default function ChatMessageList({
 
       {/* Indicador de Carga / Esperando respuesta */}
       {loading && !isTyping && (
-        <AgentPanel statusLabel="PROCESANDO..." statusPulse steps={LOADING_STEPS}>
+        <AgentPanel statusLabel="ANÁLISIS EN CURSO" statusPulse steps={LOADING_STEPS}>
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-bounce" style={{ animationDelay: "0ms" }} />
               <span className="w-2 h-2 rounded-full bg-cyan-400 animate-bounce" style={{ animationDelay: "150ms" }} />
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-bounce" style={{ animationDelay: "300ms" }} />
             </div>
-            <span className="text-xs font-mono text-slate-400">
-              Procesando indicadores de {symbol} con motor cuántico...
-            </span>
+            <ProcessingStatus symbol={symbol} />
           </div>
         </AgentPanel>
       )}
