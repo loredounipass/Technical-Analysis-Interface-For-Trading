@@ -85,6 +85,7 @@ export default function AiChat({ symbol, datos, interval = "15m", market = "cryp
           showModelSelect={chat.showModelSelect}
           setShowModelSelect={chat.setShowModelSelect}
           onOpenSidebar={() => chat.setIsSidebarOpen(true)}
+          onNewChat={chat.createNewSession}
           onClearChat={chat.clearChat}
           onMinimize={() => setIsOpen(false)}
           onClose={() => setIsOpen(false)}

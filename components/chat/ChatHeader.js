@@ -1,7 +1,7 @@
 "use client"
 
 import React from "react"
-import { FlaskConical, Sparkles, ChevronDown, History, Trash2, Minus, X, Cpu } from "lucide-react"
+import { FlaskConical, Sparkles, ChevronDown, History, Trash2, Minus, X, Cpu, SquarePen } from "lucide-react"
 
 /**
  * Encabezado superior de la ventana Cyber-Quant:
@@ -18,6 +18,7 @@ export default function ChatHeader({
   showModelSelect,
   setShowModelSelect,
   onOpenSidebar,
+  onNewChat,
   onClearChat,
   onMinimize,
   onClose,
@@ -64,6 +65,14 @@ export default function ChatHeader({
 
         {/* Lado Derecho: Controles de Ventana */}
         <div className="flex items-center gap-1">
+          <button
+            id="ai-chat-new"
+            onClick={onNewChat}
+            className="p-1.5 text-cyan-300 hover:text-cyan-200 rounded-lg hover:bg-cyan-950/40 border border-cyan-500/30 transition-colors"
+            title="Nuevo chat"
+          >
+            <SquarePen className="w-4 h-4" />
+          </button>
           <button
             onClick={onOpenSidebar}
             className="p-1.5 text-slate-400 hover:text-emerald-400 rounded-lg hover:bg-emerald-950/30 transition-colors"
