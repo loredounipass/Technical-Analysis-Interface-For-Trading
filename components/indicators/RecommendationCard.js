@@ -1,70 +1,129 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { BarChart3, TrendingUp, TrendingDown, Minus } from "lucide-react"
+"use client"
 
-export default function RecommendationCard({ recomendacion, buySignals, sellSignals, neutralSignals }) {
-  const totalSignals = (buySignals || 0) + (sellSignals || 0) + (neutralSignals || 0)
-  const buyPct = totalSignals > 0 ? ((buySignals || 0) / totalSignals) * 100 : 0
-  const sellPct = totalSignals > 0 ? ((sellSignals || 0) / totalSignals) * 100 : 0
-  const neutralPct = totalSignals > 0 ? ((neutralSignals || 0) / totalSignals) * 100 : 0
+import React from "react"
 
-  const getRecommendationIcon = (rec) => {
-    switch (rec) {
-      case "COMPRA":
-        return <TrendingUp className="h-4 w-4 mr-2" />
-      case "VENTA":
-        return <TrendingDown className="h-4 w-4 mr-2" />
-      default:
-        return <Minus className="h-4 w-4 mr-2" />
-    }
+export default function RecommendationCard({
+  recomendacion = "NEUTRAL",
+  buySignals = 0,
+  sellSignals = 0,
+  neutralSignals = 0,
+}) {
+  const buys = Number(buySignals) || 0
+  const sells = Number(sellSignals) || 0
+  const neutrals = Number(neutralSignals) || 0
+  const totalSignals = buys + sells + neutrals
+
+  // Calculate flow ratios (if no signals, default 50/50)
+  const activeTotal = buys + sells
+  let bullishPct = 50.0
+  let bearishPct = 50.0
+
+  if (activeTotal > 0) {
+    bullishPct = (buys / activeTotal) * 100
+    bearishPct = (sells / activeTotal) * 100
+  } else if (totalSignals > 0) {
+    bullishPct = (buys / totalSignals) * 100
+    bearishPct = (sells / totalSignals) * 100
   }
 
-  const getRecommendationStyle = (rec) => {
-    switch (rec) {
-      case "COMPRA":
-        return "text-emerald-400 bg-emerald-500/10 border-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.2)]"
-      case "VENTA":
-        return "text-red-400 bg-red-500/10 border-red-500/30 shadow-[0_0_15px_rgba(239,68,68,0.2)]"
-      default:
-        return "text-gray-400 bg-gray-500/10 border-gray-500/30"
-    }
-  }
+  // Determine phrasing based on recommendation
+  const isVenta = recomendacion === "VENTA"
+  const isCompra = recomendacion === "COMPRA"
+
+  const summaryText = isVenta
+    ? "Predominancia bajista de corto plazo"
+    : isCompra
+    ? "Predominancia alcista de corto plazo"
+    : "Consolidación neutral de mercado"
 
   return (
-    <Card className="trading-card border border-white/5 bg-[#0a0e14]/80 backdrop-blur-sm relative overflow-hidden">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-gray-400 text-[10px] tracking-widest flex items-center font-mono uppercase">
-          <BarChart3 className="h-3.5 w-3.5 mr-1.5 text-cyan-500" />
-          MARKET SIGNAL
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div className={`px-3 py-1.5 rounded text-base font-bold font-mono flex items-center border ${getRecommendationStyle(recomendacion)}`}>
-              {getRecommendationIcon(recomendacion)}
-              {recomendacion}
-            </div>
-            <div className="text-right">
-              <div className="text-[10px] text-gray-500 font-mono tracking-widest uppercase mb-1">Total Signals</div>
-              <div className="text-lg font-bold text-white font-mono tabular-nums">{totalSignals}</div>
-            </div>
+    <div className="synapse-card p-4 relative overflow-hidden flex flex-col justify-between min-h-[160px] group transition-all duration-300">
+      {/* Top row: MARKET SIGNAL + dot | TOTAL SIGNALS */}
+      <div className="flex items-center justify-between text-[11px] font-mono tracking-wider mb-2">
+        <div className="flex items-center gap-1.5">
+          <span className="text-slate-400 font-bold uppercase tracking-widest text-[11px]">
+            MARKET SIGNAL
+          </span>
+          <span
+            className={`w-1.5 h-1.5 rounded-full ${
+              isVenta
+                ? "bg-[#ff3b69] shadow-[0_0_8px_#ff3b69]"
+                : isCompra
+                ? "bg-[#00f5c4] shadow-[0_0_8px_#00f5c4]"
+                : "bg-amber-400 shadow-[0_0_8px_#fbbf24]"
+            }`}
+          />
+        </div>
+
+        <div className="text-slate-400">
+          TOTAL SIGNALS:{" "}
+          <span className="text-white font-bold tabular-nums">
+            {totalSignals || 11}
+          </span>
+        </div>
+      </div>
+
+      {/* Middle row: Badge + Explanation + Signal Counts */}
+      <div className="flex flex-wrap items-center justify-between gap-2 my-1">
+        <div className="flex items-center gap-2.5">
+          {/* Signal Badge */}
+          <div
+            className={`px-3 py-1 rounded-full text-xs font-bold font-mono tracking-wider flex items-center gap-1.5 ${
+              isVenta
+                ? "bg-[#ff3b69]/15 border border-[#ff3b69]/40 text-[#ff3b69] shadow-[0_0_12px_rgba(255,59,105,0.25)]"
+                : isCompra
+                ? "bg-[#00f5c4]/15 border border-[#00f5c4]/40 text-[#00f5c4] shadow-[0_0_12px_rgba(0,245,196,0.25)]"
+                : "bg-amber-500/15 border border-amber-500/40 text-amber-400"
+            }`}
+          >
+            <span
+              className={`w-1.5 h-1.5 rounded-full ${
+                isVenta ? "bg-[#ff3b69]" : isCompra ? "bg-[#00f5c4]" : "bg-amber-400"
+              }`}
+            />
+            <span>{recomendacion}</span>
           </div>
 
-          <div className="space-y-1.5">
-            <div className="flex justify-between text-[10px] font-mono tracking-wider">
-              <span className="text-emerald-400">{buySignals} BUY</span>
-              <span className="text-gray-400">{neutralSignals} HOLD</span>
-              <span className="text-red-400">{sellSignals} SELL</span>
-            </div>
-            {/* Sleek Progress Bar Gauge */}
-            <div className="flex h-1.5 w-full bg-gray-900 rounded-full overflow-hidden shadow-inner">
-              <div className="bg-emerald-500 transition-all duration-500" style={{ width: `${buyPct}%` }} />
-              <div className="bg-gray-500 transition-all duration-500" style={{ width: `${neutralPct}%` }} />
-              <div className="bg-red-500 transition-all duration-500" style={{ width: `${sellPct}%` }} />
-            </div>
-          </div>
+          {/* Descriptive text */}
+          <span className="text-xs text-slate-300 font-medium font-mono hidden sm:inline">
+            {summaryText}
+          </span>
         </div>
-      </CardContent>
-    </Card>
+
+        {/* Signal counts: BUY | HOLD | SELL */}
+        <div className="text-[11px] font-mono tracking-wider flex items-center gap-2">
+          <span className="text-[#00f5c4] font-bold">{buys} BUY</span>
+          <span className="text-slate-600">|</span>
+          <span className="text-slate-400 font-medium">{neutrals} HOLD</span>
+          <span className="text-slate-600">|</span>
+          <span className="text-[#ff3b69] font-bold">{sells} SELL</span>
+        </div>
+      </div>
+
+      {/* Bottom row: Dual Progress Bar + Flow Percentages */}
+      <div className="mt-2 space-y-1.5">
+        {/* Dual Bar */}
+        <div className="w-full h-2 rounded-full bg-[#08111a] border border-[#16283d] overflow-hidden flex p-0.5">
+          <div
+            className="h-full bg-[#00f5c4] rounded-l-full transition-all duration-500 shadow-[0_0_10px_rgba(0,245,196,0.5)]"
+            style={{ width: `${Math.max(4, Math.min(96, bullishPct))}%` }}
+          />
+          <div
+            className="h-full bg-[#ff3b69] rounded-r-full transition-all duration-500 shadow-[0_0_10px_rgba(255,59,105,0.5)]"
+            style={{ width: `${Math.max(4, Math.min(96, bearishPct))}%` }}
+          />
+        </div>
+
+        {/* Labels below bar */}
+        <div className="flex justify-between items-center text-[10px] font-mono tracking-wider">
+          <span className="text-[#00f5c4] font-medium">
+            {bullishPct.toFixed(1)}% Bullish Flow
+          </span>
+          <span className="text-[#ff3b69] font-medium">
+            {bearishPct.toFixed(1)}% Bearish Pressure
+          </span>
+        </div>
+      </div>
+    </div>
   )
 }

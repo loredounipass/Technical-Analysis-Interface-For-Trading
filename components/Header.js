@@ -1,49 +1,131 @@
 "use client"
 
-import { RefreshCw, ArrowLeft, Activity, TrendingUp, Newspaper } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import CoinLogo from "@/components/CoinLogo"
+import { RefreshCw, ArrowLeftRight, Newspaper, Activity, Sparkles, Diamond } from "lucide-react"
 import { useRouter } from "next/navigation"
 
-export default function Header({ moneda, ultimaActualizacion, onActualizar, onCambiarMoneda }) {
+export default function Header({
+  moneda,
+  ultimaActualizacion,
+  onActualizar,
+  onCambiarMoneda,
+  timeframe = "15m",
+  onTimeframeChange,
+  isConnected = true,
+  latency = "12ms",
+  time = "",
+}) {
   const router = useRouter()
+  const timeframes = ["1m", "5m", "15m", "1h", "4h", "1d"]
 
   return (
-    <Card className="mb-6 header-gradient">
-      <CardContent className="p-6">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div className="flex items-center space-x-4">
-            <div className="relative">
-              <CoinLogo symbol={moneda.symbol} market={moneda.market} size={38} fallbackIcon={moneda.icon} />
-              <TrendingUp className="absolute -top-1 -right-1 h-4 w-4 text-trading-green-500" />
+    <header className="w-full bg-[#070c14]/95 border-b border-[#142335] sticky top-0 z-40 backdrop-blur-md px-3 sm:px-6 py-2.5 mb-5 shadow-lg shadow-black/40">
+      <div className="max-w-[1600px] mx-auto flex flex-wrap items-center justify-between gap-y-2.5 gap-x-3 text-xs font-mono">
+        {/* Left: Brand + Status + Coin badge */}
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          {/* Brand */}
+          <div className="flex items-center gap-2 pr-1">
+            <div className="w-6 h-6 rounded-md bg-[#00f5c4]/10 border border-[#00f5c4]/40 flex items-center justify-center text-[#00f5c4] shadow-[0_0_10px_rgba(0,245,196,0.25)]">
+              <Activity className="w-3.5 h-3.5 animate-pulse" />
             </div>
-            <div>
-              <h1 className="text-3xl font-bold text-white font-mono flex items-center">
-                {moneda.symbol}
-                <Activity className="h-6 w-6 ml-2 text-trading-green-500 animate-pulse" />
-              </h1>
-              <p className="text-trading-dark-200 font-mono text-sm">Last Update: {ultimaActualizacion}</p>
-            </div>
+            <span className="font-bold tracking-wider text-white text-sm whitespace-nowrap">
+              SYNAPSE TERMINAL
+            </span>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Button onClick={onActualizar} size="sm" className="trading-button h-8 sm:h-9 px-2.5 sm:px-3 text-[11px] sm:text-xs [&_svg]:h-3.5 [&_svg]:w-3.5 sm:[&_svg]:h-4 sm:[&_svg]:w-4">
-              <RefreshCw className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              Refresh Data
-            </Button>
-            <Button onClick={() => router.push('/news')} size="sm" className="trading-button-secondary h-8 sm:h-9 px-2.5 sm:px-3 text-[11px] sm:text-xs [&_svg]:h-3.5 [&_svg]:w-3.5 sm:[&_svg]:h-4 sm:[&_svg]:w-4"
-              style={{ borderColor: "rgba(16, 185, 129, 0.3)" }}
-            >
-              <Newspaper className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-emerald-400" />
-              MARKET NEWS
-            </Button>
-            <Button onClick={onCambiarMoneda} size="sm" className="trading-button-secondary h-8 sm:h-9 px-2.5 sm:px-3 text-[11px] sm:text-xs [&_svg]:h-3.5 [&_svg]:w-3.5 sm:[&_svg]:h-4 sm:[&_svg]:w-4">
-              <ArrowLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              Change Pair
-            </Button>
+
+          {/* SYS.ON Data Feed Active Badge */}
+          <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#00f5c4]/5 border border-[#00f5c4]/30 text-[#00f5c4] shadow-[0_0_10px_rgba(0,245,196,0.1)]">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#00f5c4] animate-ping" />
+            <span className="text-[10px] font-bold tracking-wider whitespace-nowrap">
+              SYS.ON • DATA FEED ACTIVE
+            </span>
+          </div>
+
+          {/* Coin / Pair badge */}
+          <button
+            onClick={onCambiarMoneda}
+            title="Click to change asset"
+            className="group flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#09111b] border border-[#1d3856] hover:border-[#00f5c4]/50 transition-all shadow-sm"
+          >
+            <Diamond className="w-3 h-3 text-[#00f5c4] fill-[#00f5c4]/30" />
+            <span className="font-bold text-white tracking-wide">{moneda?.symbol || "ETHUSDT"}</span>
+            <span className="text-[9px] px-1.5 py-0.2 rounded bg-[#00f5c4]/15 text-[#00f5c4] font-bold uppercase">
+              {moneda?.market === "stock" ? (moneda?.badge || "STOCK") : "SPOT"}
+            </span>
+          </button>
+        </div>
+
+        {/* Center: Actions & Timeframes */}
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+          {/* Refresh button */}
+          <button
+            onClick={onActualizar}
+            className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#09111b] border border-[#16283d] hover:border-[#2b4c73] text-slate-300 hover:text-white transition-all"
+            title={ultimaActualizacion ? `Last update: ${ultimaActualizacion}` : "Refresh Data"}
+          >
+            <RefreshCw className="w-3 h-3 text-cyan-400 group-hover:rotate-180 transition-transform duration-500" />
+            <span className="hidden md:inline">Refresh Data</span>
+          </button>
+
+          {/* Market News button */}
+          <button
+            onClick={() => router.push("/news")}
+            className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#09111b] border border-[#16283d] hover:border-[#2b4c73] text-slate-300 hover:text-white transition-all"
+          >
+            <Newspaper className="w-3 h-3 text-cyan-400" />
+            <span className="hidden sm:inline">MarketNews</span>
+          </button>
+
+          {/* Change pair button */}
+          <button
+            onClick={onCambiarMoneda}
+            className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#09111b] border border-[#16283d] hover:border-[#2b4c73] text-slate-300 hover:text-white transition-all"
+            title="Change Trading Pair"
+          >
+            <ArrowLeftRight className="w-3 h-3 text-slate-400" />
+            <span>Ch</span>
+          </button>
+
+          {/* Timeframe pill selector */}
+          {onTimeframeChange && (
+            <div className="flex items-center gap-1 p-0.5 rounded-full bg-[#09111b] border border-[#16283d]">
+              {timeframes.map((tf) => {
+                const isActive = timeframe.toLowerCase() === tf.toLowerCase()
+                return (
+                  <button
+                    key={tf}
+                    onClick={() => onTimeframeChange(tf)}
+                    className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold tracking-wider transition-all uppercase ${
+                      isActive
+                        ? "bg-[#00f5c4]/15 border border-[#00f5c4] text-[#00f5c4] shadow-[0_0_12px_rgba(0,245,196,0.35)]"
+                        : "text-slate-400 hover:text-white border border-transparent"
+                    }`}
+                  >
+                    {tf}
+                  </button>
+                )
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Right: Latency Connection + UTC Clock */}
+        <div className="flex items-center gap-3 text-[11px]">
+          <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#09111b] border border-[#16283d]">
+            <span
+              className={`w-1.5 h-1.5 rounded-full ${
+                isConnected ? "bg-[#00f5c4] shadow-[0_0_8px_#00f5c4]" : "bg-[#ff3b69]"
+              }`}
+            />
+            <span className={isConnected ? "text-slate-300" : "text-[#ff3b69]"}>
+              {isConnected ? `CONN. STABLE (${latency})` : "CONN. LOST"}
+            </span>
+          </div>
+
+          <div className="text-slate-400 font-semibold tracking-wider">
+            UTC <span className="text-white">{time || "18:14:02"}</span>
           </div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </header>
   )
 }

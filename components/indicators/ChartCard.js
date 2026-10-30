@@ -1,27 +1,39 @@
+"use client"
+
 import React from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine } from "recharts"
+import {
+  ResponsiveContainer,
+  ComposedChart,
+  LineChart,
+  Line,
+  Bar,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ReferenceLine,
+} from "recharts"
 
 const ChartCard = ({ title, icon, type, datos = {} }) => {
-  // HELPER: ESTILO COMÚN PARA TOOLTIP (REUTILIZADO EN LOS GRÁFICOS)
+  // Common Dark Tooltip Style
   const TOOLTIP_STYLE = {
-    backgroundColor: "rgba(5, 7, 10, 0.9)",
-    border: "1px solid rgba(255, 255, 255, 0.1)",
-    borderRadius: "4px",
-    color: "#fff",
-    backdropFilter: "blur(4px)",
+    backgroundColor: "rgba(8, 18, 28, 0.95)",
+    border: "1px solid #16283d",
+    borderRadius: "6px",
+    color: "#f1f5f9",
+    backdropFilter: "blur(6px)",
     fontSize: "11px",
-    fontFamily: "monospace"
+    fontFamily: "ui-monospace, monospace",
+    boxShadow: "0 8px 24px rgba(0,0,0,0.6)",
   }
 
-  // HELPER: FORMATEAR NÚMEROS DE MANERA SEGURA A STRING CON DECIMALES
   const safeToFixed = (v, d = 2) => {
     const n = Number(v)
-    if (!isFinite(n)) return (0).toFixed(d)
+    if (!Number.isFinite(n)) return (0).toFixed(d)
     return n.toFixed(d)
   }
 
-  // HELPER: OBTENER ÚLTIMOS N VALORES VÁLIDOS DE UN ARRAY
   const getLastValidValues = (arr, n) => {
     if (!Array.isArray(arr) || arr.length === 0) return []
     const validIndices = []
@@ -33,644 +45,382 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
     return validIndices.reverse()
   }
 
-  // HELPER: Asegura al menos 2 puntos en la serie duplicando el único punto existente.
-  // Esto permite a Recharts dibujar una línea horizontal cuando sólo hay un valor.
   const ensureMinPoints = (dataArray) => {
     if (!Array.isArray(dataArray)) return dataArray
     if (dataArray.length === 1) {
-      const first = { ...dataArray[0] }
-      // ajustar el nombre para que no colisione en el eje X
-      first.name = `${dataArray[0].name}_dup`
+      const first = { ...dataArray[0], name: `${dataArray[0].name}_dup` }
       dataArray.unshift(first)
     }
     return dataArray
   }
 
-  // RENDERIZADOR PRINCIPAL: DEVUELVE EL BLOQUE DE JSX SEGÚN `type`
-  const renderChart = () => {
-    switch (type) {
-      case "rsi":
-        // BLOQUE RSI: MUESTRA VALORES NUMÉRICOS Y GRÁFICO DE RSI
-        let rsiChartData = []
-        
-        if (datos.history && Array.isArray(datos.history.rsi) && datos.history.rsi.length > 0) {
-          const validIndices = getLastValidValues(datos.history.rsi, 50)
-          
-          if (validIndices.length > 0) {
-            rsiChartData = validIndices.map((idx, i) => ({
-              name: `${i}`,
-              rsi: datos.history.rsi[idx],
-              rsiStoch: datos.history.rsiStoch?.[idx] ?? null
-            }))
-
-            // Asegurar que el último valor sea el actual
-            if (datos.rsi !== null && datos.rsi !== undefined) {
-              rsiChartData[rsiChartData.length - 1].rsi = datos.rsi
-            }
-            // Asegurar que la serie Stoch RSI tenga el último valor actual
-            if (datos.rsiStoch !== null && datos.rsiStoch !== undefined) {
-              rsiChartData[rsiChartData.length - 1].rsiStoch = datos.rsiStoch
-            }
-          }
+  // 1. RSI OSCILLATOR
+  if (type === "rsi") {
+    let rsiChartData = []
+    if (datos.history && Array.isArray(datos.history.rsi) && datos.history.rsi.length > 0) {
+      const validIndices = getLastValidValues(datos.history.rsi, 40)
+      if (validIndices.length > 0) {
+        rsiChartData = validIndices.map((idx, i) => ({
+          name: `${i}`,
+          rsi: datos.history.rsi[idx],
+          rsiSignal: datos.history.rsiStoch?.[idx] ?? null,
+        }))
+        if (datos.rsi !== null && datos.rsi !== undefined && rsiChartData.length > 0) {
+          rsiChartData[rsiChartData.length - 1].rsi = datos.rsi
         }
-        
-        // Si no hay datos históricos, usar solo el valor actual
-        if (rsiChartData.length === 0 && datos.rsi !== null && datos.rsi !== undefined) {
-          rsiChartData = [{ name: "0", rsi: datos.rsi }]
+        if (datos.rsiStoch !== null && datos.rsiStoch !== undefined && rsiChartData.length > 0) {
+          rsiChartData[rsiChartData.length - 1].rsiSignal = datos.rsiStoch
         }
-        
-        rsiChartData = ensureMinPoints(rsiChartData)
-        // Adjuntar valores de Stoch RSI ya presentes en historial; si no existen,
-        // la propiedad `rsiStoch` será nula excepto en el último punto donde
-        // se coloca `datos.rsiStoch` si está disponible.
-        try {
-          // Preferimos usar la serie `rsiStoch` directamente para la línea roja
-          // (rsiSignal) para que coincida exactamente con Stoch RSI. Si la
-          // serie histórica `rsiStoch` no está disponible, hacemos un fallback
-          // calculando una SMA sobre `rsi` (comportamiento previo).
-          let rsiSignalSeries = []
-          const hasStochHistory = Array.isArray(datos.history?.rsiStoch) && datos.history.rsiStoch.length > 0
-          if (hasStochHistory) {
-            // Mapear valores históricos de rsiStoch a la serie mostrada
-            rsiSignalSeries = rsiChartData.map((_, i) => {
-              // intentamos tomar el valor correspondiente del historial
-              return datos.history.rsiStoch[ validIndexOrZero(i, rsiChartData.length, datos.history.rsiStoch.length) ] ?? null
-            })
-            // Asegurar último valor actual
-            if (datos.rsiStoch !== null && datos.rsiStoch !== undefined) {
-              rsiSignalSeries[rsiSignalSeries.length - 1] = datos.rsiStoch
-            }
-          } else {
-            // Fallback: calcular SMA simple sobre RSI con ventana 9 (comportamiento anterior)
-            const window = 9
-            rsiSignalSeries = rsiChartData.map((_, i) => {
-              const start = Math.max(0, i - (window - 1))
-              const slice = rsiChartData
-                .slice(start, i + 1)
-                .map((x) => x.rsi)
-                .filter((v) => v !== null && v !== undefined && !isNaN(v))
-              if (slice.length === 0) return null
-              const sum = slice.reduce((a, b) => a + Number(b), 0)
-              return sum / slice.length
-            })
-          }
-          rsiChartData.forEach((d, i) => {
-            d.rsiSignal = rsiSignalSeries[i] ?? null
-          })
-        } catch (e) {}
+      }
+    }
+    if (rsiChartData.length === 0 && datos.rsi !== null && datos.rsi !== undefined) {
+      rsiChartData = [{ name: "0", rsi: datos.rsi, rsiSignal: datos.rsiStoch || 50 }]
+    }
+    rsiChartData = ensureMinPoints(rsiChartData)
 
-        // Helper local: calcula el índice de historial correspondiente para
-        // mapear la ventana reducida (p. ej. últimos N puntos) a los índices
-        // originales del historial. Queremos alinear los últimos puntos.
-        function validIndexOrZero(displayIndex, displayLen, histLen) {
-          // displayIndex 0..displayLen-1 -> map to last histLen slice indices
-          const offset = Math.max(0, histLen - displayLen)
-          return Math.min(histLen - 1, offset + displayIndex)
-        }
-        return (
-          <div className="space-y-3">
-            {/* Numerical Values */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="bg-trading-dark-700 p-2.5 rounded border border-trading-dark-600">
-                <div className="text-xs text-trading-dark-300 font-mono mb-1">RSI (14)</div>
-                <div
-                  className={`text-lg font-bold font-mono ${
-                    datos.rsi > 70
-                      ? "text-trading-red-400"
-                      : datos.rsi < 30
-                        ? "text-trading-green-400"
-                        : "text-trading-blue-400"
-                  }`}
-                >
-                  {safeToFixed(datos.rsi, 2)}
-                </div>
-                <div className="text-xs text-trading-dark-300 font-mono">
-                  {datos.rsi > 70 ? "Overbought" : datos.rsi < 30 ? "Oversold" : "Neutral"}
-                </div>
-              </div>
-              <div className="bg-trading-dark-700 p-2.5 rounded border border-trading-dark-600">
-                <div className="text-xs text-trading-dark-300 font-mono mb-1">Stoch RSI (14, 3, 3)</div>
-                <div
-                  className={`text-lg font-bold font-mono ${
-                    datos.rsiStoch > 80
-                      ? "text-trading-red-400"
-                      : datos.rsiStoch < 20
-                        ? "text-trading-green-400"
-                        : "text-trading-blue-400"
-                  }`}
-                >
-                  {safeToFixed(datos.rsiStoch, 2)}
-                </div>
-                <div className="text-xs text-trading-dark-300 font-mono">
-                  {datos.rsiStoch > 80 ? "Overbought" : datos.rsiStoch < 20 ? "Oversold" : "Neutral"}
-                </div>
-              </div>
-            </div>
+    const rsiVal = Number(datos.rsi) || 50
+    const isOB = rsiVal >= 70
+    const isOS = rsiVal <= 30
+    const statusText = isOB ? "Overbought" : isOS ? "Oversold" : "Neutral"
+    const badgeColor = isOB
+      ? "bg-[#ff3b69]/15 border border-[#ff3b69]/40 text-[#ff3b69]"
+      : isOS
+      ? "bg-[#00f5c4]/15 border border-[#00f5c4]/40 text-[#00f5c4]"
+      : "bg-[#00f5c4]/10 border border-[#00f5c4]/30 text-[#00f5c4]"
 
-            {/* Chart */}
-            {rsiChartData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={140}>
-                <LineChart data={rsiChartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                  <XAxis dataKey="name" tick={{ fill: "#a3a3a3", fontSize: 10 }} />
-                  <YAxis domain={[0, 100]} tick={{ fill: "#a3a3a3", fontSize: 10 }} />
-                  <Tooltip contentStyle={TOOLTIP_STYLE} />
-                  {/* Reference lines removed per request - only the blue (rsi) and red (rsiSignal) lines remain */}
-                  <Line 
-                    type="monotone" 
-                    dataKey="rsi" 
-                    stroke="#3b82f6" 
-                    strokeWidth={2} 
-                    dot={false}
-                    connectNulls={true}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="rsiSignal"
-                    stroke="#ef4444"
-                    strokeWidth={2}
-                    dot={false}
-                    connectNulls={true}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-[140px] flex items-center justify-center text-trading-dark-400 text-sm">
-                No hay datos históricos disponibles
-              </div>
-            )}
+    return (
+      <div className="synapse-card p-3.5 flex flex-col justify-between">
+        {/* Header */}
+        <div className="flex items-center justify-between pb-2 mb-2 border-b border-[#142335] text-xs font-mono">
+          <div className="flex items-center gap-1.5 font-bold tracking-wider text-slate-300 uppercase text-[11px]">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#00f5c4] shadow-[0_0_8px_#00f5c4]" />
+            <span>{title || "RSI OSCILLATOR (14)"}</span>
           </div>
-        )
-
-      case "macd":
-        // BLOQUE MACD: MUESTRA LÍNEAS MACD/SIGNAL, HISTOGRAMA Y GRÁFICO
-        let macdChartData = []
-        
-        if (datos.history && Array.isArray(datos.history.macd) && datos.history.macd.length > 0) {
-          const validIndices = getLastValidValues(datos.history.macd, 50)
-          
-          if (validIndices.length > 0) {
-            macdChartData = validIndices.map((idx, i) => ({
-              name: `${i}`,
-              macd: datos.history.macd[idx],
-              signal: datos.history.macd_signal?.[idx] || null
-            }))
-            
-            // Asegurar que el último valor sea el actual
-            if (datos.macdValue !== null && datos.macdValue !== undefined) {
-              macdChartData[macdChartData.length - 1].macd = datos.macdValue
-              macdChartData[macdChartData.length - 1].signal = datos.macdSignal
-            }
-          }
-        }
-        
-        // Si no hay datos históricos, usar solo valores actuales
-        if (macdChartData.length === 0 && datos.macdValue !== null && datos.macdValue !== undefined) {
-          macdChartData = [{ name: "0", macd: datos.macdValue, signal: datos.macdSignal }]
-        }
-        
-        macdChartData = ensureMinPoints(macdChartData)
-        // Calcular dominio Y para mejor visualización
-        const macdValues = macdChartData.flatMap(d => [d.macd, d.signal].filter(v => v !== null && v !== undefined && !isNaN(v)))
-        let macdYDomain = ["auto", "auto"]
-        if (macdValues.length > 0) {
-          const min = Math.min(...macdValues)
-          const max = Math.max(...macdValues)
-          const pad = Math.max((max - min) * 0.1, Math.abs(max) * 0.05, 0.0001)
-          macdYDomain = [min - pad, max + pad]
-        }
-
-        return (
-          <div className="space-y-3">
-            {/* Numerical Values */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="bg-trading-dark-700 p-2.5 rounded border border-trading-dark-600">
-                <div className="text-xs text-trading-dark-300 font-mono mb-1">MACD Line (12, 26, 9)</div>
-                <div
-                  className={`text-lg font-bold font-mono ${
-                    datos.macdValue > 0 ? "text-trading-green-400" : "text-trading-red-400"
-                  }`}
-                >
-                  {safeToFixed(datos.macdValue, 4)}
-                </div>
-                <div className="text-xs text-trading-dark-300 font-mono">
-                  {datos.macdValue > 0 ? "Bullish" : "Bearish"}
-                </div>
-              </div>
-              <div className="bg-trading-dark-700 p-2.5 rounded border border-trading-dark-600">
-                <div className="text-xs text-trading-dark-300 font-mono mb-1">Signal Line (12, 26, 9)</div>
-                <div
-                  className={`text-lg font-bold font-mono ${
-                    datos.macdSignal > 0 ? "text-trading-green-400" : "text-trading-red-400"
-                  }`}
-                >
-                  {safeToFixed(datos.macdSignal, 4)}
-                </div>
-                <div className="text-xs text-trading-dark-300 font-mono">
-                  Histogram: {safeToFixed(datos.macdValue - datos.macdSignal, 4)}
-                </div>
-              </div>
-            </div>
-
-            {/* Chart */}
-            {macdChartData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={140}>
-                <LineChart data={macdChartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                  <XAxis dataKey="name" tick={{ fill: "#a3a3a3", fontSize: 10 }} />
-                  <YAxis domain={macdYDomain} tick={{ fill: "#a3a3a3", fontSize: 10 }} />
-                  <Tooltip contentStyle={TOOLTIP_STYLE} />
-                  <ReferenceLine y={0} stroke="#525252" />
-                  <Line 
-                    type="monotone" 
-                    dataKey="macd" 
-                    stroke="#10b981" 
-                    strokeWidth={2} 
-                    dot={false}
-                    connectNulls={true}
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey="signal" 
-                    stroke="#ef4444" 
-                    strokeWidth={2} 
-                    dot={false}
-                    connectNulls={true}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-[140px] flex items-center justify-center text-trading-dark-400 text-sm">
-                No hay datos históricos disponibles
-              </div>
-            )}
+          <div className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold font-mono tracking-wider ${badgeColor}`}>
+            {safeToFixed(rsiVal, 2)} {statusText}
           </div>
-        )
+        </div>
 
-      case "bollinger":
-        // BLOQUE BOLLINGER: MUESTRA BANDAS SUPERIOR/MEDIA/INFERIOR Y PRECIO
-        let bbChartData = []
-        let bbYDomain = ["auto", "auto"]
-        
-        if (datos.history && Array.isArray(datos.history.closes) && datos.history.closes.length > 0) {
-          const validIndices = getLastValidValues(datos.history.closes, 50)
-          
-          if (validIndices.length > 0) {
-            bbChartData = validIndices.map((idx, i) => ({
-              name: `${i}`,
-              upper: datos.history.bb_upper?.[idx] ?? null,
-              middle: datos.history.bb_middle?.[idx] ?? null,
-              lower: datos.history.bb_lower?.[idx] ?? null,
-              price: datos.history.closes[idx]
-            }))
-            
-            // Asegurar que el último valor sea el actual
-            if (datos.precio !== null && datos.precio !== undefined) {
-              bbChartData[bbChartData.length - 1] = {
-                name: `${bbChartData.length - 1}`,
-                upper: datos.bbUpper,
-                middle: datos.bbMiddle,
-                lower: datos.bbLower,
-                price: datos.precio
-              }
-            }
-          }
+        {/* Chart */}
+        <div className="h-[120px] w-full my-1">
+          {rsiChartData.length > 0 ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={rsiChartData} margin={{ top: 5, right: 10, left: 10, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="2 2" stroke="#132235" vertical={false} />
+                <YAxis domain={[0, 100]} hide={true} />
+                <Tooltip contentStyle={TOOLTIP_STYLE} />
+                <ReferenceLine y={70} stroke="#ff3b69" strokeDasharray="3 3" strokeOpacity={0.3} />
+                <ReferenceLine y={30} stroke="#00f5c4" strokeDasharray="3 3" strokeOpacity={0.3} />
+                {/* Cyan continuous curve */}
+                <Line
+                  type="monotone"
+                  dataKey="rsi"
+                  stroke="#00f5c4"
+                  strokeWidth={2}
+                  dot={false}
+                  connectNulls={true}
+                  isAnimationActive={false}
+                />
+                {/* Pink/Coral dotted signal curve */}
+                <Line
+                  type="monotone"
+                  dataKey="rsiSignal"
+                  stroke="#ff3b69"
+                  strokeWidth={1.5}
+                  strokeDasharray="2 2"
+                  dot={false}
+                  connectNulls={true}
+                  isAnimationActive={false}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-full flex items-center justify-center text-slate-500 font-mono text-xs">
+              No historical RSI data
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-between pt-2 border-t border-[#142335] text-[10px] font-mono tracking-wider text-slate-400">
+          <span>Oversold: <span className="text-slate-300">30</span></span>
+          <span>Overbought: <span className="text-slate-300">70</span></span>
+        </div>
+      </div>
+    )
+  }
+
+  // 2. MACD INDICATOR
+  if (type === "macd") {
+    let macdChartData = []
+    if (datos.history && Array.isArray(datos.history.macd) && datos.history.macd.length > 0) {
+      const validIndices = getLastValidValues(datos.history.macd, 40)
+      if (validIndices.length > 0) {
+        macdChartData = validIndices.map((idx, i) => {
+          const m = datos.history.macd[idx]
+          const s = datos.history.macd_signal?.[idx] ?? null
+          const h = m !== null && s !== null ? m - s : 0
+          return { name: `${i}`, macd: m, signal: s, hist: h }
+        })
+        if (datos.macdValue !== null && datos.macdValue !== undefined && macdChartData.length > 0) {
+          const last = macdChartData.length - 1
+          macdChartData[last].macd = datos.macdValue
+          macdChartData[last].signal = datos.macdSignal
+          macdChartData[last].hist = datos.macdValue - (datos.macdSignal || 0)
         }
-        
-        // Si no hay datos históricos, usar solo valores actuales
-        if (bbChartData.length === 0 && datos.precio !== null && datos.precio !== undefined) {
-          bbChartData = [{
-            name: "0",
+      }
+    }
+    if (macdChartData.length === 0 && datos.macdValue !== null && datos.macdValue !== undefined) {
+      macdChartData = [
+        {
+          name: "0",
+          macd: datos.macdValue,
+          signal: datos.macdSignal,
+          hist: datos.macdValue - (datos.macdSignal || 0),
+        },
+      ]
+    }
+    macdChartData = ensureMinPoints(macdChartData)
+
+    const macdVal = Number(datos.macdValue) || 0
+    const histVal = Number(datos.macdHistogram ?? (datos.macdValue - (datos.macdSignal || 0))) || 0
+    const isBull = macdVal > 0
+    const badgeColor = isBull
+      ? "bg-[#00f5c4]/15 border border-[#00f5c4]/40 text-[#00f5c4]"
+      : "bg-[#ff3b69]/15 border border-[#ff3b69]/40 text-[#ff3b69]"
+
+    return (
+      <div className="synapse-card p-3.5 flex flex-col justify-between">
+        {/* Header */}
+        <div className="flex items-center justify-between pb-2 mb-2 border-b border-[#142335] text-xs font-mono">
+          <div className="flex items-center gap-1.5 font-bold tracking-wider text-slate-300 uppercase text-[11px]">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#00f5c4] shadow-[0_0_8px_#00f5c4]" />
+            <span>{title || "MACD (12, 26, 9)"}</span>
+          </div>
+          <div className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold font-mono tracking-wider ${badgeColor}`}>
+            {safeToFixed(macdVal, 2)} {isBull ? "Bullish" : "Bearish"}
+          </div>
+        </div>
+
+        {/* Chart with Histogram Bars + MACD & Signal curves */}
+        <div className="h-[120px] w-full my-1">
+          {macdChartData.length > 0 ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart data={macdChartData} margin={{ top: 5, right: 10, left: 10, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="2 2" stroke="#132235" vertical={false} />
+                <ReferenceLine y={0} stroke="#1f3752" />
+                <Tooltip contentStyle={TOOLTIP_STYLE} />
+
+                {/* Histogram Bars */}
+                <Bar dataKey="hist" barSize={3} isAnimationActive={false}>
+                  {macdChartData.map((entry, index) => (
+                    <Cell
+                      key={`hist-${index}`}
+                      fill={(entry.hist || 0) >= 0 ? "#00f5c4" : "#ff3b69"}
+                      fillOpacity={0.7}
+                    />
+                  ))}
+                </Bar>
+
+                {/* MACD Line (Cyan) */}
+                <Line
+                  type="monotone"
+                  dataKey="macd"
+                  stroke="#00f5c4"
+                  strokeWidth={1.5}
+                  dot={false}
+                  connectNulls={true}
+                  isAnimationActive={false}
+                />
+
+                {/* Signal Line (Pink/Coral) */}
+                <Line
+                  type="monotone"
+                  dataKey="signal"
+                  stroke="#ff3b69"
+                  strokeWidth={1.5}
+                  dot={false}
+                  connectNulls={true}
+                  isAnimationActive={false}
+                />
+              </ComposedChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-full flex items-center justify-center text-slate-500 font-mono text-xs">
+              No historical MACD data
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-between pt-2 border-t border-[#142335] text-[10px] font-mono tracking-wider text-slate-400">
+          <span>
+            Histogram:{" "}
+            <span className={histVal >= 0 ? "text-[#00f5c4]" : "text-[#ff3b69]"}>
+              {safeToFixed(histVal, 2)}
+            </span>
+          </span>
+          <span>
+            Signal:{" "}
+            <span className="text-cyan-400">
+              {Math.abs(histVal) < 0.05 ? "Convergence" : "Divergence"}
+            </span>
+          </span>
+        </div>
+      </div>
+    )
+  }
+
+  // 3. BOLLINGER BANDS
+  if (type === "bollinger") {
+    let bbChartData = []
+    if (datos.history && Array.isArray(datos.history.closes) && datos.history.closes.length > 0) {
+      const validIndices = getLastValidValues(datos.history.closes, 40)
+      if (validIndices.length > 0) {
+        bbChartData = validIndices.map((idx, i) => ({
+          name: `${i}`,
+          upper: datos.history.bb_upper?.[idx] ?? null,
+          middle: datos.history.bb_middle?.[idx] ?? null,
+          lower: datos.history.bb_lower?.[idx] ?? null,
+          price: datos.history.closes[idx],
+        }))
+        if (datos.precio !== null && datos.precio !== undefined && bbChartData.length > 0) {
+          const last = bbChartData.length - 1
+          bbChartData[last] = {
+            name: `${last}`,
             upper: datos.bbUpper,
             middle: datos.bbMiddle,
             lower: datos.bbLower,
-            price: datos.precio
-          }]
-        }
-        
-        bbChartData = ensureMinPoints(bbChartData)
-        // Calcular dominio Y (usar solo las bandas, excluir precio)
-        const bbValues = bbChartData.flatMap(d => [d.upper, d.middle, d.lower].filter(v => v !== null && v !== undefined && !isNaN(v)))
-        if (bbValues.length > 0) {
-          const min = Math.min(...bbValues)
-          const max = Math.max(...bbValues)
-          const pad = Math.max((max - min) * 0.1, Math.abs(max) * 0.02, 0.01)
-          bbYDomain = [min - pad, max + pad]
-        }
-
-        return (
-          <div className="space-y-3">
-            {/* Numerical Values */}
-            <div className="grid grid-cols-3 gap-2">
-              <div className="bg-trading-red-600/20 p-2 rounded border border-trading-red-600/30">
-                <div className="text-xs text-trading-red-300 font-mono mb-1">Upper</div>
-                <div className="text-base font-bold font-mono text-trading-red-400">
-                  ${safeToFixed(datos.bbUpper, datos.decimales)}
-                </div>
-              </div>
-              <div className="bg-trading-yellow-600/20 p-2 rounded border border-trading-yellow-600/30">
-                <div className="text-xs text-trading-yellow-300 font-mono mb-1">Middle</div>
-                <div className="text-base font-bold font-mono text-trading-yellow-400">
-                  ${safeToFixed(datos.bbMiddle, datos.decimales)}
-                </div>
-              </div>
-              <div className="bg-trading-green-600/20 p-2 rounded border border-trading-green-600/30">
-                <div className="text-xs text-trading-green-300 font-mono mb-1">Lower</div>
-                <div className="text-base font-bold font-mono text-trading-green-400">
-                  ${safeToFixed(datos.bbLower, datos.decimales)}
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-trading-dark-700 p-2.5 rounded border border-trading-dark-600">
-              <div className="flex justify-between items-center">
-                <span className="text-xs text-trading-dark-300 font-mono">Current Price Position:</span>
-                <span
-                  className={`text-sm font-bold font-mono ${
-                    datos.precio > datos.bbUpper
-                      ? "text-trading-red-400"
-                      : datos.precio < datos.bbLower
-                        ? "text-trading-green-400"
-                        : "text-trading-blue-400"
-                  }`}
-                >
-                  {datos.precio > datos.bbUpper
-                    ? "Above Upper Band"
-                    : datos.precio < datos.bbLower
-                      ? "Below Lower Band"
-                      : "Within Bands"}
-                </span>
-              </div>
-              <div className="mt-2 text-xs text-trading-dark-300 font-mono">
-                Band Width: {safeToFixed(((datos.bbUpper - datos.bbLower) / datos.bbMiddle) * 100, 2)}%
-              </div>
-            </div>
-
-            {/* Chart */}
-            {bbChartData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={140}>
-                <LineChart data={bbChartData} margin={{ left: 40, right: 40 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                  <XAxis dataKey="name" tick={{ fill: "#a3a3a3", fontSize: 10 }} />
-                  <YAxis domain={bbYDomain} tick={{ fill: "#a3a3a3", fontSize: 10 }} />
-                  <Tooltip contentStyle={TOOLTIP_STYLE} />
-                  <Line
-                    type="monotone"
-                    dataKey="upper"
-                    stroke="#ef4444"
-                    strokeWidth={2}
-                    dot={false}
-                    connectNulls={true}
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey="middle" 
-                    stroke="#f59e0b" 
-                    strokeWidth={2} 
-                    dot={false}
-                    connectNulls={true}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="lower"
-                    stroke="#10b981"
-                    strokeWidth={2}
-                    dot={false}
-                    connectNulls={true}
-                  />
-                  {/* Price line removed for EMA chart per request */}
-                </LineChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-[140px] flex items-center justify-center text-trading-dark-400 text-sm">
-                No hay datos históricos disponibles
-              </div>
-            )}
-          </div>
-        )
-
-      case "ema":
-        // BLOQUE EMA: MUESTRA EMAs (50/100/200), ANÁLISIS DE TENDENCIA Y GRÁFICO
-        let emaChartData = []
-
-        // Construir serie mostrada: intentar usar historial de closes y EMAs si existen.
-        // Si las EMAs históricas no están disponibles o tienen muchos nulos,
-        // calculamos un fallback de EMA a partir de los precios para dibujar
-        // líneas continuas.
-        if (datos.history && Array.isArray(datos.history.closes) && datos.history.closes.length > 0) {
-          const validIndices = getLastValidValues(datos.history.closes, 50)
-
-          if (validIndices.length > 0) {
-            const closesSeries = validIndices.map((idx) => datos.history.closes[idx])
-
-            // Helper: calcula EMA a partir de una serie de precios
-            function computeEMAFromPrices(arr, period) {
-              const out = []
-              if (!Array.isArray(arr) || arr.length === 0) return out
-              const k = 2 / (period + 1)
-              // inicializar EMA con el primer valor válido
-              let ema = null
-              for (let i = 0; i < arr.length; i++) {
-                const v = arr[i]
-                if (v === null || v === undefined || isNaN(v)) {
-                  out.push(null)
-                  continue
-                }
-                if (ema === null) {
-                  ema = v
-                } else {
-                  ema = v * k + ema * (1 - k)
-                }
-                out.push(ema)
-              }
-              return out
-            }
-
-            // calcular EMAs fallback a partir de closes
-            const ema50FromPrices = computeEMAFromPrices(closesSeries, 50)
-            const ema100FromPrices = computeEMAFromPrices(closesSeries, 100)
-            const ema200FromPrices = computeEMAFromPrices(closesSeries, 200)
-
-            emaChartData = validIndices.map((idx, i) => ({
-              name: `${i}`,
-              // Priorizar valores históricos si existen, si no usar el fallback calculado
-              ema50: (Array.isArray(datos.history?.ema50) ? datos.history.ema50[idx] : null) ?? ema50FromPrices[i] ?? null,
-              ema100: (Array.isArray(datos.history?.ema100) ? datos.history.ema100[idx] : null) ?? ema100FromPrices[i] ?? null,
-              ema200: (Array.isArray(datos.history?.ema200) ? datos.history.ema200[idx] : null) ?? ema200FromPrices[i] ?? null,
-              price: datos.history.closes[idx]
-            }))
-
-            // Asegurar que el último valor sea el actual (valores en `datos`)
-            if (datos.precio !== null && datos.precio !== undefined) {
-              const last = emaChartData.length - 1
-              emaChartData[last] = {
-                name: `${last}`,
-                ema50: datos.ema50 ?? emaChartData[last].ema50,
-                ema100: datos.ema100 ?? emaChartData[last].ema100,
-                ema200: datos.ema200 ?? emaChartData[last].ema200,
-                price: datos.precio
-              }
-            }
+            price: datos.precio,
           }
         }
-        
-        // Si no hay datos históricos, usar solo valores actuales
-        if (emaChartData.length === 0 && datos.precio !== null && datos.precio !== undefined) {
-          emaChartData = [{
-            name: "0",
-            ema50: datos.ema50,
-            ema100: datos.ema100,
-            ema200: datos.ema200,
-            price: datos.precio
-          }]
-        }
-        
-        emaChartData = ensureMinPoints(emaChartData)
-        // Calcular dominio Y
-        const emaValues = emaChartData.flatMap(d => [d.ema50, d.ema100, d.ema200, d.price].filter(v => v !== null && v !== undefined && !isNaN(v)))
-        let yDomain = ["auto", "auto"]
-        if (emaValues.length > 0) {
-          const min = Math.min(...emaValues)
-          const max = Math.max(...emaValues)
-          const pad = Math.max((max - min) * 0.1, Math.abs(max) * 0.02, 0.01)
-          yDomain = [min - pad, max + pad]
-        }
-
-        return (
-          <div className="space-y-3">
-            {/* Numerical Values */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <div className="bg-trading-dark-700 p-2 rounded border border-trading-dark-600 flex justify-between">
-                  <span className="text-xs text-trading-green-300 font-mono">EMA 50:</span>
-                  <span className="text-sm font-bold font-mono text-trading-green-400">
-                    ${safeToFixed(datos.ema50, datos.decimales)}
-                  </span>
-                </div>
-                <div className="bg-trading-dark-700 p-2 rounded border border-trading-dark-600 flex justify-between">
-                  <span className="text-xs text-white font-mono">EMA 100:</span>
-                  <span className="text-sm font-bold font-mono text-white">
-                    ${safeToFixed(datos.ema100, datos.decimales)}
-                  </span>
-                </div>
-                <div className="bg-trading-dark-700 p-2 rounded border border-trading-dark-600 flex justify-between">
-                  <span className="text-xs text-trading-red-300 font-mono">EMA 200:</span>
-                  <span className="text-sm font-bold font-mono text-trading-red-400">
-                    ${safeToFixed(datos.ema200, datos.decimales)}
-                  </span>
-                </div>
-              </div>
-              <div className="bg-trading-dark-700 p-2.5 rounded border border-trading-dark-600">
-                <div className="text-xs text-trading-dark-300 font-mono mb-1">Trend Analysis</div>
-                <div
-                  className={`text-lg font-bold font-mono ${
-                    datos.precio > datos.ema50 && datos.ema50 > datos.ema100 && datos.ema100 > datos.ema200
-                      ? "text-trading-green-400"
-                      : datos.precio < datos.ema50 && datos.ema50 < datos.ema100 && datos.ema100 < datos.ema200
-                        ? "text-trading-red-400"
-                        : "text-trading-yellow-400"
-                  }`}
-                >
-                  {datos.precio > datos.ema50 && datos.ema50 > datos.ema100 && datos.ema100 > datos.ema200
-                    ? "BULLISH"
-                    : datos.precio < datos.ema50 && datos.ema50 < datos.ema100 && datos.ema100 < datos.ema200
-                      ? "BEARISH"
-                      : "SIDEWAYS"}
-                </div>
-                <div className="text-xs text-trading-dark-300 font-mono">
-                  Price vs EMA50: {safeToFixed((datos.precio / datos.ema50 - 1) * 100, 2)}%
-                </div>
-                <div className="text-xs text-trading-dark-300 font-mono">
-                  EMA Distance: {safeToFixed(((datos.ema50 - datos.ema200) / datos.ema200) * 100, 2)}%
-                </div>
-              </div>
-            </div>
-
-            {/* Chart */}
-            {emaChartData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={140}>
-                <LineChart data={emaChartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                  <XAxis dataKey="name" tick={{ fill: "#a3a3a3", fontSize: 10 }} />
-                  <YAxis domain={yDomain} tick={{ fill: "#a3a3a3", fontSize: 10 }} />
-                  <Tooltip contentStyle={TOOLTIP_STYLE} />
-                  <Line 
-                    type="monotone" 
-                    dataKey="ema50" 
-                    stroke="#10b981" 
-                    strokeWidth={2} 
-                    dot={false}
-                    connectNulls={true}
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey="ema100" 
-                    stroke="#ffffff" 
-                    strokeWidth={2} 
-                    dot={false}
-                    connectNulls={true}
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey="ema200" 
-                    stroke="#ef4444" 
-                    strokeWidth={2} 
-                    dot={false}
-                    connectNulls={true}
-                  />
-                  {/* Price line removed for EMA chart per request */}
-                </LineChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-[140px] flex items-center justify-center text-trading-dark-400 text-sm">
-                No hay datos históricos disponibles
-              </div>
-            )}
-          </div>
-        )
-
-      default:
-        // TIPO NO RECONOCIDO: NO RENDERIZAR NADA
-        return null
+      }
     }
+    bbChartData = ensureMinPoints(bbChartData)
+
+    const isAbove = datos.precio > datos.bbUpper
+    const isBelow = datos.precio < datos.bbLower
+
+    return (
+      <div className="synapse-card p-3.5 flex flex-col justify-between">
+        <div className="flex items-center justify-between pb-2 mb-2 border-b border-[#142335] text-xs font-mono">
+          <div className="flex items-center gap-1.5 font-bold tracking-wider text-slate-300 uppercase text-[11px]">
+            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_8px_#22d3ee]" />
+            <span>{title || "BOLLINGER BANDS (20, 2σ)"}</span>
+          </div>
+          <div
+            className={`px-2 py-0.5 rounded-full text-[10px] font-bold font-mono ${
+              isAbove
+                ? "bg-[#ff3b69]/15 border border-[#ff3b69]/40 text-[#ff3b69]"
+                : isBelow
+                ? "bg-[#00f5c4]/15 border border-[#00f5c4]/40 text-[#00f5c4]"
+                : "bg-slate-800 text-slate-300 border border-slate-700"
+            }`}
+          >
+            {isAbove ? "Upper Break" : isBelow ? "Lower Break" : "In Band"}
+          </div>
+        </div>
+
+        <div className="h-[120px] w-full my-1">
+          {bbChartData.length > 0 ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={bbChartData} margin={{ top: 5, right: 10, left: 10, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="2 2" stroke="#132235" vertical={false} />
+                <Tooltip contentStyle={TOOLTIP_STYLE} />
+                <Line type="monotone" dataKey="upper" stroke="#ff3b69" strokeWidth={1.5} dot={false} isAnimationActive={false} />
+                <Line type="monotone" dataKey="middle" stroke="#f59e0b" strokeWidth={1.5} dot={false} isAnimationActive={false} />
+                <Line type="monotone" dataKey="lower" stroke="#00f5c4" strokeWidth={1.5} dot={false} isAnimationActive={false} />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-full flex items-center justify-center text-slate-500 font-mono text-xs">
+              No Bollinger Bands data
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center justify-between pt-2 border-t border-[#142335] text-[10px] font-mono tracking-wider text-slate-400">
+          <span>U: <span className="text-[#ff3b69]">${safeToFixed(datos.bbUpper, datos.decimales)}</span></span>
+          <span>M: <span className="text-amber-400">${safeToFixed(datos.bbMiddle, datos.decimales)}</span></span>
+          <span>L: <span className="text-[#00f5c4]">${safeToFixed(datos.bbLower, datos.decimales)}</span></span>
+        </div>
+      </div>
+    )
   }
 
-  return (
-    <Card className="trading-card border border-white/5 bg-[#0a0e14]/80 backdrop-blur-sm relative overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-b from-white/[0.02] to-transparent opacity-50 pointer-events-none" />
-      <CardHeader className="pb-2 relative z-10 border-b border-white/[0.02]">
-        <CardTitle className="text-gray-400 text-[10px] tracking-widest flex items-center font-mono uppercase">
-          {icon}
-          {title}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="pt-3 relative z-10">
-        <div className="chart-container">{renderChart()}</div>
-      </CardContent>
-    </Card>
-  )
+  // 4. MOVING AVERAGES (EMA)
+  if (type === "ema") {
+    let emaChartData = []
+    if (datos.history && Array.isArray(datos.history.closes) && datos.history.closes.length > 0) {
+      const validIndices = getLastValidValues(datos.history.closes, 40)
+      if (validIndices.length > 0) {
+        emaChartData = validIndices.map((idx, i) => ({
+          name: `${i}`,
+          ema50: datos.history.ema50?.[idx] ?? null,
+          ema100: datos.history.ema100?.[idx] ?? null,
+          ema200: datos.history.ema200?.[idx] ?? null,
+        }))
+        if (datos.precio !== null && datos.precio !== undefined && emaChartData.length > 0) {
+          const last = emaChartData.length - 1
+          emaChartData[last] = {
+            name: `${last}`,
+            ema50: datos.ema50 ?? emaChartData[last].ema50,
+            ema100: datos.ema100 ?? emaChartData[last].ema100,
+            ema200: datos.ema200 ?? emaChartData[last].ema200,
+          }
+        }
+      }
+    }
+    emaChartData = ensureMinPoints(emaChartData)
+
+    const isBullTrend = datos.precio > datos.ema50 && datos.ema50 > datos.ema200
+
+    return (
+      <div className="synapse-card p-3.5 flex flex-col justify-between">
+        <div className="flex items-center justify-between pb-2 mb-2 border-b border-[#142335] text-xs font-mono">
+          <div className="flex items-center gap-1.5 font-bold tracking-wider text-slate-300 uppercase text-[11px]">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#00f5c4] shadow-[0_0_8px_#00f5c4]" />
+            <span>{title || "MOVING AVERAGES (50/100/200)"}</span>
+          </div>
+          <div
+            className={`px-2 py-0.5 rounded-full text-[10px] font-bold font-mono ${
+              isBullTrend
+                ? "bg-[#00f5c4]/15 border border-[#00f5c4]/40 text-[#00f5c4]"
+                : "bg-[#ff3b69]/15 border border-[#ff3b69]/40 text-[#ff3b69]"
+            }`}
+          >
+            {isBullTrend ? "Bullish Trend" : "Bearish / Range"}
+          </div>
+        </div>
+
+        <div className="h-[120px] w-full my-1">
+          {emaChartData.length > 0 ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={emaChartData} margin={{ top: 5, right: 10, left: 10, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="2 2" stroke="#132235" vertical={false} />
+                <Tooltip contentStyle={TOOLTIP_STYLE} />
+                <Line type="monotone" dataKey="ema50" stroke="#00f5c4" strokeWidth={1.5} dot={false} isAnimationActive={false} />
+                <Line type="monotone" dataKey="ema100" stroke="#f1f5f9" strokeWidth={1.5} dot={false} isAnimationActive={false} />
+                <Line type="monotone" dataKey="ema200" stroke="#ff3b69" strokeWidth={1.5} dot={false} isAnimationActive={false} />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-full flex items-center justify-center text-slate-500 font-mono text-xs">
+              No EMA data
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center justify-between pt-2 border-t border-[#142335] text-[10px] font-mono tracking-wider text-slate-400">
+          <span>EMA50: <span className="text-[#00f5c4]">${safeToFixed(datos.ema50, datos.decimales)}</span></span>
+          <span>EMA100: <span className="text-white">${safeToFixed(datos.ema100, datos.decimales)}</span></span>
+          <span>EMA200: <span className="text-[#ff3b69]">${safeToFixed(datos.ema200, datos.decimales)}</span></span>
+        </div>
+      </div>
+    )
+  }
+
+  return null
 }
 
-export default React.memo(ChartCard, (prev, next) => {
-  if (prev.title !== next.title || prev.type !== next.type) return false
-  const p = prev.datos || {}
-  const n = next.datos || {}
-  
-  if (p.precio !== n.precio) return false
-  if (p.timeframe !== n.timeframe || p.symbol !== n.symbol) return false
-  
-  const pTime = p.history?.times?.[p.history.times.length - 1]
-  const nTime = n.history?.times?.[n.history.times.length - 1]
-  if (pTime !== nTime) return false
-
-  switch (prev.type) {
-    case "rsi": return p.rsi === n.rsi && p.rsiStoch === n.rsiStoch
-    case "macd": return p.macdValue === n.macdValue && p.macdSignal === n.macdSignal
-    case "bollinger": return p.bbUpper === n.bbUpper && p.bbLower === n.bbLower
-    case "ema": return p.ema50 === n.ema50 && p.ema200 === n.ema200
-    case "stoch": return p.stochK === n.stochK && p.stochD === n.stochD
-    case "cci": return p.cci === n.cci
-    case "adx": return p.adx === n.adx && p.plusDi === n.plusDi
-    default: return true
-  }
-})
+export default React.memo(ChartCard)

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { TrendingUp, BarChart3, Activity, Zap, Shield, Globe, ChevronRight, Radio, Bitcoin, LineChart } from "lucide-react"
+import { BarChart3, Activity, Zap, Shield, Globe, ChevronRight, Radio, Bitcoin, LineChart } from "lucide-react"
 import CoinLogo from "@/components/CoinLogo"
 
 export default function CoinSelector({ monedas, acciones, onSelect }) {
@@ -25,24 +25,24 @@ export default function CoinSelector({ monedas, acciones, onSelect }) {
 
   const getDynamicCoinColor = (symbol) => {
     const knownColors = {
-      "ETHUSDT": { from: "#627eea", to: "#3b5998", glow: "rgba(98, 126, 234, 0.3)" },
-      "PEPEUSDT": { from: "#3cc68a", to: "#1a8f5c", glow: "rgba(60, 198, 138, 0.3)" },
-      "SOLUSDT": { from: "#9945ff", to: "#14f195", glow: "rgba(153, 69, 255, 0.3)" },
-      "BTCUSDT": { from: "#f7931a", to: "#e2820a", glow: "rgba(247, 147, 26, 0.3)" },
-      "BNBUSDT": { from: "#f3ba2f", to: "#c98f10", glow: "rgba(243, 186, 47, 0.3)" },
-      "DOGEUSDT": { from: "#c2a633", to: "#8f7a1f", glow: "rgba(194, 166, 51, 0.3)" },
-      "XRPUSDT": { from: "#23292f", to: "#0f1216", glow: "rgba(35, 41, 47, 0.4)" },
-      "AAPL": { from: "#a2aaad", to: "#6e7679", glow: "rgba(162, 170, 173, 0.3)" },
-      "MSFT": { from: "#00a4ef", to: "#0d5b8c", glow: "rgba(0, 164, 239, 0.3)" },
-      "NVDA": { from: "#76b900", to: "#4a7a00", glow: "rgba(118, 185, 0, 0.3)" },
-      "TSLA": { from: "#e82127", to: "#8f1216", glow: "rgba(232, 33, 39, 0.3)" },
-      "AMZN": { from: "#ff9900", to: "#b36a00", glow: "rgba(255, 153, 0, 0.3)" },
-      "GOOGL": { from: "#4285f4", to: "#1a56c4", glow: "rgba(66, 133, 244, 0.3)" },
-      "META": { from: "#0866ff", to: "#0550b8", glow: "rgba(8, 102, 255, 0.3)" },
-      "NFLX": { from: "#e50914", to: "#8f070d", glow: "rgba(229, 9, 20, 0.3)" },
-      "AMD": { from: "#ed1c24", to: "#96121a", glow: "rgba(237, 28, 36, 0.3)" },
-      "INTC": { from: "#0071c5", to: "#00518c", glow: "rgba(0, 113, 197, 0.3)" },
-      "LMT": { from: "#00a0df", to: "#00658f", glow: "rgba(0, 160, 223, 0.3)" },
+      "ETHUSDT": { from: "#00f5c4", to: "#0d5b8c", glow: "rgba(0, 245, 196, 0.25)" },
+      "PEPEUSDT": { from: "#10e5bd", to: "#0d9488", glow: "rgba(16, 229, 189, 0.25)" },
+      "SOLUSDT": { from: "#9945ff", to: "#00f5c4", glow: "rgba(153, 69, 255, 0.25)" },
+      "BTCUSDT": { from: "#f59e0b", to: "#d97706", glow: "rgba(245, 158, 11, 0.25)" },
+      "BNBUSDT": { from: "#fbbf24", to: "#b45309", glow: "rgba(251, 191, 36, 0.25)" },
+      "DOGEUSDT": { from: "#eab308", to: "#854d0e", glow: "rgba(234, 179, 8, 0.25)" },
+      "XRPUSDT": { from: "#38bdf8", to: "#0284c7", glow: "rgba(56, 189, 248, 0.25)" },
+      "AAPL": { from: "#94a3b8", to: "#475569", glow: "rgba(148, 163, 184, 0.25)" },
+      "MSFT": { from: "#00a4ef", to: "#0369a1", glow: "rgba(0, 164, 239, 0.25)" },
+      "NVDA": { from: "#76b900", to: "#4d7c0f", glow: "rgba(118, 185, 0, 0.25)" },
+      "TSLA": { from: "#ff3b69", to: "#be123c", glow: "rgba(255, 59, 105, 0.25)" },
+      "AMZN": { from: "#f97316", to: "#c2410c", glow: "rgba(249, 115, 22, 0.25)" },
+      "GOOGL": { from: "#38bdf8", to: "#1d4ed8", glow: "rgba(56, 189, 248, 0.25)" },
+      "META": { from: "#3b82f6", to: "#1e40af", glow: "rgba(59, 130, 246, 0.25)" },
+      "NFLX": { from: "#ff3b69", to: "#991b1b", glow: "rgba(255, 59, 105, 0.25)" },
+      "AMD": { from: "#ff4d4d", to: "#991b1b", glow: "rgba(255, 77, 77, 0.25)" },
+      "INTC": { from: "#0284c7", to: "#075985", glow: "rgba(2, 132, 199, 0.25)" },
+      "LMT": { from: "#0ea5e9", to: "#0369a1", glow: "rgba(14, 165, 233, 0.25)" },
     }
     
     if (knownColors[symbol]) return knownColors[symbol]
@@ -53,107 +53,85 @@ export default function CoinSelector({ monedas, acciones, onSelect }) {
     }
     
     const h = Math.abs(hash % 360)
-    const from = `hsl(${h}, 80%, 60%)`
-    const to = `hsl(${h}, 80%, 30%)`
-    const glow = `hsla(${h}, 80%, 60%, 0.3)`
-    
-    return { from, to, glow }
+    return {
+      from: `hsl(${h}, 80%, 60%)`,
+      to: `hsl(${h}, 80%, 30%)`,
+      glow: `hsla(${h}, 80%, 60%, 0.25)`,
+    }
   }
 
   return (
-    <div
-      className="min-h-screen relative overflow-hidden flex items-center justify-center p-4"
-      style={{ background: "#05070a" }}
-    >
-      {/* Animated grid background */}
+    <div className="min-h-screen relative overflow-hidden flex items-center justify-center p-4 bg-[#070c14]">
+      {/* Precision grid background */}
       <div
-        className="absolute inset-0 opacity-[0.03]"
+        className="absolute inset-0 opacity-[0.03] pointer-events-none"
         style={{
           backgroundImage: `
-            linear-gradient(rgba(16, 185, 129, 0.5) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(16, 185, 129, 0.5) 1px, transparent 1px)
+            linear-gradient(#00f5c4 1px, transparent 1px),
+            linear-gradient(90deg, #00f5c4 1px, transparent 1px)
           `,
-          backgroundSize: "60px 60px",
+          backgroundSize: "40px 40px",
         }}
       />
 
       {/* Radial glow */}
       <div
-        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full opacity-20 pointer-events-none"
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full opacity-15 pointer-events-none"
         style={{
-          background: "radial-gradient(circle, rgba(16, 185, 129, 0.15) 0%, transparent 70%)",
+          background: "radial-gradient(circle, rgba(0, 245, 196, 0.15) 0%, transparent 70%)",
         }}
       />
 
-      {/* Corner accents */}
-      <div className="absolute top-0 left-0 w-32 h-32 opacity-20 pointer-events-none"
-        style={{ borderTop: "1px solid #10b981", borderLeft: "1px solid #10b981" }}
-      />
-      <div className="absolute bottom-0 right-0 w-32 h-32 opacity-20 pointer-events-none"
-        style={{ borderBottom: "1px solid #10b981", borderRight: "1px solid #10b981" }}
-      />
-
       {/* Main content */}
-      <div className={`relative z-10 w-full max-w-2xl transition-all duration-1000 ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}>
-
+      <div
+        className={`relative z-10 w-full max-w-2xl transition-all duration-700 ${
+          mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
+        }`}
+      >
         {/* Top status bar */}
-        <div className="flex items-center justify-between mb-8 px-2">
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-[10px] font-mono text-emerald-400/60 uppercase tracking-widest">System Online</span>
+        <div className="flex items-center justify-between mb-8 px-2 font-mono">
+          <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-[#0c1420] border border-[#16283d]">
+            <div className="w-2 h-2 rounded-full bg-[#00f5c4] shadow-[0_0_8px_#00f5c4] animate-pulse" />
+            <span className="text-[10px] text-[#00f5c4] uppercase tracking-widest font-bold">
+              SYS.ON • DATA FEED ACTIVE
+            </span>
           </div>
-          <div className="flex items-center gap-4">
-            <span className="text-[10px] font-mono text-gray-600 uppercase tracking-wider">UTC {time}</span>
-            <div className="flex items-center gap-1.5">
-              <Radio className="w-3 h-3 text-emerald-500/50" />
-              <span className="text-[10px] font-mono text-gray-600">LIVE</span>
+
+          <div className="flex items-center gap-4 text-[11px]">
+            <span className="text-slate-400">UTC {time}</span>
+            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[#0c1420] border border-[#16283d]">
+              <Radio className="w-3 h-3 text-[#00f5c4]" />
+              <span className="text-[10px] text-slate-300 font-bold">LIVE</span>
             </div>
           </div>
         </div>
 
         {/* Logo & Title */}
         <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center mb-6">
-            <div className="relative">
-              <div className="absolute inset-0 bg-emerald-500/20 rounded-2xl blur-xl" />
-              <div
-                className="relative w-16 h-16 rounded-2xl flex items-center justify-center"
-                style={{
-                  background: "linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(6, 182, 212, 0.1))",
-                  border: "1px solid rgba(16, 185, 129, 0.2)",
-                }}
-              >
-                <Activity className="w-8 h-8 text-emerald-400" />
-              </div>
+          <div className="inline-flex items-center justify-center mb-5">
+            <div className="w-14 h-14 rounded-2xl bg-[#0c1420] border border-[#00f5c4]/40 flex items-center justify-center text-[#00f5c4] shadow-[0_0_20px_rgba(0,245,196,0.25)]">
+              <Activity className="w-7 h-7 animate-pulse" />
             </div>
           </div>
 
-          <h1
-            className="text-4xl md:text-5xl font-bold mb-3 tracking-tight"
-            style={{
-              background: "linear-gradient(135deg, #ffffff 0%, #a3a3a3 50%, #10b981 100%)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-              fontFamily: "'Inter', 'SF Pro Display', system-ui, sans-serif",
-            }}
-          >
-            TRADING TERMINAL
+          <h1 className="text-3xl md:text-4xl font-extrabold mb-2 tracking-wider font-mono text-white">
+            SYNAPSE TERMINAL
           </h1>
 
-          <p className="text-gray-500 text-sm font-mono tracking-wider mb-2">
-            Professional Technical Analysis Platform
+          <p className="text-slate-400 text-xs font-mono tracking-widest uppercase mb-4">
+            Next-Gen Technical Analysis Interface
           </p>
 
-          <div className="flex items-center justify-center flex-wrap gap-x-4 gap-y-2 mt-4 sm:gap-x-6">
+          <div className="flex items-center justify-center flex-wrap gap-x-5 gap-y-2 font-mono">
             {[
-              { icon: Zap, label: "Real-Time" },
+              { icon: Zap, label: "Live Feed" },
               { icon: BarChart3, label: "Advanced TA" },
-              { icon: Shield, label: "Secure" },
+              { icon: Shield, label: "Sub-Second" },
               { icon: Globe, label: "Multi-Market" },
             ].map(({ icon: Icon, label }) => (
-              <div key={label} className="flex items-center gap-1.5">
-                <Icon className="w-3 h-3 text-emerald-500/50 flex-shrink-0" />
-                <span className="text-[10px] font-mono text-gray-600 uppercase tracking-wider whitespace-nowrap">{label}</span>
+              <div key={label} className="flex items-center gap-1.5 text-slate-400 text-[10px] uppercase tracking-wider">
+                <Icon className="w-3.5 h-3.5 text-[#00f5c4]" />
+                <span>{label}</span>
               </div>
             ))}
           </div>
@@ -161,28 +139,30 @@ export default function CoinSelector({ monedas, acciones, onSelect }) {
 
         {/* Section label */}
         <div className="flex items-center gap-3 mb-4 px-1">
-          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-gray-800 to-transparent" />
-          <span className="text-[10px] font-mono text-gray-500 uppercase tracking-[0.2em]">Select Trading Pair</span>
-          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-gray-800 to-transparent" />
+          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-[#16283d] to-transparent" />
+          <span className="text-[10px] font-mono text-slate-400 uppercase tracking-[0.25em]">
+            Select Trading Asset
+          </span>
+          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-[#16283d] to-transparent" />
         </div>
 
         {/* Market toggle */}
-        <div className="flex items-center justify-center mb-5">
-          <div className="flex items-center gap-1 bg-[#0a0e14]/80 p-1 rounded-lg border border-white/5">
+        <div className="flex items-center justify-center mb-5 font-mono">
+          <div className="flex items-center gap-1 bg-[#0c1420] p-1 rounded-full border border-[#16283d]">
             {[
-              { key: "crypto", label: "CRYPTO", Icon: Bitcoin },
-              { key: "stock", label: "STOCKS", Icon: LineChart },
+              { key: "crypto", label: "CRYPTO SPOT", Icon: Bitcoin },
+              { key: "stock", label: "US EQUITIES", Icon: LineChart },
             ].map(({ key, label, Icon }) => (
               <button
                 key={key}
                 onClick={() => setMarket(key)}
-                className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-[11px] font-bold tracking-widest transition-all duration-150 ${
+                className={`flex items-center gap-2 px-4 py-1 rounded-full text-[11px] font-bold tracking-wider transition-all uppercase ${
                   market === key
-                    ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shadow-[0_0_10px_rgba(16,185,129,0.15)]"
-                    : "text-gray-500 hover:text-gray-300 hover:bg-white/5 border border-transparent"
+                    ? "bg-[#00f5c4]/15 text-[#00f5c4] border border-[#00f5c4] shadow-[0_0_12px_rgba(0,245,196,0.25)]"
+                    : "text-slate-400 hover:text-white border border-transparent"
                 }`}
               >
-                <Icon className="w-3.5 h-3.5" strokeWidth={2.2} />
+                <Icon className="w-3.5 h-3.5" />
                 {label}
               </button>
             ))}
@@ -191,7 +171,7 @@ export default function CoinSelector({ monedas, acciones, onSelect }) {
 
         {/* Asset cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {Object.entries(activeList).map(([key, moneda], index) => {
+          {Object.entries(activeList).map(([key, moneda]) => {
             const colors = getDynamicCoinColor(moneda.symbol)
             const isHovered = hoveredKey === key
 
@@ -202,98 +182,51 @@ export default function CoinSelector({ monedas, acciones, onSelect }) {
                 onClick={() => onSelect(key)}
                 onMouseEnter={() => setHoveredKey(key)}
                 onMouseLeave={() => setHoveredKey(null)}
-                className="group relative rounded-xl overflow-hidden transition-all duration-300"
+                className="synapse-card p-4 flex items-center justify-between text-left group transition-all duration-200"
                 style={{
-                  background: isHovered
-                    ? `linear-gradient(135deg, rgba(17,24,39,0.95), rgba(17,24,39,0.8))`
-                    : "rgba(10, 14, 20, 0.6)",
-                  border: `1px solid ${isHovered ? `${colors.from}40` : "rgba(55, 65, 81, 0.3)"}`,
-                  boxShadow: isHovered ? `0 8px 32px ${colors.glow}, inset 0 1px 0 rgba(255,255,255,0.03)` : "none",
+                  borderColor: isHovered ? colors.from : "#16283d",
+                  boxShadow: isHovered ? `0 4px 25px ${colors.glow}` : "none",
                   transform: isHovered ? "translateY(-2px)" : "translateY(0)",
                 }}
               >
-                {/* Hover glow line at top */}
-                <div
-                  className="absolute top-0 left-0 right-0 h-px transition-opacity duration-300"
-                  style={{
-                    opacity: isHovered ? 1 : 0,
-                    background: `linear-gradient(90deg, transparent, ${colors.from}, transparent)`,
-                  }}
-                />
-
-                <div className="flex items-center gap-4 p-5">
-                  {/* Icon */}
+                <div className="flex items-center gap-3.5">
                   <div
-                    className="relative w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0 transition-all duration-300"
+                    className="w-11 h-11 rounded-xl bg-[#09111b] border flex items-center justify-center flex-shrink-0 transition-transform duration-200"
                     style={{
-                      background: isHovered
-                        ? `linear-gradient(135deg, ${colors.from}25, ${colors.to}15)`
-                        : "rgba(55, 65, 81, 0.2)",
-                      border: `1px solid ${isHovered ? `${colors.from}30` : "rgba(55, 65, 81, 0.2)"}`,
+                      borderColor: isHovered ? colors.from : "#16283d",
+                      transform: isHovered ? "scale(1.05)" : "scale(1)",
                     }}
                   >
-                    <span className="transition-transform duration-300" style={{ transform: isHovered ? "scale(1.1)" : "scale(1)" }}>
-                      <CoinLogo symbol={moneda.symbol} market={moneda.market} size={34} fallbackIcon={moneda.icon} />
-                    </span>
+                    <CoinLogo symbol={moneda.symbol} market={moneda.market} size={28} fallbackIcon={moneda.icon} />
                   </div>
 
-                  {/* Info */}
-                  <div className="flex-1 text-left">
+                  <div className="font-mono">
                     <div className="flex items-center gap-2 mb-0.5">
-                      <span
-                        className="text-base font-bold transition-colors duration-300 font-mono"
-                        style={{ color: isHovered ? colors.from : "#e5e7eb" }}
-                      >
+                      <span className="text-sm font-bold text-white group-hover:text-[#00f5c4] transition-colors">
                         {moneda.symbol}
                       </span>
-                      <div
-                        className="px-1.5 py-0.5 rounded text-[9px] font-mono uppercase tracking-wider transition-all duration-300"
-                        style={{
-                          background: isHovered ? `${colors.from}15` : "rgba(55, 65, 81, 0.3)",
-                          color: isHovered ? colors.from : "#6b7280",
-                          border: `1px solid ${isHovered ? `${colors.from}20` : "transparent"}`,
-                        }}
-                      >
+                      <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-[#00f5c4]/10 text-[#00f5c4] border border-[#00f5c4]/30 uppercase">
                         {moneda.badge || "USDT"}
-                      </div>
+                      </span>
                     </div>
-                    <span className="text-xs text-gray-500 font-mono">{moneda.nombre}</span>
+                    <span className="text-xs text-slate-400">{moneda.nombre}</span>
                   </div>
-
-                  {/* Arrow */}
-                  <ChevronRight
-                    className="w-5 h-5 transition-all duration-300 flex-shrink-0"
-                    style={{
-                      color: isHovered ? colors.from : "#374151",
-                      transform: isHovered ? "translateX(4px)" : "translateX(0)",
-                    }}
-                  />
                 </div>
+
+                <ChevronRight
+                  className="w-4 h-4 transition-transform duration-200 text-slate-500 group-hover:text-[#00f5c4] group-hover:translate-x-1"
+                />
               </button>
             )
           })}
         </div>
 
-        {/* Bottom info */}
-        <div className="mt-8 text-center">
-          <div className="inline-flex items-center justify-center flex-wrap gap-2 px-4 py-2 rounded-full max-w-full text-center"
-            style={{
-              background: "rgba(16, 185, 129, 0.04)",
-              border: "1px solid rgba(16, 185, 129, 0.08)",
-            }}
-          >
-            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-[10px] font-mono text-gray-500 tracking-wider">
-              WOODY AGENT • Real-Time {market === "stock" ? "Stock" : "Crypto"} Technical Analysis • AI-Powered
-            </span>
-          </div>
-        </div>
-
         {/* Footer */}
-        <div className="mt-6 flex items-center justify-center gap-6">
-          <span className="text-[9px] font-mono text-gray-700 tracking-wider">POWERED BY NVIDIA AI</span>
-          <div className="w-px h-3 bg-gray-800" />
-          <span className="text-[9px] font-mono text-gray-700 tracking-wider">v2.0</span>
+        <div className="mt-8 text-center font-mono">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#0c1420] border border-[#16283d] text-slate-400 text-[10px]">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#00f5c4] shadow-[0_0_6px_#00f5c4]" />
+            <span>WOODY AGENT v3.0 • READY FOR REAL-TIME TELEMETRY</span>
+          </div>
         </div>
       </div>
     </div>
