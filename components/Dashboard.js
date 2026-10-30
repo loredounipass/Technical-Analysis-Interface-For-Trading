@@ -196,7 +196,7 @@ export default function Dashboard({ moneda, market = "crypto", onCambiarMoneda }
         </div>
 
         {/* Candlestick & Technical Indicators Grid */}
-        <IndicatorGrid datos={datos} />
+        <IndicatorGrid key={`${datos.symbol}-${datos.timeframe}`} datos={datos} />
       </main>
 
       {/* Woody scanning animation */}

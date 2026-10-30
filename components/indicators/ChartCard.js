@@ -13,8 +13,35 @@ import {
   Tooltip,
   ReferenceLine,
 } from "recharts"
+import useChartWindow from "@/components/indicators/useChartWindow"
+import ChartNavControls from "@/components/indicators/ChartNavControls"
 
 const ChartCard = ({ title, icon, type, datos = {} }) => {
+  // Navegacion pan/zoom compartida (misma ventana para los 4 tipos de grafico)
+  const historyLen = datos?.history?.closes?.length || 0
+  const win = useChartWindow(historyLen, { defaultCount: 40, minCount: 10 })
+
+  // Props de interaccion para el contenedor de cada grafico
+  const chartInteraction = {
+    ref: win.containerRef,
+    ...win.pointerHandlers,
+    style: { touchAction: "pan-y" },
+  }
+  const chartCursor = "select-none cursor-grab active:cursor-grabbing"
+
+  const renderNavControls = () => (
+    <div className="flex items-center justify-between gap-2 text-[9px] font-mono text-slate-600 pb-1">
+      <span>{win.start + 1}–{win.effEnd} de {historyLen}</span>
+      <ChartNavControls
+        onPanLeft={() => win.panBy(-Math.max(1, Math.round(win.effCount / 4)))}
+        onPanRight={() => win.panBy(Math.max(1, Math.round(win.effCount / 4)))}
+        onZoomIn={() => win.zoomBy(-100, 0.5)}
+        onZoomOut={() => win.zoomBy(100, 0.5)}
+        isLive={win.isLive}
+        onGoLive={win.goLive}
+      />
+    </div>
+  )
   // Dark Tooltip Style matching Synapse Terminal
   const TOOLTIP_STYLE = {
     backgroundColor: "rgba(8, 18, 28, 0.95)",
@@ -33,17 +60,6 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
     return n.toFixed(d)
   }
 
-  const getLastValidValues = (arr, n) => {
-    if (!Array.isArray(arr) || arr.length === 0) return []
-    const validIndices = []
-    for (let i = arr.length - 1; i >= 0 && validIndices.length < n; i--) {
-      if (arr[i] !== null && arr[i] !== undefined && !isNaN(arr[i])) {
-        validIndices.push(i)
-      }
-    }
-    return validIndices.reverse()
-  }
-
   const ensureMinPoints = (dataArray) => {
     if (!Array.isArray(dataArray)) return dataArray
     if (dataArray.length === 1) {
@@ -55,27 +71,24 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
 
   // 1. RSI OSCILLATOR
   if (type === "rsi") {
-    let rsiChartData = []
+    let rsiFullData = []
     if (datos.history && Array.isArray(datos.history.rsi) && datos.history.rsi.length > 0) {
-      const validIndices = getLastValidValues(datos.history.rsi, 40)
-      if (validIndices.length > 0) {
-        rsiChartData = validIndices.map((idx, i) => ({
-          name: `${i}`,
-          rsi: datos.history.rsi[idx],
-          rsiSignal: datos.history.rsiStoch?.[idx] ?? null,
-        }))
-        if (datos.rsi !== null && datos.rsi !== undefined && rsiChartData.length > 0) {
-          rsiChartData[rsiChartData.length - 1].rsi = datos.rsi
-        }
-        if (datos.rsiStoch !== null && datos.rsiStoch !== undefined && rsiChartData.length > 0) {
-          rsiChartData[rsiChartData.length - 1].rsiSignal = datos.rsiStoch
-        }
+      rsiFullData = datos.history.rsi.map((v, i) => ({
+        name: `${i}`,
+        rsi: v,
+        rsiSignal: datos.history.rsiStoch?.[i] ?? null,
+      }))
+      if (datos.rsi !== null && datos.rsi !== undefined && rsiFullData.length > 0) {
+        rsiFullData[rsiFullData.length - 1].rsi = datos.rsi
+      }
+      if (datos.rsiStoch !== null && datos.rsiStoch !== undefined && rsiFullData.length > 0) {
+        rsiFullData[rsiFullData.length - 1].rsiSignal = datos.rsiStoch
       }
     }
-    if (rsiChartData.length === 0 && datos.rsi !== null && datos.rsi !== undefined) {
-      rsiChartData = [{ name: "0", rsi: datos.rsi, rsiSignal: datos.rsiStoch || 50 }]
+    if (rsiFullData.length === 0 && datos.rsi !== null && datos.rsi !== undefined) {
+      rsiFullData = [{ name: "0", rsi: datos.rsi, rsiSignal: datos.rsiStoch || 50 }]
     }
-    rsiChartData = ensureMinPoints(rsiChartData)
+    let rsiChartData = ensureMinPoints(rsiFullData.slice(win.start, win.effEnd))
 
     const rsiVal = Number(datos.rsi) || 50
     const isOB = rsiVal >= 70
@@ -101,7 +114,7 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
         </div>
 
         {/* Chart */}
-        <div className="h-[120px] w-full my-1">
+        <div {...chartInteraction} className={`h-[120px] w-full my-1 ${chartCursor}`}>
           {rsiChartData.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={rsiChartData} margin={{ top: 5, right: 10, left: 10, bottom: 0 }}>
@@ -138,6 +151,8 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
           )}
         </div>
 
+        {renderNavControls()}
+
         {/* Footer */}
         <div className="flex items-center justify-between pt-2 border-t border-[#142335] text-[10px] font-mono tracking-wider text-slate-400">
           <span>Oversold: <span className="text-slate-300">30</span></span>
@@ -149,26 +164,22 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
 
   // 2. MACD INDICATOR
   if (type === "macd") {
-    let macdChartData = []
+    let macdFullData = []
     if (datos.history && Array.isArray(datos.history.macd) && datos.history.macd.length > 0) {
-      const validIndices = getLastValidValues(datos.history.macd, 40)
-      if (validIndices.length > 0) {
-        macdChartData = validIndices.map((idx, i) => {
-          const m = datos.history.macd[idx]
-          const s = datos.history.macd_signal?.[idx] ?? null
-          const h = m !== null && s !== null ? m - s : 0
-          return { name: `${i}`, macd: m, signal: s, hist: h }
-        })
-        if (datos.macdValue !== null && datos.macdValue !== undefined && macdChartData.length > 0) {
-          const last = macdChartData.length - 1
-          macdChartData[last].macd = datos.macdValue
-          macdChartData[last].signal = datos.macdSignal
-          macdChartData[last].hist = datos.macdValue - (datos.macdSignal || 0)
-        }
+      macdFullData = datos.history.macd.map((m, i) => {
+        const s = datos.history.macd_signal?.[i] ?? null
+        const h = m !== null && s !== null ? m - s : 0
+        return { name: `${i}`, macd: m, signal: s, hist: h }
+      })
+      if (datos.macdValue !== null && datos.macdValue !== undefined && macdFullData.length > 0) {
+        const last = macdFullData.length - 1
+        macdFullData[last].macd = datos.macdValue
+        macdFullData[last].signal = datos.macdSignal
+        macdFullData[last].hist = datos.macdValue - (datos.macdSignal || 0)
       }
     }
-    if (macdChartData.length === 0 && datos.macdValue !== null && datos.macdValue !== undefined) {
-      macdChartData = [
+    if (macdFullData.length === 0 && datos.macdValue !== null && datos.macdValue !== undefined) {
+      macdFullData = [
         {
           name: "0",
           macd: datos.macdValue,
@@ -177,7 +188,8 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
         },
       ]
     }
-    macdChartData = ensureMinPoints(macdChartData)
+    let macdChartData = ensureMinPoints(macdFullData.slice(win.start, win.effEnd))
+    const histBarSize = Math.min(Math.max((win.plotWidth / win.effCount) * 0.5, 1), 10)
 
     const macdVal = Number(datos.macdValue) || 0
     const histVal = Number(datos.macdHistogram ?? (datos.macdValue - (datos.macdSignal || 0))) || 0
@@ -200,7 +212,7 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
         </div>
 
         {/* Chart with Histogram Bars + MACD & Signal curves */}
-        <div className="h-[120px] w-full my-1">
+        <div {...chartInteraction} className={`h-[120px] w-full my-1 ${chartCursor}`}>
           {macdChartData.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={macdChartData} margin={{ top: 5, right: 10, left: 10, bottom: 0 }}>
@@ -209,7 +221,7 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
                 <Tooltip contentStyle={TOOLTIP_STYLE} />
 
                 {/* Histogram Bars */}
-                <Bar dataKey="hist" barSize={3} isAnimationActive={false}>
+                <Bar dataKey="hist" barSize={histBarSize} isAnimationActive={false}>
                   {macdChartData.map((entry, index) => (
                     <Cell
                       key={`hist-${index}`}
@@ -249,6 +261,8 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
           )}
         </div>
 
+        {renderNavControls()}
+
         {/* Footer */}
         <div className="flex items-center justify-between pt-2 border-t border-[#142335] text-[10px] font-mono tracking-wider text-slate-400">
           <span>
@@ -270,30 +284,27 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
 
   // 3. BOLLINGER BANDS (20, 2σ) - With dynamic auto Y-Axis scaling to show real wave action
   if (type === "bollinger") {
-    let bbChartData = []
+    let bbFullData = []
     if (datos.history && Array.isArray(datos.history.closes) && datos.history.closes.length > 0) {
-      const validIndices = getLastValidValues(datos.history.closes, 40)
-      if (validIndices.length > 0) {
-        bbChartData = validIndices.map((idx, i) => ({
-          name: `${i}`,
-          upper: datos.history.bb_upper?.[idx] ?? null,
-          middle: datos.history.bb_middle?.[idx] ?? null,
-          lower: datos.history.bb_lower?.[idx] ?? null,
-          price: datos.history.closes[idx],
-        }))
-        if (datos.precio !== null && datos.precio !== undefined && bbChartData.length > 0) {
-          const last = bbChartData.length - 1
-          bbChartData[last] = {
-            name: `${last}`,
-            upper: datos.bbUpper ?? bbChartData[last].upper,
-            middle: datos.bbMiddle ?? bbChartData[last].middle,
-            lower: datos.bbLower ?? bbChartData[last].lower,
-            price: datos.precio,
-          }
+      bbFullData = datos.history.closes.map((c, i) => ({
+        name: `${i}`,
+        upper: datos.history.bb_upper?.[i] ?? null,
+        middle: datos.history.bb_middle?.[i] ?? null,
+        lower: datos.history.bb_lower?.[i] ?? null,
+        price: c,
+      }))
+      if (datos.precio !== null && datos.precio !== undefined && bbFullData.length > 0) {
+        const last = bbFullData.length - 1
+        bbFullData[last] = {
+          name: `${last}`,
+          upper: datos.bbUpper ?? bbFullData[last].upper,
+          middle: datos.bbMiddle ?? bbFullData[last].middle,
+          lower: datos.bbLower ?? bbFullData[last].lower,
+          price: datos.precio,
         }
       }
     }
-    bbChartData = ensureMinPoints(bbChartData)
+    let bbChartData = ensureMinPoints(bbFullData.slice(win.start, win.effEnd))
 
     // Compute dynamic Y-axis domain so Bollinger Bands use full vertical resolution
     const bbValues = bbChartData
@@ -327,7 +338,7 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
           </div>
         </div>
 
-        <div className="h-[120px] w-full my-1">
+        <div {...chartInteraction} className={`h-[120px] w-full my-1 ${chartCursor}`}>
           {bbChartData.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={bbChartData} margin={{ top: 5, right: 10, left: 10, bottom: 0 }}>
@@ -395,6 +406,8 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
           )}
         </div>
 
+        {renderNavControls()}
+
         <div className="flex items-center justify-between pt-2 border-t border-[#142335] text-[10px] font-mono tracking-wider text-slate-400">
           <span>U: <span className="text-[#ff3b69] font-medium">${safeToFixed(datos.bbUpper, datos.decimales)}</span></span>
           <span>M: <span className="text-amber-400 font-medium">${safeToFixed(datos.bbMiddle, datos.decimales)}</span></span>
@@ -406,30 +419,27 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
 
   // 4. MOVING AVERAGES (EMA 50 / 100 / 200) - With dynamic auto Y-Axis scaling
   if (type === "ema") {
-    let emaChartData = []
+    let emaFullData = []
     if (datos.history && Array.isArray(datos.history.closes) && datos.history.closes.length > 0) {
-      const validIndices = getLastValidValues(datos.history.closes, 40)
-      if (validIndices.length > 0) {
-        emaChartData = validIndices.map((idx, i) => ({
-          name: `${i}`,
-          ema50: datos.history.ema50?.[idx] ?? null,
-          ema100: datos.history.ema100?.[idx] ?? null,
-          ema200: datos.history.ema200?.[idx] ?? null,
-          price: datos.history.closes[idx],
-        }))
-        if (datos.precio !== null && datos.precio !== undefined && emaChartData.length > 0) {
-          const last = emaChartData.length - 1
-          emaChartData[last] = {
-            name: `${last}`,
-            ema50: datos.ema50 ?? emaChartData[last].ema50,
-            ema100: datos.ema100 ?? emaChartData[last].ema100,
-            ema200: datos.ema200 ?? emaChartData[last].ema200,
-            price: datos.precio,
-          }
+      emaFullData = datos.history.closes.map((c, i) => ({
+        name: `${i}`,
+        ema50: datos.history.ema50?.[i] ?? null,
+        ema100: datos.history.ema100?.[i] ?? null,
+        ema200: datos.history.ema200?.[i] ?? null,
+        price: c,
+      }))
+      if (datos.precio !== null && datos.precio !== undefined && emaFullData.length > 0) {
+        const last = emaFullData.length - 1
+        emaFullData[last] = {
+          name: `${last}`,
+          ema50: datos.ema50 ?? emaFullData[last].ema50,
+          ema100: datos.ema100 ?? emaFullData[last].ema100,
+          ema200: datos.ema200 ?? emaFullData[last].ema200,
+          price: datos.precio,
         }
       }
     }
-    emaChartData = ensureMinPoints(emaChartData)
+    let emaChartData = ensureMinPoints(emaFullData.slice(win.start, win.effEnd))
 
     // Compute dynamic Y-axis domain so the 3 EMAs are clearly differentiated vertically
     const emaValues = emaChartData
@@ -460,7 +470,7 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
           </div>
         </div>
 
-        <div className="h-[120px] w-full my-1">
+        <div {...chartInteraction} className={`h-[120px] w-full my-1 ${chartCursor}`}>
           {emaChartData.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={emaChartData} margin={{ top: 5, right: 10, left: 10, bottom: 0 }}>
@@ -515,6 +525,8 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
             </div>
           )}
         </div>
+
+        {renderNavControls()}
 
         <div className="flex items-center justify-between pt-2 border-t border-[#142335] text-[10px] font-mono tracking-wider text-slate-400">
           <span>EMA50: <span className="text-[#00f5c4] font-medium">${safeToFixed(datos.ema50, datos.decimales)}</span></span>

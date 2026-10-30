@@ -4,6 +4,8 @@ import React from "react"
 import IndicatorCard from "@/components/indicators/IndicatorCard"
 import ChartCard from "@/components/indicators/ChartCard"
 import CandleChart from "@/components/indicators/CandleChart"
+import useChartWindow from "@/components/indicators/useChartWindow"
+import ChartNavControls from "@/components/indicators/ChartNavControls"
 import {
   Shield,
   Target,
@@ -86,8 +88,10 @@ const IndicatorGrid = ({ datos = {} }) => {
     }
   }
 
-  // Barras de volumen: solo las ultimas 36 (la tarjeta es pequena)
-  const recentVolumeData = volumeChartData.slice(-36)
+  // Barras de volumen: ventana navegable (pan/zoom) sobre las 300 velas
+  const volWin = useChartWindow(volumeChartData.length, { defaultCount: 36, minCount: 10 })
+  const recentVolumeData = volumeChartData.slice(volWin.start, volWin.effEnd)
+  const volBarSize = Math.min(Math.max((volWin.plotWidth / volWin.effCount) * 0.55, 1), 12)
 
   // Calculate Buyer Ratio
   const totalSignals = (datos.buySignals || 0) + (datos.sellSignals || 0)
@@ -143,7 +147,12 @@ const IndicatorGrid = ({ datos = {} }) => {
           </div>
 
           {/* Volume Bars */}
-          <div className="h-[120px] w-full my-1">
+          <div
+            ref={volWin.containerRef}
+            {...volWin.pointerHandlers}
+            className="h-[120px] w-full my-1 select-none cursor-grab active:cursor-grabbing"
+            style={{ touchAction: "pan-y" }}
+          >
             {recentVolumeData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={recentVolumeData} margin={{ top: 5, right: 5, left: 5, bottom: 0 }}>
@@ -158,7 +167,7 @@ const IndicatorGrid = ({ datos = {} }) => {
                     }}
                     formatter={(v) => [formatVolume(v), "Volume"]}
                   />
-                  <Bar dataKey="volume" barSize={8} isAnimationActive={false}>
+                  <Bar dataKey="volume" barSize={volBarSize} isAnimationActive={false}>
                     {recentVolumeData.map((entry, index) => (
                       <Cell
                         key={`vol-${index}`}
@@ -174,6 +183,19 @@ const IndicatorGrid = ({ datos = {} }) => {
                 No volume bars available
               </div>
             )}
+          </div>
+
+          {/* Controles de navegacion del volumen */}
+          <div className="flex items-center justify-between gap-2 text-[9px] font-mono text-slate-600 pb-1">
+            <span>{volWin.start + 1}–{volWin.effEnd} de {volumeChartData.length}</span>
+            <ChartNavControls
+              onPanLeft={() => volWin.panBy(-Math.max(1, Math.round(volWin.effCount / 4)))}
+              onPanRight={() => volWin.panBy(Math.max(1, Math.round(volWin.effCount / 4)))}
+              onZoomIn={() => volWin.zoomBy(-100, 0.5)}
+              onZoomOut={() => volWin.zoomBy(100, 0.5)}
+              isLive={volWin.isLive}
+              onGoLive={volWin.goLive}
+            />
           </div>
 
           {/* Footer */}
