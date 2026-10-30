@@ -202,6 +202,33 @@ def compute_cci_series(highs, lows, closes, period=20):
     return out
 
 
+# CALCULA LA SERIE DE MFI (14) - MONEY FLOW INDEX (RSI DE VOLUMEN)
+def compute_mfi_series(highs, lows, closes, volumes, period=14):
+    n = len(closes)
+    out = [None] * n
+    if n < period + 1:
+        return out
+    tp = [(h + l + c) / 3.0 for h, l, c in zip(highs, lows, closes)]
+    pos_mf = [0.0] * n
+    neg_mf = [0.0] * n
+    for i in range(1, n):
+        v = float(volumes[i]) if volumes and i < len(volumes) and volumes[i] is not None else 0.0
+        raw_flow = tp[i] * v
+        if tp[i] > tp[i - 1]:
+            pos_mf[i] = raw_flow
+        elif tp[i] < tp[i - 1]:
+            neg_mf[i] = raw_flow
+    for i in range(period, n):
+        p_sum = sum(pos_mf[i - period + 1 : i + 1])
+        n_sum = sum(neg_mf[i - period + 1 : i + 1])
+        if n_sum == 0:
+            out[i] = 100.0 if p_sum > 0 else 50.0
+        else:
+            mr = p_sum / n_sum
+            out[i] = round(100.0 - (100.0 / (1.0 + mr)), 2)
+    return out
+
+
 # CALCULA ADX (14) CON SUAVIZADO WILDER, MAS +DI / -DI
 def compute_adx_series(highs, lows, closes, period=14):
     n = len(closes)
@@ -296,7 +323,7 @@ def compute_pivots(highs, lows, closes, times):
 
 # CONSENSO DE SEÑALES (estilo TradingView) SOBRE OSCILADORES Y MEDIAS MOVILES
 def compute_signal_summary(rsi, stoch_k, stoch_d, cci, macd_v, macd_sig, adx_v,
-                           plus_di, minus_di, rsi_stoch, ema50, ema100, ema200, precio):
+                           plus_di, minus_di, rsi_stoch, ema50, ema100, ema200, precio, mfi=None):
     buy = 0
     sell = 0
     neutral = 0
@@ -319,6 +346,8 @@ def compute_signal_summary(rsi, stoch_k, stoch_d, cci, macd_v, macd_sig, adx_v,
     vote(stoch_k, 20, 80)
     vote(stoch_d, 20, 80)
     vote(cci, -100, 100)
+    if mfi is not None:
+        vote(mfi, 20, 80)
     if macd_v is not None and macd_sig is not None:
         if macd_v > macd_sig:
             buy += 1

@@ -53,6 +53,7 @@ def _build_multi_timeframe_context(symbol, current_interval, market):
             'macdHistogram': d.get('macdHistogram'),
             'adx': d.get('adx'),
             'cci': d.get('cci'),
+            'mfi': d.get('mfi'),
             'ema50': d.get('ema50'),
             'bbUpper': d.get('bbUpper'),
             'bbLower': d.get('bbLower'),

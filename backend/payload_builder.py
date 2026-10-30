@@ -12,7 +12,7 @@ import logging
 from indicators import (
     compute_rsi_series, compute_ema_series, compute_macd_series,
     compute_bollinger_series, compute_stoch_series, compute_stoch_rsi_series,
-    compute_cci_series, compute_adx_series, compute_pivots,
+    compute_cci_series, compute_mfi_series, compute_adx_series, compute_pivots,
     compute_signal_summary, last_non_none, price_decimals,
 )
 from data_fetchers import (
@@ -77,6 +77,7 @@ def build_payload(symbol, interval_str, market, klines, vol_24h=None):
         stoch_k, stoch_d = compute_stoch_series(highs, lows, closes)
         stoch_rsi_k = compute_stoch_rsi_series(rsi_series)
         cci_series = compute_cci_series(highs, lows, closes, period=20)
+        mfi_series = compute_mfi_series(highs, lows, closes, quote_volumes if quote_volumes else [1.0] * len(closes), period=14)
         macd_line, macd_signal = compute_macd_series(closes, fast=12, slow=26, signal=9)
         bb_upper, bb_middle, bb_lower = compute_bollinger_series(closes, period=20)
         ema50 = compute_ema_series(closes, 50)
@@ -102,6 +103,7 @@ def build_payload(symbol, interval_str, market, klines, vol_24h=None):
         history['stochK'] = stoch_k
         history['stochD'] = stoch_d
         history['cci'] = cci_series
+        history['mfi'] = mfi_series
         history['adx'] = adx
     except Exception as e:
         logger.error(f"[TradingData] calculo de indicadores fallo para {symbol}: {e}")
@@ -141,6 +143,7 @@ def build_payload(symbol, interval_str, market, klines, vol_24h=None):
             stoch_k, stoch_d = compute_stoch_series(highs, lows, closes)
             stoch_rsi_k = compute_stoch_rsi_series(rsi_series)
             cci_series = compute_cci_series(highs, lows, closes, period=20)
+            mfi_series = compute_mfi_series(highs, lows, closes, [1000.0] * len(closes), period=14)
             macd_line, macd_signal = compute_macd_series(closes, fast=12, slow=26, signal=9)
             bb_upper, bb_middle, bb_lower = compute_bollinger_series(closes, period=20)
             ema50 = compute_ema_series(closes, 50)
@@ -166,6 +169,7 @@ def build_payload(symbol, interval_str, market, klines, vol_24h=None):
             history['stochK'] = stoch_k
             history['stochD'] = stoch_d
             history['cci'] = cci_series
+            history['mfi'] = mfi_series
             history['adx'] = adx
 
             if vol_24h is None:
@@ -193,6 +197,7 @@ def build_payload(symbol, interval_str, market, klines, vol_24h=None):
         last_non_none(ema100),
         last_non_none(ema200),
         precio,
+        last_non_none(mfi_series),
     )
     r1, r2, r3, s1, s2, s3 = pivots
     macd_curr = last_non_none(macd_line)
@@ -331,6 +336,7 @@ def build_payload(symbol, interval_str, market, klines, vol_24h=None):
         'stochK': last_non_none(stoch_k),
         'stochD': last_non_none(stoch_d),
         'cci': last_non_none(cci_series),
+        'mfi': last_non_none(mfi_series),
         'ema50': last_non_none(ema50),
         'ema100': last_non_none(ema100),
         'ema200': last_non_none(ema200),
