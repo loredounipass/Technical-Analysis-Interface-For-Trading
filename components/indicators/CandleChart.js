@@ -15,7 +15,7 @@ import {
 } from "recharts"
 import useChartWindow from "@/components/indicators/useChartWindow"
 import ChartNavControls from "@/components/indicators/ChartNavControls"
-import { CandlestickChart } from "lucide-react"
+import { CandlestickChart, Activity } from "lucide-react"
 
 export default function CandleChart({
   data = [],
@@ -63,7 +63,7 @@ export default function CandleChart({
 
   // ── Ventana visible según pan/zoom (hook compartido) ──
   const total = chartDataWithEma.length
-  const win = useChartWindow(total)
+  const win = useChartWindow(total, { defaultCount: 60, minCount: 10 })
   const visibleData = chartDataWithEma.slice(win.start, win.effEnd)
   const isLive = win.isLive
 
@@ -89,20 +89,20 @@ export default function CandleChart({
       const isBull = d.close >= d.open
       return (
         <div className="bg-[#08121c]/95 border border-[#16283d] p-2.5 rounded-lg shadow-2xl font-mono text-xs backdrop-blur-md">
-          <div className="text-slate-400 text-[10px] mb-1.5 border-b border-[#16283d] pb-1 flex justify-between gap-4">
-            <span>{d.time}</span>
-            <span className={isBull ? "text-[#00f5c4]" : "text-[#ff3b69]"}>
+          <div className="text-slate-300 text-[10px] mb-1.5 border-b border-[#16283d] pb-1 flex justify-between gap-4">
+            <span className="text-white font-medium">{d.time}</span>
+            <span className={isBull ? "text-[#00f5c4] font-bold" : "text-[#ff3b69] font-bold"}>
               {isBull ? "BULLISH" : "BEARISH"}
             </span>
           </div>
           <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[11px]">
-            <span className="text-slate-400">Open:</span>
+            <span className="text-slate-300">Open:</span>
             <span className="text-white text-right font-medium">${fmt(d.open)}</span>
-            <span className="text-slate-400">High:</span>
+            <span className="text-slate-300">High:</span>
             <span className="text-white text-right font-medium">${fmt(d.high)}</span>
-            <span className="text-slate-400">Low:</span>
+            <span className="text-slate-300">Low:</span>
             <span className="text-white text-right font-medium">${fmt(d.low)}</span>
-            <span className="text-slate-400">Close:</span>
+            <span className="text-slate-300">Close:</span>
             <span
               className={`text-right font-bold ${
                 isBull ? "text-[#00f5c4]" : "text-[#ff3b69]"
@@ -119,7 +119,7 @@ export default function CandleChart({
 
   if (!hasData) {
     return (
-      <div className="h-[280px] flex items-center justify-center text-slate-500 font-mono text-xs">
+      <div className="h-[280px] flex items-center justify-center text-slate-400 font-mono text-xs">
         Awaiting real-time candlestick data...
       </div>
     )
@@ -131,27 +131,29 @@ export default function CandleChart({
       <div className="flex flex-wrap items-center justify-between gap-y-2 gap-x-4 pb-3 mb-2 border-b border-[#142335] text-xs font-mono">
         {/* Left: LIVE MARKET PRICE ACTION + OHLC */}
         <div className="flex flex-wrap items-center gap-2 sm:gap-4">
-          <div className="flex items-center gap-1.5 text-[#00f5c4] font-bold text-xs tracking-wider">
-            <CandlestickChart className="w-4 h-4" />
-            <span>LIVE MARKET PRICE ACTION</span>
+          <div className="flex items-center gap-2 text-[#00f5c4] font-bold text-xs tracking-wider">
+            <div className="w-6 h-6 rounded-md bg-[#00f5c4]/10 border border-[#00f5c4]/30 flex items-center justify-center text-[#00f5c4] shadow-[0_0_8px_rgba(0,245,196,0.25)]">
+              <CandlestickChart className="w-3.5 h-3.5" />
+            </div>
+            <span className="text-white">LIVE MARKET PRICE ACTION</span>
           </div>
 
-          {/* OHLC Badges */}
+          {/* OHLC Badges en blanco y cyan */}
           {latestCandle.open && (
             <div className="flex items-center gap-2 text-[11px] bg-[#09111b] px-2.5 py-0.5 rounded-md border border-[#16283d]">
-              <span className="text-slate-400">
-                O: <span className="text-slate-200 font-medium">{fmt(latestCandle.open)}</span>
+              <span className="text-slate-300">
+                O: <span className="text-white font-medium">{fmt(latestCandle.open)}</span>
               </span>
               <span className="text-slate-600">|</span>
-              <span className="text-slate-400">
-                H: <span className="text-slate-200 font-medium">{fmt(latestCandle.high)}</span>
+              <span className="text-slate-300">
+                H: <span className="text-white font-medium">{fmt(latestCandle.high)}</span>
               </span>
               <span className="text-slate-600">|</span>
-              <span className="text-slate-400">
-                L: <span className="text-slate-200 font-medium">{fmt(latestCandle.low)}</span>
+              <span className="text-slate-300">
+                L: <span className="text-white font-medium">{fmt(latestCandle.low)}</span>
               </span>
               <span className="text-slate-600">|</span>
-              <span className="text-slate-400">
+              <span className="text-slate-300">
                 C:{" "}
                 <span
                   className={`font-bold ${
@@ -167,11 +169,11 @@ export default function CandleChart({
 
         {/* Right stats: Spread + Candles + EMA + Controles de navegación */}
         <div className="flex items-center gap-2 text-[11px]">
-          <span className="text-slate-400 hidden xl:inline">
+          <span className="text-slate-300 hidden xl:inline">
             Spread: <span className="text-[#00f5c4] font-bold">{spread} USDT</span>
           </span>
 
-          <span className="px-2 py-0.5 rounded bg-[#09111b] border border-[#16283d] text-slate-300 font-medium uppercase hidden sm:inline">
+          <span className="px-2 py-0.5 rounded bg-[#09111b] border border-[#16283d] text-white font-medium uppercase hidden sm:inline">
             CANDLES {timeframe}
           </span>
 
@@ -179,11 +181,13 @@ export default function CandleChart({
             EMA 20/50/200
           </span>
 
-          {/* Controles de navegación del gráfico */}
+          {/* Controles de navegación del gráfico (llevar hasta atrás / zoom / live) */}
           <ChartNavControls
             onGoStart={win.goStart}
+            onPanLeftBig={() => win.panBy(-50)}
             onPanLeft={() => win.panBy(-Math.max(1, Math.round(win.effCount / 4)))}
             onPanRight={() => win.panBy(Math.max(1, Math.round(win.effCount / 4)))}
+            onPanRightBig={() => win.panBy(50)}
             onZoomIn={() => win.zoomBy(-100, 0.5)}
             onZoomOut={() => win.zoomBy(100, 0.5)}
             isLive={isLive}
@@ -222,7 +226,7 @@ export default function CandleChart({
 
             <XAxis
               dataKey="timeLabel"
-              tick={{ fill: "#64748b", fontSize: 10 }}
+              tick={{ fill: "#94a3b8", fontSize: 10 }}
               minTickGap={45}
               axisLine={{ stroke: "#142335" }}
               tickLine={false}
@@ -231,7 +235,7 @@ export default function CandleChart({
             <YAxis
               domain={domain}
               orientation="right"
-              tick={{ fill: "#64748b", fontSize: 10 }}
+              tick={{ fill: "#94a3b8", fontSize: 10 }}
               axisLine={{ stroke: "#142335" }}
               tickLine={false}
               tickFormatter={(v) => (v > 1 ? v.toFixed(2) : v.toFixed(4))}
@@ -239,7 +243,7 @@ export default function CandleChart({
 
             <Tooltip content={<CustomTooltip />} cursor={{ stroke: "#244163", strokeDasharray: "3 3" }} />
 
-            {/* Current Price Reference Line & Badge (oculta si queda fuera de la vista) */}
+            {/* Current Price Reference Line */}
             {currentPrice > 0 && (
               <ReferenceLine
                 y={currentPrice}
@@ -247,19 +251,6 @@ export default function CandleChart({
                 stroke="#00f5c4"
                 strokeDasharray="2 2"
                 strokeOpacity={0.6}
-                label={{
-                  value: `$${fmt(currentPrice)}`,
-                  position: "right",
-                  fill: "#ffffff",
-                  fontSize: 10,
-                  fontWeight: "bold",
-                  className: "current-price-badge",
-                  style: {
-                    backgroundColor: "#00f5c4",
-                    padding: "2px 6px",
-                    borderRadius: "4px",
-                  },
-                }}
               />
             )}
 
@@ -314,22 +305,26 @@ export default function CandleChart({
           </ComposedChart>
         </ResponsiveContainer>
 
-        {/* Floating Current Price Pill on the Right Axis */}
+        {/* Floating Current Price Pill on the Right Axis (texto en blanco/cyan neon) */}
         {currentPrice > 0 && isLive && (
           <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1 hidden sm:block">
-            <div className="px-2 py-0.5 rounded bg-[#00f5c4] text-[#070c14] font-mono font-bold text-[10px] shadow-[0_0_12px_rgba(0,245,196,0.5)]">
-              ${fmt(currentPrice)}
+            <div className="px-2.5 py-0.5 rounded bg-[#0b1c26] border border-[#00f5c4] text-white font-mono font-bold text-[10px] shadow-[0_0_12px_rgba(0,245,196,0.35)] flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#00f5c4] animate-ping" />
+              <span>${fmt(currentPrice)}</span>
             </div>
           </div>
         )}
       </div>
 
-      {/* Hint de navegación + rango visible */}
-      <div className="flex items-center justify-between pt-2 text-[10px] font-mono text-slate-600">
-        <span>DRAG: PAN · SCROLL: ZOOM</span>
-        <span>
+      {/* Hint de navegación + rango visible con texto en blanco */}
+      <div className="flex items-center justify-between pt-2 text-[10px] font-mono text-slate-400">
+        <span className="flex items-center gap-1.5 text-slate-300">
+          <Activity className="w-3 h-3 text-[#00f5c4]" />
+          <span>DRAG: DESPLAZAR · RUEDA: ZOOM · &lt;&lt; LLEVAR HASTA ATRÁS</span>
+        </span>
+        <span className="text-white font-medium">
           {win.start + 1}–{win.effEnd} de {total} velas
-          {!isLive && <span className="text-amber-500/80 ml-2">· HISTORIAL</span>}
+          {!isLive && <span className="text-amber-400 ml-2 font-bold tracking-wider">· HISTORIAL</span>}
         </span>
       </div>
     </div>

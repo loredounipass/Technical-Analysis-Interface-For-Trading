@@ -15,13 +15,13 @@ import {
 } from "recharts"
 import useChartWindow from "@/components/indicators/useChartWindow"
 import ChartNavControls from "@/components/indicators/ChartNavControls"
+import { Gauge, Crosshair, Waves, GitCompare, Percent, Sparkles } from "lucide-react"
 
 const ChartCard = ({ title, icon, type, datos = {} }) => {
-  // Navegacion pan/zoom compartida (misma ventana para los 4 tipos de grafico)
+  // Navegación pan/zoom compartida
   const historyLen = datos?.history?.closes?.length || 0
   const win = useChartWindow(historyLen, { defaultCount: 40, minCount: 10 })
 
-  // Props de interaccion para el contenedor de cada grafico
   const chartInteraction = {
     ref: win.containerRef,
     ...win.pointerHandlers,
@@ -30,11 +30,13 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
   const chartCursor = "select-none cursor-grab active:cursor-grabbing"
 
   const renderNavControls = () => (
-    <div className="flex items-center justify-between gap-2 text-[9px] font-mono text-slate-600 pb-1">
+    <div className="flex items-center justify-between gap-2 text-[9px] font-mono text-slate-300 pb-1">
       <span>{win.start + 1}–{win.effEnd} de {historyLen}</span>
       <ChartNavControls
+        onPanLeftBig={() => win.panBy(-50)}
         onPanLeft={() => win.panBy(-Math.max(1, Math.round(win.effCount / 4)))}
         onPanRight={() => win.panBy(Math.max(1, Math.round(win.effCount / 4)))}
+        onPanRightBig={() => win.panBy(50)}
         onZoomIn={() => win.zoomBy(-100, 0.5)}
         onZoomOut={() => win.zoomBy(100, 0.5)}
         isLive={win.isLive}
@@ -42,12 +44,13 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
       />
     </div>
   )
-  // Dark Tooltip Style matching Synapse Terminal
+
+  // Dark Tooltip Style matching Synapse Terminal (todo texto en blanco/cyan)
   const TOOLTIP_STYLE = {
     backgroundColor: "rgba(8, 18, 28, 0.95)",
     border: "1px solid #16283d",
     borderRadius: "6px",
-    color: "#f1f5f9",
+    color: "#ffffff",
     backdropFilter: "blur(6px)",
     fontSize: "11px",
     fontFamily: "ui-monospace, monospace",
@@ -69,7 +72,7 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
     return dataArray
   }
 
-  // 1. RSI OSCILLATOR
+  // 1. RSI OSCILLATOR (14)
   if (type === "rsi") {
     let rsiFullData = []
     if (datos.history && Array.isArray(datos.history.rsi) && datos.history.rsi.length > 0) {
@@ -102,10 +105,12 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
 
     return (
       <div className="synapse-card p-3.5 flex flex-col justify-between">
-        {/* Header */}
+        {/* Header con squircle icon */}
         <div className="flex items-center justify-between pb-2 mb-2 border-b border-[#142335] text-xs font-mono">
-          <div className="flex items-center gap-1.5 font-bold tracking-wider text-slate-300 uppercase text-[11px]">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#00f5c4] shadow-[0_0_8px_#00f5c4]" />
+          <div className="flex items-center gap-2 font-bold tracking-wider text-white uppercase text-[11px]">
+            <div className="w-6 h-6 rounded-md bg-[#00f5c4]/10 border border-[#00f5c4]/30 flex items-center justify-center text-[#00f5c4] shadow-[0_0_8px_rgba(0,245,196,0.25)] flex-shrink-0">
+              <Gauge className="w-3.5 h-3.5" />
+            </div>
             <span>{title || "RSI OSCILLATOR (14)"}</span>
           </div>
           <div className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold font-mono tracking-wider ${badgeColor}`}>
@@ -145,7 +150,7 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
               </LineChart>
             </ResponsiveContainer>
           ) : (
-            <div className="h-full flex items-center justify-center text-slate-500 font-mono text-xs">
+            <div className="h-full flex items-center justify-center text-slate-400 font-mono text-xs">
               No historical RSI data
             </div>
           )}
@@ -153,16 +158,16 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
 
         {renderNavControls()}
 
-        {/* Footer */}
-        <div className="flex items-center justify-between pt-2 border-t border-[#142335] text-[10px] font-mono tracking-wider text-slate-400">
-          <span>Oversold: <span className="text-slate-300">30</span></span>
-          <span>Overbought: <span className="text-slate-300">70</span></span>
+        {/* Footer con letras blancas */}
+        <div className="flex items-center justify-between pt-2 border-t border-[#142335] text-[10px] font-mono tracking-wider text-slate-300">
+          <span>Oversold: <span className="text-white font-medium">30</span></span>
+          <span>Overbought: <span className="text-white font-medium">70</span></span>
         </div>
       </div>
     )
   }
 
-  // 2. MACD INDICATOR
+  // 2. MACD INDICATOR (12, 26, 9)
   if (type === "macd") {
     let macdFullData = []
     if (datos.history && Array.isArray(datos.history.macd) && datos.history.macd.length > 0) {
@@ -200,10 +205,12 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
 
     return (
       <div className="synapse-card p-3.5 flex flex-col justify-between">
-        {/* Header */}
+        {/* Header con squircle icon */}
         <div className="flex items-center justify-between pb-2 mb-2 border-b border-[#142335] text-xs font-mono">
-          <div className="flex items-center gap-1.5 font-bold tracking-wider text-slate-300 uppercase text-[11px]">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#00f5c4] shadow-[0_0_8px_#00f5c4]" />
+          <div className="flex items-center gap-2 font-bold tracking-wider text-white uppercase text-[11px]">
+            <div className="w-6 h-6 rounded-md bg-[#00f5c4]/10 border border-[#00f5c4]/30 flex items-center justify-center text-[#00f5c4] shadow-[0_0_8px_rgba(0,245,196,0.25)] flex-shrink-0">
+              <Crosshair className="w-3.5 h-3.5" />
+            </div>
             <span>{title || "MACD (12, 26, 9)"}</span>
           </div>
           <div className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold font-mono tracking-wider ${badgeColor}`}>
@@ -255,7 +262,7 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
               </ComposedChart>
             </ResponsiveContainer>
           ) : (
-            <div className="h-full flex items-center justify-center text-slate-500 font-mono text-xs">
+            <div className="h-full flex items-center justify-center text-slate-400 font-mono text-xs">
               No historical MACD data
             </div>
           )}
@@ -263,17 +270,17 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
 
         {renderNavControls()}
 
-        {/* Footer */}
-        <div className="flex items-center justify-between pt-2 border-t border-[#142335] text-[10px] font-mono tracking-wider text-slate-400">
+        {/* Footer con letras blancas */}
+        <div className="flex items-center justify-between pt-2 border-t border-[#142335] text-[10px] font-mono tracking-wider text-slate-300">
           <span>
             Histogram:{" "}
-            <span className={histVal >= 0 ? "text-[#00f5c4]" : "text-[#ff3b69]"}>
+            <span className={histVal >= 0 ? "text-[#00f5c4] font-medium" : "text-[#ff3b69] font-medium"}>
               {safeToFixed(histVal, 2)}
             </span>
           </span>
           <span>
             Signal:{" "}
-            <span className="text-cyan-400">
+            <span className="text-white font-medium">
               {Math.abs(histVal) < 0.05 ? "Convergence" : "Divergence"}
             </span>
           </span>
@@ -282,7 +289,7 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
     )
   }
 
-  // 3. BOLLINGER BANDS (20, 2σ) - With dynamic auto Y-Axis scaling to show real wave action
+  // 3. BOLLINGER BANDS (20, 2σ)
   if (type === "bollinger") {
     let bbFullData = []
     if (datos.history && Array.isArray(datos.history.closes) && datos.history.closes.length > 0) {
@@ -306,7 +313,6 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
     }
     let bbChartData = ensureMinPoints(bbFullData.slice(win.start, win.effEnd))
 
-    // Compute dynamic Y-axis domain so Bollinger Bands use full vertical resolution
     const bbValues = bbChartData
       .flatMap((d) => [d.upper, d.middle, d.lower, d.price])
       .filter((v) => Number.isFinite(v))
@@ -321,8 +327,10 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
     return (
       <div className="synapse-card p-3.5 flex flex-col justify-between">
         <div className="flex items-center justify-between pb-2 mb-2 border-b border-[#142335] text-xs font-mono">
-          <div className="flex items-center gap-1.5 font-bold tracking-wider text-slate-300 uppercase text-[11px]">
-            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_8px_#22d3ee]" />
+          <div className="flex items-center gap-2 font-bold tracking-wider text-white uppercase text-[11px]">
+            <div className="w-6 h-6 rounded-md bg-[#38bdf8]/10 border border-[#38bdf8]/30 flex items-center justify-center text-[#38bdf8] shadow-[0_0_8px_rgba(56,189,248,0.25)] flex-shrink-0">
+              <Waves className="w-3.5 h-3.5" />
+            </div>
             <span>{title || "BOLLINGER BANDS (20, 2σ)"}</span>
           </div>
           <div
@@ -331,7 +339,7 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
                 ? "bg-[#ff3b69]/15 border border-[#ff3b69]/40 text-[#ff3b69]"
                 : isBelow
                 ? "bg-[#00f5c4]/15 border border-[#00f5c4]/40 text-[#00f5c4]"
-                : "bg-slate-800 text-slate-300 border border-slate-700"
+                : "bg-slate-800 text-slate-200 border border-slate-700"
             }`}
           >
             {isAbove ? "Upper Break" : isBelow ? "Lower Break" : "In Band"}
@@ -355,7 +363,6 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
                     return [val, name]
                   }}
                 />
-                {/* Upper Band: Coral red */}
                 <Line
                   type="monotone"
                   dataKey="upper"
@@ -365,7 +372,6 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
                   connectNulls={true}
                   isAnimationActive={false}
                 />
-                {/* Middle Band: Amber dashed */}
                 <Line
                   type="monotone"
                   dataKey="middle"
@@ -376,7 +382,6 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
                   connectNulls={true}
                   isAnimationActive={false}
                 />
-                {/* Lower Band: Neon Cyan */}
                 <Line
                   type="monotone"
                   dataKey="lower"
@@ -386,13 +391,12 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
                   connectNulls={true}
                   isAnimationActive={false}
                 />
-                {/* Actual Price Path: White subtle curve */}
                 <Line
                   type="monotone"
                   dataKey="price"
                   stroke="#f1f5f9"
                   strokeWidth={1}
-                  strokeOpacity={0.6}
+                  strokeOpacity={0.65}
                   dot={false}
                   connectNulls={true}
                   isAnimationActive={false}
@@ -400,7 +404,7 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
               </LineChart>
             </ResponsiveContainer>
           ) : (
-            <div className="h-full flex items-center justify-center text-slate-500 font-mono text-xs">
+            <div className="h-full flex items-center justify-center text-slate-400 font-mono text-xs">
               No Bollinger Bands data
             </div>
           )}
@@ -408,7 +412,7 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
 
         {renderNavControls()}
 
-        <div className="flex items-center justify-between pt-2 border-t border-[#142335] text-[10px] font-mono tracking-wider text-slate-400">
+        <div className="flex items-center justify-between pt-2 border-t border-[#142335] text-[10px] font-mono tracking-wider text-slate-300">
           <span>U: <span className="text-[#ff3b69] font-medium">${safeToFixed(datos.bbUpper, datos.decimales)}</span></span>
           <span>M: <span className="text-amber-400 font-medium">${safeToFixed(datos.bbMiddle, datos.decimales)}</span></span>
           <span>L: <span className="text-[#00f5c4] font-medium">${safeToFixed(datos.bbLower, datos.decimales)}</span></span>
@@ -417,7 +421,7 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
     )
   }
 
-  // 4. MOVING AVERAGES (EMA 50 / 100 / 200) - With dynamic auto Y-Axis scaling
+  // 4. MOVING AVERAGES (EMA 50 / 100 / 200)
   if (type === "ema") {
     let emaFullData = []
     if (datos.history && Array.isArray(datos.history.closes) && datos.history.closes.length > 0) {
@@ -441,7 +445,6 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
     }
     let emaChartData = ensureMinPoints(emaFullData.slice(win.start, win.effEnd))
 
-    // Compute dynamic Y-axis domain so the 3 EMAs are clearly differentiated vertically
     const emaValues = emaChartData
       .flatMap((d) => [d.ema50, d.ema100, d.ema200, d.price])
       .filter((v) => Number.isFinite(v))
@@ -455,8 +458,10 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
     return (
       <div className="synapse-card p-3.5 flex flex-col justify-between">
         <div className="flex items-center justify-between pb-2 mb-2 border-b border-[#142335] text-xs font-mono">
-          <div className="flex items-center gap-1.5 font-bold tracking-wider text-slate-300 uppercase text-[11px]">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#00f5c4] shadow-[0_0_8px_#00f5c4]" />
+          <div className="flex items-center gap-2 font-bold tracking-wider text-white uppercase text-[11px]">
+            <div className="w-6 h-6 rounded-md bg-[#00f5c4]/10 border border-[#00f5c4]/30 flex items-center justify-center text-[#00f5c4] shadow-[0_0_8px_rgba(0,245,196,0.25)] flex-shrink-0">
+              <GitCompare className="w-3.5 h-3.5" />
+            </div>
             <span>{title || "MOVING AVERAGES (50/100/200)"}</span>
           </div>
           <div
@@ -487,7 +492,6 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
                     return [val, name]
                   }}
                 />
-                {/* EMA 50: Neon Cyan */}
                 <Line
                   type="monotone"
                   dataKey="ema50"
@@ -497,7 +501,6 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
                   connectNulls={true}
                   isAnimationActive={false}
                 />
-                {/* EMA 100: Electric Sky Blue */}
                 <Line
                   type="monotone"
                   dataKey="ema100"
@@ -507,7 +510,6 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
                   connectNulls={true}
                   isAnimationActive={false}
                 />
-                {/* EMA 200: Coral Pink */}
                 <Line
                   type="monotone"
                   dataKey="ema200"
@@ -520,7 +522,7 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
               </LineChart>
             </ResponsiveContainer>
           ) : (
-            <div className="h-full flex items-center justify-center text-slate-500 font-mono text-xs">
+            <div className="h-full flex items-center justify-center text-slate-400 font-mono text-xs">
               No EMA data
             </div>
           )}
@@ -528,10 +530,210 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
 
         {renderNavControls()}
 
-        <div className="flex items-center justify-between pt-2 border-t border-[#142335] text-[10px] font-mono tracking-wider text-slate-400">
+        <div className="flex items-center justify-between pt-2 border-t border-[#142335] text-[10px] font-mono tracking-wider text-slate-300">
           <span>EMA50: <span className="text-[#00f5c4] font-medium">${safeToFixed(datos.ema50, datos.decimales)}</span></span>
           <span>EMA100: <span className="text-[#38bdf8] font-medium">${safeToFixed(datos.ema100, datos.decimales)}</span></span>
           <span>EMA200: <span className="text-[#ff3b69] font-medium">${safeToFixed(datos.ema200, datos.decimales)}</span></span>
+        </div>
+      </div>
+    )
+  }
+
+  // 5. STOCHASTIC OSCILLATOR (14, 3, 3) - %K & %D Curves
+  if (type === "stoch") {
+    let stochFullData = []
+    if (datos.history && Array.isArray(datos.history.stochK) && datos.history.stochK.length > 0) {
+      stochFullData = datos.history.stochK.map((k, i) => ({
+        name: `${i}`,
+        k: k,
+        d: datos.history.stochD?.[i] ?? null,
+      }))
+      if (datos.stochK !== null && datos.stochK !== undefined && stochFullData.length > 0) {
+        const last = stochFullData.length - 1
+        stochFullData[last] = {
+          name: `${last}`,
+          k: datos.stochK,
+          d: datos.stochD,
+        }
+      }
+    }
+    if (stochFullData.length === 0 && datos.stochK !== null && datos.stochK !== undefined) {
+      stochFullData = [
+        { name: "0", k: datos.stochK, d: datos.stochD },
+        { name: "1", k: datos.stochK, d: datos.stochD },
+      ]
+    }
+    let stochChartData = ensureMinPoints(stochFullData.slice(win.start, win.effEnd))
+
+    const kVal = Number(datos.stochK) || 50
+    const dVal = Number(datos.stochD) || 50
+    const isOB = kVal >= 80
+    const isOS = kVal <= 20
+    const statusText = isOB ? "Overbought" : isOS ? "Oversold" : "Neutral"
+    const badgeColor = isOB
+      ? "bg-[#ff3b69]/15 border border-[#ff3b69]/40 text-[#ff3b69]"
+      : isOS
+      ? "bg-[#00f5c4]/15 border border-[#00f5c4]/40 text-[#00f5c4]"
+      : "bg-cyan-500/10 border border-cyan-500/30 text-cyan-400"
+
+    return (
+      <div className="synapse-card p-3.5 flex flex-col justify-between">
+        {/* Header con squircle icon */}
+        <div className="flex items-center justify-between pb-2 mb-2 border-b border-[#142335] text-xs font-mono">
+          <div className="flex items-center gap-2 font-bold tracking-wider text-white uppercase text-[11px]">
+            <div className="w-6 h-6 rounded-md bg-[#00f5c4]/10 border border-[#00f5c4]/30 flex items-center justify-center text-[#00f5c4] shadow-[0_0_8px_rgba(0,245,196,0.25)] flex-shrink-0">
+              <Percent className="w-3.5 h-3.5" />
+            </div>
+            <span>{title || "STOCHASTIC OSCILLATOR (14, 3, 3)"}</span>
+          </div>
+          <div className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold font-mono tracking-wider ${badgeColor}`}>
+            %K: {safeToFixed(kVal, 2)} {statusText}
+          </div>
+        </div>
+
+        {/* Chart */}
+        <div {...chartInteraction} className={`h-[120px] w-full my-1 ${chartCursor}`}>
+          {stochChartData.length > 0 ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={stochChartData} margin={{ top: 5, right: 10, left: 10, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="2 2" stroke="#132235" vertical={false} />
+                <YAxis domain={[0, 100]} hide={true} />
+                <Tooltip
+                  contentStyle={TOOLTIP_STYLE}
+                  formatter={(value, name) => {
+                    const val = safeToFixed(value, 2)
+                    if (name === "k") return [val, "%K Line (Fast)"]
+                    if (name === "d") return [val, "%D Line (Slow)"]
+                    return [val, name]
+                  }}
+                />
+                <ReferenceLine y={80} stroke="#ff3b69" strokeDasharray="3 3" strokeOpacity={0.35} />
+                <ReferenceLine y={20} stroke="#00f5c4" strokeDasharray="3 3" strokeOpacity={0.35} />
+                {/* %K Line: Neon Cyan */}
+                <Line
+                  type="monotone"
+                  dataKey="k"
+                  stroke="#00f5c4"
+                  strokeWidth={2}
+                  dot={false}
+                  connectNulls={true}
+                  isAnimationActive={false}
+                />
+                {/* %D Line: Coral Pink dashed */}
+                <Line
+                  type="monotone"
+                  dataKey="d"
+                  stroke="#ff3b69"
+                  strokeWidth={1.5}
+                  strokeDasharray="2 2"
+                  dot={false}
+                  connectNulls={true}
+                  isAnimationActive={false}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-full flex items-center justify-center text-slate-400 font-mono text-xs">
+              No historical Stochastic data
+            </div>
+          )}
+        </div>
+
+        {renderNavControls()}
+
+        {/* Footer con letras blancas */}
+        <div className="flex items-center justify-between pt-2 border-t border-[#142335] text-[10px] font-mono tracking-wider text-slate-300">
+          <span>%K: <span className="text-[#00f5c4] font-medium">{safeToFixed(kVal, 2)}</span></span>
+          <span>%D: <span className="text-[#ff3b69] font-medium">{safeToFixed(dVal, 2)}</span></span>
+          <span>Zone: <span className="text-white font-medium">20 / 80</span></span>
+        </div>
+      </div>
+    )
+  }
+
+  // 6. STOCHASTIC RSI (14, 3, 3)
+  if (type === "stochRsi") {
+    let stochRsiFullData = []
+    if (datos.history && Array.isArray(datos.history.rsiStoch) && datos.history.rsiStoch.length > 0) {
+      stochRsiFullData = datos.history.rsiStoch.map((v, i) => ({
+        name: `${i}`,
+        stochRsi: v,
+      }))
+      if (datos.rsiStoch !== null && datos.rsiStoch !== undefined && stochRsiFullData.length > 0) {
+        stochRsiFullData[stochRsiFullData.length - 1].stochRsi = datos.rsiStoch
+      }
+    }
+    if (stochRsiFullData.length === 0 && datos.rsiStoch !== null && datos.rsiStoch !== undefined) {
+      stochRsiFullData = [
+        { name: "0", stochRsi: datos.rsiStoch },
+        { name: "1", stochRsi: datos.rsiStoch },
+      ]
+    }
+    let stochRsiChartData = ensureMinPoints(stochRsiFullData.slice(win.start, win.effEnd))
+
+    const rsiStochVal = Number(datos.rsiStoch) || 50
+    const isOB = rsiStochVal >= 80
+    const isOS = rsiStochVal <= 20
+    const statusText = isOB ? "Overbought" : isOS ? "Oversold" : "Neutral"
+    const badgeColor = isOB
+      ? "bg-[#ff3b69]/15 border border-[#ff3b69]/40 text-[#ff3b69]"
+      : isOS
+      ? "bg-[#00f5c4]/15 border border-[#00f5c4]/40 text-[#00f5c4]"
+      : "bg-cyan-500/10 border border-cyan-500/30 text-cyan-400"
+
+    return (
+      <div className="synapse-card p-3.5 flex flex-col justify-between">
+        {/* Header con squircle icon */}
+        <div className="flex items-center justify-between pb-2 mb-2 border-b border-[#142335] text-xs font-mono">
+          <div className="flex items-center gap-2 font-bold tracking-wider text-white uppercase text-[11px]">
+            <div className="w-6 h-6 rounded-md bg-[#00f5c4]/10 border border-[#00f5c4]/30 flex items-center justify-center text-[#00f5c4] shadow-[0_0_8px_rgba(0,245,196,0.25)] flex-shrink-0">
+              <Sparkles className="w-3.5 h-3.5" />
+            </div>
+            <span>{title || "STOCHASTIC RSI (14, 3, 3)"}</span>
+          </div>
+          <div className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold font-mono tracking-wider ${badgeColor}`}>
+            {safeToFixed(rsiStochVal, 2)} {statusText}
+          </div>
+        </div>
+
+        {/* Chart */}
+        <div {...chartInteraction} className={`h-[120px] w-full my-1 ${chartCursor}`}>
+          {stochRsiChartData.length > 0 ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={stochRsiChartData} margin={{ top: 5, right: 10, left: 10, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="2 2" stroke="#132235" vertical={false} />
+                <YAxis domain={[0, 100]} hide={true} />
+                <Tooltip
+                  contentStyle={TOOLTIP_STYLE}
+                  formatter={(value) => [`${safeToFixed(value, 2)}`, "Stoch RSI"]}
+                />
+                <ReferenceLine y={80} stroke="#ff3b69" strokeDasharray="3 3" strokeOpacity={0.35} />
+                <ReferenceLine y={20} stroke="#00f5c4" strokeDasharray="3 3" strokeOpacity={0.35} />
+                <Line
+                  type="monotone"
+                  dataKey="stochRsi"
+                  stroke="#38bdf8"
+                  strokeWidth={2}
+                  dot={false}
+                  connectNulls={true}
+                  isAnimationActive={false}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-full flex items-center justify-center text-slate-400 font-mono text-xs">
+              No historical Stoch RSI data
+            </div>
+          )}
+        </div>
+
+        {renderNavControls()}
+
+        {/* Footer con letras blancas */}
+        <div className="flex items-center justify-between pt-2 border-t border-[#142335] text-[10px] font-mono tracking-wider text-slate-300">
+          <span>Oversold: <span className="text-[#00f5c4] font-medium">20</span></span>
+          <span>Current: <span className="text-white font-medium">{safeToFixed(rsiStochVal, 2)}</span></span>
+          <span>Overbought: <span className="text-[#ff3b69] font-medium">80</span></span>
         </div>
       </div>
     )

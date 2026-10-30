@@ -174,9 +174,9 @@ def build_payload(symbol, interval_str, market, klines, vol_24h=None):
             logger.error(f"[TradingData] historia sintetica fallo para {symbol}: {e}")
 
     # Los indicadores se calculan con toda la historia (convergencia exacta);
-    # el historial que se envia al frontend se recorta para no inflar el payload
+    # el historial que se envia al frontend se recorta a 500 velas para navegacion profunda
     if history:
-        history = {k: v[-300:] for k, v in history.items()}
+        history = {k: v[-500:] for k, v in history.items()}
 
     buy, sell, neutral = compute_signal_summary(
         last_non_none(rsi_series),
