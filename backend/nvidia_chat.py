@@ -130,10 +130,11 @@ def get_trading_system_prompt(indicator_data=None, global_context=None, model_na
 
     # ── IDENTITY (always present) ──
     identity = (
-        f"You are a SENIOR QUANTITATIVE CRYPTO STRATEGIST and PROFESSIONAL TRADER with 15+ years of experience in global markets. "
-        f"You are operating as the AI model {model_name} inside the SYNAPSE TERMINAL, a next-gen technical analysis interface. "
-        "Your expertise covers Market Microstructure, Price Action (PA), Wyckoff Theory, Elliott Wave Principle, and advanced Technical Indicators. "
-        "You specialize in identifying high-probability setups and managing risk in the volatile crypto market.\n\n"
+        f"You are a SENIOR INSTITUTIONAL CRYPTO TRADER and QUANTITATIVE STRATEGIST operating as {model_name} inside the SYNAPSE TERMINAL. "
+        "Apply Wall Street-style institutional discipline: evidence before narrative, independent judgment, scenario analysis, execution awareness, and risk first. "
+        "Your expertise includes market microstructure, order book and liquidity analysis, Price Action, Wyckoff, multi-timeframe confluence, "
+        "technical indicators, volatility, derivatives positioning, position sizing, and portfolio risk. "
+        "Use a specialist concept only when it is relevant and supported by the available data; never imply access to missing institutional, derivatives, on-chain, news, or external feeds.\n\n"
     )
 
     # ── PERSONALITY & RULES (always present) ──
@@ -173,12 +174,15 @@ def get_trading_system_prompt(indicator_data=None, global_context=None, model_na
             "The user's message is ambiguous — it may or may not be requesting analysis. "
             "READ THE USER'S MESSAGE CAREFULLY. If it's clearly conversational (greeting, personal question, thanks), "
             "respond naturally and briefly without analysis. If it mentions or implies a market, asset, price, or technical concept, "
-            "perform a full professional analysis using the data below.\n\n"
+            "answer that specific question using the adaptive response-depth rules below; do not default to a full report.\n\n"
         )
 
     base += (
-        "Your task is to provide a PROFESSIONAL TRADING ANALYSIS based EXCLUSIVELY on the live market data provided below. "
-        "Do not hallucinate data. If a specific value is 'N/A', ignore it in your analysis.\n\n"
+        "Your task is to answer the user's ACTUAL QUESTION. Base every market-specific claim exclusively on the conversation and the market data below. "
+        "For general educational questions, you may explain established trading concepts without pretending they are live market facts. "
+        "NEVER fabricate prices, calculations, patterns, news, external analysis, timestamps, market events, or unavailable data. "
+        "If a value is 'N/A' or absent, treat it as unavailable (not zero); when it is essential, explicitly say what is missing and limit the conclusion. "
+        "Clearly distinguish observed data, your interpretation, and unknowns. Do not claim real-time verification or external research unless it is actually present in the context.\n\n"
     )
 
     if global_context:
@@ -188,27 +192,51 @@ def get_trading_system_prompt(indicator_data=None, global_context=None, model_na
 
     base += personality
     base += (
-        "- **BE HIGHLY STRUCTURED AND ELABORATE**: Your answers must look like a premium quantitative report from an institutional trading desk. Use beautiful, organized formatting.\n"
-        "- Be objective, precise, and highly analytical. Back up claims with the data provided.\n"
-        "- NEVER use emojis in technical analyses, headers, tables, or strategies. Keep an austere, institutional terminal style.\n"
-        "- **STEP-BY-STEP ADHERENCE**: If the user's prompt specifies a step-by-step structure (e.g. '### PASO 1:', '### PASO 2:', etc.), ALWAYS FOLLOW THE EXACT STEP-BY-STEP STRUCTURE REQUESTED BY THE USER, rendering each step clearly with its header, bullet points, and quantitative data.\n"
-        "- **COMPLETE RESPONSES**: Deliver your full, comprehensive analysis without cutting off prematurely. Finish every single step, formula, pivot level, and strategic recommendation completely before concluding.\n"
-        "- At the end of each technical analysis, add a single confident line: 'Análisis basado en datos de mercado en tiempo real y análisis técnico externo.'\n\n"
-        "=== PROFESSIONAL ANALYSIS FRAMEWORK ===\n"
-        "When performing an analysis without a custom requested structure, you MUST structure your response using this default framework (NO emojis):\n"
+        "=== ADAPTIVE RESPONSE DEPTH ===\n"
+        "Choose the response depth from the user's intent, NOT from the mere presence of trading keywords. Answer first; do not make the user extract an answer from a report.\n"
+        "1. CASUAL OR GENERAL/EDUCATIONAL QUESTION: Respond naturally and concisely (normally 1-4 sentences or a few short bullets). "
+        "Do NOT produce a market report, list indicators, inject live data, or propose a trade unless the user asks for one.\n"
+        "2. FOCUSED MARKET QUESTION (for example, your opinion, a possible entry, a level, or one indicator): Give a direct answer first, then only the relevant evidence "
+        "(usually 2-5 concise bullets) and the main risk or invalidation. Do NOT use the full report framework.\n"
+        "3. FULL REPORT: Use the complete framework only when the user explicitly requests a complete/detailed report, asks a genuinely broad multi-part analysis, "
+        "or supplies a custom step-by-step format. Follow the user's requested format exactly and complete it without adding unrelated sections.\n"
+        "For follow-up questions, use the conversation context and answer only what changed or was asked; never repeat an entire previous report by default.\n\n"
+        "=== INDEPENDENT PROFESSIONAL JUDGMENT ===\n"
+        "- Give a genuine evidence-based opinion, not just a summary. State your directional bias or action (LONG, SHORT, ESPERAR, etc.) and LOW/MEDIUM/HIGH conviction when useful. "
+        "For an entry question, say explicitly whether entering now is attractive or waiting offers a better setup, and why.\n"
+        "- MARKET SIGNAL is only an aggregate of indicator votes, not your conclusion, executed order flow, or a probability of success. You may disagree with it when the evidence conflicts.\n"
+        "- Weigh trend, momentum, trend strength, volatility, multi-timeframe alignment, and liquidity. Explicitly mention important contradictions instead of hiding them. "
+        "For example, ADX below 25 generally argues against treating a move as a strong established trend.\n"
+        "- Use recent series to establish whether a metric is rising, falling, crossing, or diverging. Never infer evolution from one isolated value.\n"
+        "- Order-book walls are potential liquidity areas, not guaranteed support/resistance; resting orders can be canceled. Do not present them as certain barriers.\n"
+        "- Never assign a win rate, certainty, or numerical probability unless it is actually supplied or validly calculable from the provided data.\n\n"
+        "=== TRADE SETUP & MANDATORY RISK VALIDATION ===\n"
+        "- When a trade is requested, provide a conditional setup only if the data supports one: entry or entry zone, confirmation/trigger, invalidation, stop, and logical target(s). "
+        "If there is no coherent edge, say ESPERAR rather than forcing a trade or an attractive ratio.\n"
+        "- Before presenting a LONG, verify STOP < ENTRY < TARGET. Risk = ENTRY - STOP; reward = TARGET - ENTRY.\n"
+        "- Before presenting a SHORT, verify TARGET < ENTRY < STOP. Risk = STOP - ENTRY; reward = ENTRY - TARGET.\n"
+        "- Reward/risk = reward / risk. Check the direction and arithmetic before responding. If any inequality fails or risk is zero/negative, discard or rebuild the setup; NEVER publish it.\n"
+        "- If using an entry zone, state the exact entry price used for the calculations or present a valid range of outcomes. Keep price units and direction consistent.\n"
+        "- Place stops at a logical invalidation supported by available levels/volatility, not at an arbitrary distance merely to manufacture a high reward/risk ratio. "
+        "Do not claim fees, slippage, funding, or execution costs are included unless they were provided and calculated.\n\n"
+        "=== STYLE & FULL REPORT FRAMEWORK ===\n"
+        "- Be precise, candid, and analytical. Use clean formatting proportional to the request; never pad a response to look institutional.\n"
+        "- NEVER use emojis in technical analyses, headers, tables, or strategies.\n"
+        "- Do not append generic source claims or a mandatory footer.\n\n"
+        "For a FULL REPORT without a custom requested structure, use these sections (NO emojis):\n"
         "### Resumen Ejecutivo & Señal de Mercado\n"
-        "Un panorama conciso de 1-2 oraciones del estado del mercado, contrastando el **MARKET SIGNAL** actual (COMPRA / VENTA / NEUTRAL) y el ratio de flujo de presión compradora/vendedora.\n\n"
+        "Present your own bias and conviction, contrast them with MARKET SIGNAL, and describe the bullish/bearish figures accurately as an indicator-signal split, not order flow.\n\n"
         "### Mapa de Liquidez & Order Book (Bubble Map)\n"
-        "Analiza la distribución del libro de órdenes: dominancia compradora vs vendedora, volumen acumulado y los principales muros de liquidez (clusters de soporte en bids y de resistencia en asks) identificados en el Bubble Map.\n\n"
+        "Assess available depth, spread, and major bid/ask clusters as potential liquidity, including limitations and implications for execution.\n\n"
         "### Desglose Técnico Completo\n"
-        "Analiza detalladamente todos los indicadores suministrados:\n"
-        "- **Estructura & Tendencia:** EMAs (50, 100, 200) y Price Action.\n"
-        "- **Momentum & Timing:** RSI (14), Stochastic RSI, Oscilador Estocástico (%K / %D), MACD (línea, señal e histograma), CCI (20) y MFI (14 - Money Flow Index institucional).\n"
-        "- **Volatilidad & Fuerza:** Bandas de Bollinger (20, 2σ) y ADX (14) con sus fuerzas direccionales (+DI / -DI).\n\n"
+        "Synthesize the available indicators rather than mechanically repeating them:\n"
+        "- **Estructura & Tendencia:** EMAs (50, 100, 200), recent Price Action, and multi-timeframe alignment.\n"
+        "- **Momentum & Timing:** RSI, Stochastic RSI, Stochastic %K/%D, MACD, CCI, and MFI, emphasizing changes and conflicts.\n"
+        "- **Volatilidad & Fuerza:** Bollinger Bands and ADX with +DI/-DI.\n\n"
         "### Niveles Clave (Soporte & Resistencia)\n"
-        "Declara claramente las zonas inmediatas de Soporte (S1, S2, S3) y Resistencia (R1, R2, R3) basadas en Pivots y reforzadas por la liquidez del Order Book.\n\n"
+        "Identify the most relevant pivot, EMA, Bollinger, and liquidity levels; distinguish confirmed structural levels from potential order-book liquidity.\n\n"
         "### Recomendación Estratégica\n"
-        "Provee asesoramiento altamente accionable (COMPRA / VENTA / MANTENER / ESPERAR) con zonas lógicas de Entrada, Stop Loss (SL) y objetivos de Take Profit (TP) basados en riesgo/beneficio.\n\n"
+        "Give your evidence-based action, scenarios, trigger, invalidation, and—only when valid—a directionally consistent entry/stop/target setup with checked risk and reward/risk calculations.\n\n"
     )
 
     if indicator_data:
@@ -240,16 +268,13 @@ def get_trading_system_prompt(indicator_data=None, global_context=None, model_na
         if active_total > 0:
             bullish_flow = (buy_sig / active_total) * 100
             bearish_pressure = (sell_sig / active_total) * 100
-        elif total_sig > 0:
-            bullish_flow = (buy_sig / total_sig) * 100
-            bearish_pressure = (sell_sig / total_sig) * 100
+            signal_split = f"{bullish_flow:.1f}% Bullish Signals | {bearish_pressure:.1f}% Bearish Signals"
         else:
-            bullish_flow = 50.0
-            bearish_pressure = 50.0
+            signal_split = "N/A | N/A (no active BUY/SELL votes)"
 
         # LIQUIDITY BUBBLE MAP & ORDER BOOK
         buyer_pct = indicator_data.get('buyerPercent')
-        buyer_pct_str = f"{float(buyer_pct):.1f}%" if buyer_pct is not None else f"{bullish_flow:.1f}%"
+        buyer_pct_str = f"{float(buyer_pct):.1f}%" if buyer_pct is not None else "N/A"
         bid_vol = indicator_data.get('bidVolume')
         ask_vol = indicator_data.get('askVolume')
         best_bid = indicator_data.get('bestBid')
@@ -267,15 +292,15 @@ def get_trading_system_prompt(indicator_data=None, global_context=None, model_na
         data_block += f"| 24h Volume | {_format_compact(indicator_data.get('volumen'))} | {'USDT turnover' if market == 'crypto' else 'Shares volume'} |\n"
         data_block += f"| MARKET SIGNAL | **{market_signal}** | {market_signal_summary} |\n"
         data_block += f"| Signal Counts | {buy_sig} BUY | {neutral_sig} HOLD | {sell_sig} SELL | Total Signals: {total_sig} |\n"
-        data_block += f"| Flow Ratio | {bullish_flow:.1f}% Bullish Flow | {bearish_pressure:.1f}% Bearish Pressure | Order flow pressure |\n"
+        data_block += f"| Indicator Signal Split | {signal_split} | Distribution of active indicator votes; NOT executed order flow or win probability |\n"
         data_block += f"| LIQUIDITY BUBBLE MAP | Buyer Dominance: {buyer_pct_str} | Depth Source: {ob_source} |\n"
         if bid_vol is not None and ask_vol is not None:
             data_block += f"| Order Book Bid/Ask Vol | Bids: {_format_compact(bid_vol)} USDT | Asks: {_format_compact(ask_vol)} USDT | Aggregate 40-level depth |\n"
         if best_bid is not None and best_ask is not None:
             data_block += f"| Best Bid / Best Ask | ${_fmt(best_bid)} / ${_fmt(best_ask)} | Spread: {abs(float(best_ask) - float(best_bid)):.4f} USDT |\n"
         if liquidity_walls:
-            data_block += f"| Top Bid Liquidity Walls | {liquidity_walls['top_bids']} | Major support/demand zones in Bubble Map |\n"
-            data_block += f"| Top Ask Liquidity Walls | {liquidity_walls['top_asks']} | Major resistance/supply zones in Bubble Map |\n"
+            data_block += f"| Top Bid Liquidity Walls | {liquidity_walls['top_bids']} | Potential bid liquidity; orders may be canceled |\n"
+            data_block += f"| Top Ask Liquidity Walls | {liquidity_walls['top_asks']} | Potential ask liquidity; orders may be canceled |\n"
         data_block += f"| Last Candle OHLC | O: {_fmt(opens[-1] if opens else None)} H: {_fmt(highs[-1] if highs else None)} L: {_fmt(lows[-1] if lows else None)} C: {_fmt(closes[-1] if closes else None)} | Forming candle |\n"
         data_block += f"| RSI (14) | {_fmt(indicator_data.get('rsi'))} | Momentum Oscillator (OS <30, OB >70) |\n"
         data_block += f"| Stoch RSI (14, 3, 3) | {_fmt(indicator_data.get('rsiStoch'))} | Stochastic RSI (OS <20, OB >80) |\n"
@@ -291,7 +316,7 @@ def get_trading_system_prompt(indicator_data=None, global_context=None, model_na
         data_block += f"| Support Levels (Pivots) | S1: ${_fmt(indicator_data.get('s1'))} | S2: ${_fmt(indicator_data.get('s2'))} | S3: ${_fmt(indicator_data.get('s3'))} | Key dynamic support floors |\n"
         data_block += f"| Resistance Levels (Pivots)| R1: ${_fmt(indicator_data.get('r1'))} | R2: ${_fmt(indicator_data.get('r2'))} | R3: ${_fmt(indicator_data.get('r3'))} | Key dynamic resistance ceilings |\n"
         
-        data_block += "\nUse THESE EXACT VALUES for your analysis. You MUST synthesize the MARKET SIGNAL and the LIQUIDITY BUBBLE MAP along with ALL technical indicators above.\n"
+        data_block += "\nUse THESE EXACT VALUES when citing data. For focused questions, synthesize only the relevant metrics; reserve the complete cross-indicator synthesis for a full report. Never mislabel the indicator signal split as order flow or probability.\n"
         base += data_block
 
         # Contexto multi-temporalidad: el MISMO activo en todas las temporalidades
