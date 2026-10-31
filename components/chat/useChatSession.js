@@ -46,12 +46,6 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
   const isAutoScrollPausedRef = useRef(false)
   const { ttsEnabled, toggle: toggleTTS, playResponse } = useVoiceTTS()
 
-  // Hora de inicio de sesión UTC
-  useEffect(() => {
-    const now = new Date()
-    setSessionTime(now.toTimeString().split(" ")[0])
-  }, [])
-
   // Telemetría en vivo del libro de órdenes y diagnóstico cuantitativo
   // Se alimenta directamente de los indicadores de `datos`
   const marketTelemetry = useMemo(() => {
