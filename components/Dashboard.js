@@ -139,7 +139,7 @@ export default function Dashboard({ moneda, market = "crypto", onCambiarMoneda }
   const recomendacion = getRecommendation(datos)
 
   return (
-    <div className="min-h-screen relative overflow-x-hidden font-mono bg-[#070c14] text-slate-100 selection:bg-[#00f5c4]/20 selection:text-[#00f5c4]">
+    <div className="min-h-screen relative overflow-x-clip font-mono bg-[#070c14] text-slate-100 selection:bg-[#00f5c4]/20 selection:text-[#00f5c4]">
       {/* Precision Grid Background */}
       <div
         className="fixed inset-0 pointer-events-none opacity-[0.025]"
