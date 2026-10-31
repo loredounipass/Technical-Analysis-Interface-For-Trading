@@ -292,17 +292,17 @@ const IndicatorGrid = ({ datos = {} }) => {
           footerLeft={<span>1.2× ATR displacement</span>}
           footerRight={<span>Close-based invalidation</span>}
         >
-          <div className="space-y-2 font-mono">
+          <div className="h-[220px] overflow-y-auto overscroll-contain space-y-2 pr-1 font-mono scrollbar-hidden">
             {!hasOrderBlockData ? (
-              <div className="h-[104px] flex items-center justify-center text-slate-400 text-xs text-center">
+              <div className="h-full flex items-center justify-center text-slate-400 text-xs text-center">
                 Waiting for Order Block endpoint data...
               </div>
             ) : activeOrderBlocks.length === 0 ? (
-              <div className="h-[104px] flex items-center justify-center text-slate-400 text-xs text-center">
+              <div className="h-full flex items-center justify-center text-slate-400 text-xs text-center">
                 No active candidates in the latest 200 candles
               </div>
             ) : (
-              activeOrderBlocks.slice(0, 3).map((zone) => {
+              activeOrderBlocks.map((zone) => {
                 const isBullish = zone.side === "bullish"
                 return (
                   <div
@@ -353,17 +353,17 @@ const IndicatorGrid = ({ datos = {} }) => {
           footerLeft={<span>3-candle imbalance</span>}
           footerRight={<span>Real-time mitigation</span>}
         >
-          <div className="space-y-2 font-mono">
+          <div className="h-[220px] overflow-y-auto overscroll-contain space-y-2 pr-1 font-mono scrollbar-hidden">
             {!hasFvgData ? (
-              <div className="h-[104px] flex items-center justify-center text-slate-400 text-xs text-center">
+              <div className="h-full flex items-center justify-center text-slate-400 text-xs text-center">
                 Waiting for FVG endpoint data...
               </div>
             ) : activeFvgs.length === 0 ? (
-              <div className="h-[104px] flex items-center justify-center text-slate-400 text-xs text-center">
+              <div className="h-full flex items-center justify-center text-slate-400 text-xs text-center">
                 No open or partial FVGs in the latest 200 candles
               </div>
             ) : (
-              activeFvgs.slice(0, 3).map((gap) => {
+              activeFvgs.map((gap) => {
                 const isBullish = gap.side === "bullish"
                 const fillPercent = Math.min(100, Math.max(0, Number(gap.fillPercent) || 0))
                 return (
