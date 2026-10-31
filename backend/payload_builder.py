@@ -13,6 +13,7 @@ from indicators import (
     compute_rsi_series, compute_ema_series, compute_macd_series,
     compute_bollinger_series, compute_stoch_series, compute_stoch_rsi_series,
     compute_cci_series, compute_mfi_series, compute_adx_series, compute_pivots,
+    compute_order_blocks, compute_fair_value_gaps,
     compute_signal_summary, last_non_none, price_decimals,
 )
 from data_fetchers import (
@@ -176,6 +177,21 @@ def build_payload(symbol, interval_str, market, klines, vol_24h=None):
                 vol_24h = precio * max(1, 86400 // secs)
         except Exception as e:
             logger.error(f"[TradingData] historia sintetica fallo para {symbol}: {e}")
+
+    # Price action calculado exclusivamente con velas reales del exchange.
+    # Se expone en el mismo payload REST/WebSocket que el resto de indicadores.
+    order_blocks = []
+    fair_value_gaps = []
+    if klines:
+        try:
+            order_blocks = compute_order_blocks(
+                opens, highs, lows, closes, timestamps
+            )
+            fair_value_gaps = compute_fair_value_gaps(
+                highs, lows, closes, timestamps
+            )
+        except Exception as e:
+            logger.error(f"[TradingData] price action fallo para {symbol}: {e}")
 
     # Los indicadores se calculan con toda la historia (convergencia exacta);
     # el historial que se envia al frontend se recorta a 500 velas para navegacion profunda
@@ -356,6 +372,8 @@ def build_payload(symbol, interval_str, market, klines, vol_24h=None):
         'bestAsk': best_ask,
         'orderBookSource': ob_source,
         'depthRaw': depth_raw,
+        'orderBlocks': order_blocks,
+        'fairValueGaps': fair_value_gaps,
         'timeframe': interval_str,
         'history': history
     }

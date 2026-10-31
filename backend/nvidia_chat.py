@@ -33,6 +33,7 @@ _ANALYSIS_TRIGGERS = re.compile(
     r'bitcoin|btc|ethereum|eth|solana|sol|dogecoin|doge|xrp|ripple|bnb|binance|pepe|shib|shiba|'
     r'grafico|gráfico|chart|candle|vela|'
     r'liquidez|liquidity|volumen|volume|'
+    r'order.?blocks?|fair.?value.?gaps?|fvg|imbalances?|ineficiencias?|'
     r'pivot|fibonacci|fibo|wyckoff|elliott|'
     r'qué (ves|opinas|piensas|recomiendas|sugieres)|'
     r'how.?is|what.?about|what.?do you (think|see|recommend)|'
@@ -209,6 +210,8 @@ def get_trading_system_prompt(indicator_data=None, global_context=None, model_na
         "For example, ADX below 25 generally argues against treating a move as a strong established trend.\n"
         "- Use recent series to establish whether a metric is rising, falling, crossing, or diverging. Never infer evolution from one isolated value.\n"
         "- Order-book walls are potential liquidity areas, not guaranteed support/resistance; resting orders can be canceled. Do not present them as certain barriers.\n"
+        "- ORDER BLOCKS are OHLC-detected candidate price-action zones, not evidence of bank orders or institutional positioning. Respect their status: never treat an invalidated block as active.\n"
+        "- FVGs are measured three-candle imbalances. Use their actual open/partial/filled status and fill percentage; never claim that a gap must fill or assign it an unsupported probability.\n"
         "- Never assign a win rate, certainty, or numerical probability unless it is actually supplied or validly calculable from the provided data.\n\n"
         "=== TRADE SETUP & MANDATORY RISK VALIDATION ===\n"
         "- When a trade is requested, provide a conditional setup only if the data supports one: entry or entry zone, confirmation/trigger, invalidation, stop, and logical target(s). "
@@ -230,7 +233,7 @@ def get_trading_system_prompt(indicator_data=None, global_context=None, model_na
         "Assess available depth, spread, and major bid/ask clusters as potential liquidity, including limitations and implications for execution.\n\n"
         "### Desglose Técnico Completo\n"
         "Synthesize the available indicators rather than mechanically repeating them:\n"
-        "- **Estructura & Tendencia:** EMAs (50, 100, 200), recent Price Action, and multi-timeframe alignment.\n"
+        "- **Estructura & Tendencia:** EMAs (50, 100, 200), recent Price Action, active Order Block candidates, FVG mitigation, and multi-timeframe alignment.\n"
         "- **Momentum & Timing:** RSI, Stochastic RSI, Stochastic %K/%D, MACD, CCI, and MFI, emphasizing changes and conflicts.\n"
         "- **Volatilidad & Fuerza:** Bollinger Bands and ADX with +DI/-DI.\n\n"
         "### Niveles Clave (Soporte & Resistencia)\n"
@@ -315,6 +318,7 @@ def get_trading_system_prompt(indicator_data=None, global_context=None, model_na
         data_block += f"| Moving Averages | EMA50: ${_fmt(indicator_data.get('ema50'))} | EMA100: ${_fmt(indicator_data.get('ema100'))} | EMA200: ${_fmt(indicator_data.get('ema200'))} | Trend bias & dynamic S/R |\n"
         data_block += f"| Support Levels (Pivots) | S1: ${_fmt(indicator_data.get('s1'))} | S2: ${_fmt(indicator_data.get('s2'))} | S3: ${_fmt(indicator_data.get('s3'))} | Key dynamic support floors |\n"
         data_block += f"| Resistance Levels (Pivots)| R1: ${_fmt(indicator_data.get('r1'))} | R2: ${_fmt(indicator_data.get('r2'))} | R3: ${_fmt(indicator_data.get('r3'))} | Key dynamic resistance ceilings |\n"
+        data_block += _format_price_action_context(indicator_data)
         
         data_block += "\nUse THESE EXACT VALUES when citing data. For focused questions, synthesize only the relevant metrics; reserve the complete cross-indicator synthesis for a full report. Never mislabel the indicator signal split as order flow or probability.\n"
         base += data_block
@@ -500,6 +504,48 @@ def _fmt_ts(ms):
     except Exception:
         return str(ms)
 
+
+
+def _format_price_action_context(indicator_data):
+    """Serializa las zonas reales de price action para el contexto del modelo."""
+    order_blocks = indicator_data.get('orderBlocks')
+    fair_value_gaps = indicator_data.get('fairValueGaps')
+    lines = [
+        "\n=== PRICE ACTION ZONES (REAL OHLC, LATEST 200 CANDLES) ===",
+        "Order Blocks are candidates, not confirmed institutional orders. FVG fill is measured, never guaranteed.",
+    ]
+
+    if not isinstance(order_blocks, list):
+        lines.append("ORDER BLOCKS: N/A (field not supplied)")
+    elif not order_blocks:
+        lines.append("ORDER BLOCKS: No candidates detected")
+    else:
+        lines.append("ORDER BLOCK CANDIDATES:")
+        for zone in order_blocks:
+            lines.append(
+                f"- {str(zone.get('side', 'N/A')).upper()} | Status: {zone.get('status', 'N/A')} | "
+                f"Zone: ${_fmt(zone.get('bottom'))} - ${_fmt(zone.get('top'))} | "
+                f"Displacement: {_fmt(zone.get('impulseAtr'))}x ATR | "
+                f"Body: {_fmt(zone.get('impulseBodyPercent'))}% | "
+                f"Confirmed: {_fmt_ts(zone.get('confirmationTime'))}"
+            )
+
+    if not isinstance(fair_value_gaps, list):
+        lines.append("FAIR VALUE GAPS: N/A (field not supplied)")
+    elif not fair_value_gaps:
+        lines.append("FAIR VALUE GAPS: No imbalances detected")
+    else:
+        lines.append("FAIR VALUE GAPS:")
+        for gap in fair_value_gaps:
+            lines.append(
+                f"- {str(gap.get('side', 'N/A')).upper()} | Status: {gap.get('status', 'N/A')} | "
+                f"Gap: ${_fmt(gap.get('bottom'))} - ${_fmt(gap.get('top'))} | "
+                f"50% Midpoint: ${_fmt(gap.get('midpoint'))} | "
+                f"Filled: {_fmt(gap.get('fillPercent'))}% | "
+                f"Size: {_fmt(gap.get('sizePercent'))}% | Formed: {_fmt_ts(gap.get('formedAt'))}"
+            )
+
+    return "\n".join(lines) + "\n"
 
 
 def get_api_key() -> Optional[str]:
