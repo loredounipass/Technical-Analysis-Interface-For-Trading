@@ -77,11 +77,11 @@ export default function Header({
           {/* Change pair button */}
           <button
             onClick={onCambiarMoneda}
-            className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#09111b] border border-[#16283d] hover:border-[#2b4c73] text-white transition-all"
+            className="flex items-center gap-2 px-4 py-2 rounded-full bg-[#09111b] border border-[#16283d] hover:border-[#00f5c4]/40 hover:bg-[#00f5c4]/5 text-white transition-all text-sm font-semibold tracking-wide shadow-sm"
             title="Change Trading Pair"
           >
-            <ArrowLeftRight className="w-3 h-3 text-[#00f5c4]" />
-            <span className="text-white font-medium">Ch</span>
+            <ArrowLeftRight className="w-4 h-4 text-[#00f5c4]" />
+            <span className="text-white font-semibold whitespace-nowrap">Change Coin</span>
           </button>
 
           {/* Timeframe pill selector */}
