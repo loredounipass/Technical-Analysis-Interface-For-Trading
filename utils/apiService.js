@@ -56,10 +56,9 @@ async function request(path, { method = 'GET', headers = {}, body = null, timeou
   }
 }
 
-export const fetchTradingData = async (symbol, interval = '15m', market = 'crypto', force = false) => {
+export const fetchTradingData = async (symbol, interval = '15m', market = 'crypto') => {
   if (!symbol) throw new Error('symbol is required');
-  const forceParam = force ? '&force=1' : '';
-  return request(`/trading/${symbol}?interval=${interval}&market=${market}${forceParam}`, { retries: 4 });
+  return request(`/trading/${symbol}?interval=${interval}&market=${market}`, { retries: 4 });
 };
 
 export const fetchNews = async (symbol, market = 'crypto') => {

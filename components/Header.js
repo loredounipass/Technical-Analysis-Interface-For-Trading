@@ -1,12 +1,10 @@
 "use client"
 
-import { RefreshCw, ArrowLeftRight, Newspaper, Activity, Diamond } from "lucide-react"
+import { ArrowLeftRight, Newspaper, Activity, Diamond } from "lucide-react"
 import { useRouter } from "next/navigation"
 
 export default function Header({
   moneda,
-  ultimaActualizacion,
-  onActualizar,
   onCambiarMoneda,
   timeframe = "15m",
   onTimeframeChange,
@@ -67,16 +65,6 @@ export default function Header({
 
         {/* Center: Actions & Timeframes */}
         <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-          {/* Refresh button */}
-          <button
-            onClick={onActualizar}
-            className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#09111b] border border-[#16283d] hover:border-[#2b4c73] text-white transition-all"
-            title={ultimaActualizacion ? `Last update: ${ultimaActualizacion}` : "Refresh Data"}
-          >
-            <RefreshCw className="w-3 h-3 text-cyan-400 group-hover:rotate-180 transition-transform duration-500" />
-            <span className="hidden md:inline text-white font-medium">Refresh Data</span>
-          </button>
-
           {/* Market News button */}
           <button
             onClick={() => router.push("/news")}

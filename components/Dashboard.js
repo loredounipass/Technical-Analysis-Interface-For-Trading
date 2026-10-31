@@ -14,7 +14,6 @@ export default function Dashboard({ moneda, market = "crypto", onCambiarMoneda }
   const [datos, setDatos] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [ultimaActualizacion, setUltimaActualizacion] = useState(null)
   const [timeframe, setTimeframe] = useState("15m")
   const [time, setTime] = useState("")
   const [mounted, setMounted] = useState(false)
@@ -34,13 +33,12 @@ export default function Dashboard({ moneda, market = "crypto", onCambiarMoneda }
     return () => clearInterval(interval)
   }, [])
 
-  const fetchData = async (selectedTimeframe = timeframe, force = false) => {
+  const fetchData = async (selectedTimeframe = timeframe) => {
     const currentFetch = ++fetchCounterRef.current
     try {
-      const nuevoDatos = await fetchTradingData(moneda.symbol, selectedTimeframe, market, force)
+      const nuevoDatos = await fetchTradingData(moneda.symbol, selectedTimeframe, market)
       if (currentFetch === fetchCounterRef.current) {
         setDatos(nuevoDatos)
-        setUltimaActualizacion(new Date().toLocaleTimeString())
         setError(null)
       }
     } catch (err) {
@@ -70,7 +68,6 @@ export default function Dashboard({ moneda, market = "crypto", onCambiarMoneda }
     if (liveData) {
       fetchCounterRef.current++
       setDatos(liveData)
-      setUltimaActualizacion(new Date().toLocaleTimeString())
       setLoading(false)
     }
   }, [liveData])
@@ -163,8 +160,6 @@ export default function Dashboard({ moneda, market = "crypto", onCambiarMoneda }
       {/* Unified Synapse Top Navigation Header */}
       <Header
         moneda={moneda}
-        ultimaActualizacion={ultimaActualizacion}
-        onActualizar={() => fetchData(timeframe, true)}
         onCambiarMoneda={onCambiarMoneda}
         timeframe={timeframe}
         onTimeframeChange={handleTimeframeChange}
