@@ -1,8 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import CoinSelector from "@/components/CoinSelector"
-import Dashboard from "@/components/Dashboard"
 
 // Configuración de monedas
 type Moneda = {
@@ -40,28 +40,26 @@ const ACCIONES: Record<string, Moneda> = {
 
 const STORAGE_KEY = "woody-terminal-asset"
 
-function loadSavedMoneda(): Moneda | null {
-  if (typeof window === "undefined") return null
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY)
-    if (!raw) return null
-    const saved = JSON.parse(raw)
-    if (saved && saved.symbol) return saved as Moneda
-  } catch (e) {
-    // ignore corrupt storage
-  }
-  return null
-}
-
 export default function CryptoTradingApp() {
-  const [monedaSeleccionada, setMonedaSeleccionada] = useState<Moneda | null>(null)
+  const router = useRouter()
   const [hydrated, setHydrated] = useState(false)
 
-  // Restaurar el activo guardado (recargar la pagina no saca del dashboard)
+  // Si ya hay un activo guardado, redirigir directamente al dashboard
   useEffect(() => {
-    setMonedaSeleccionada(loadSavedMoneda())
+    try {
+      const raw = window.localStorage.getItem(STORAGE_KEY)
+      if (raw) {
+        const saved = JSON.parse(raw)
+        if (saved && saved.symbol) {
+          router.replace("/dashboard")
+          return
+        }
+      }
+    } catch (e) {
+      // ignore corrupt storage
+    }
     setHydrated(true)
-  }, [])
+  }, [router])
 
   const seleccionarMoneda = (key: string) => {
     const moneda = MONEDAS[key] || ACCIONES[key]
@@ -71,31 +69,12 @@ export default function CryptoTradingApp() {
       } catch (e) {
         // ignore storage errors
       }
-      setMonedaSeleccionada(moneda)
+      router.push("/dashboard")
     }
-  }
-  const cambiarMoneda = () => {
-    try {
-      window.localStorage.removeItem(STORAGE_KEY)
-    } catch (e) {
-      // ignore storage errors
-    }
-    setMonedaSeleccionada(null)
   }
 
-  // Evitar flash del selector mientras se restaura el activo guardado
+  // Evitar flash del selector mientras se verifica localStorage
   if (!hydrated) return null
 
-  // Renderizado condicional basado en el estado
-  if (!monedaSeleccionada) {
-    return <CoinSelector monedas={MONEDAS} acciones={ACCIONES} onSelect={seleccionarMoneda} />
-  }
-
-  return (
-    <Dashboard
-      moneda={monedaSeleccionada}
-      market={monedaSeleccionada.market}
-      onCambiarMoneda={cambiarMoneda}
-    />
-  )
+  return <CoinSelector monedas={MONEDAS} acciones={ACCIONES} onSelect={seleccionarMoneda} />
 }

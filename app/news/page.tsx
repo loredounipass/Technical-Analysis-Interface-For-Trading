@@ -133,7 +133,7 @@ export default function NewsPage() {
         {/* === Header === */}
         <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
           <div className="flex items-center gap-4">
-            <Link href="/"
+            <Link href="/dashboard"
               className="group flex items-center gap-2 text-xs font-mono text-gray-600 hover:text-emerald-400 transition-all duration-300 px-3 py-1.5 rounded-lg hover:bg-emerald-400/5"
             >
               <svg className="w-4 h-4 transition-transform group-hover:-translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
