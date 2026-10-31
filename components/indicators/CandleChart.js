@@ -61,10 +61,31 @@ export default function CandleChart({
     })
   }, [data])
 
-  // ── Ventana visible según pan/zoom (hook compartido) ──
+  // Ventana visible con espacio a la derecha y pan más allá del último precio.
   const total = chartDataWithEma.length
-  const win = useChartWindow(total, { defaultCount: 60, minCount: 10 })
-  const visibleData = chartDataWithEma.slice(win.start, win.effEnd)
+  const win = useChartWindow(total, {
+    defaultCount: 60,
+    minCount: 10,
+    rightMargin: 12,
+    allowRightPan: true,
+  })
+  const visibleData = Array.from({ length: win.effCount }, (_, index) => (
+    chartDataWithEma[win.start + index] || {
+      timeLabel: "",
+      open: null,
+      high: null,
+      low: null,
+      close: null,
+      wickRange: null,
+      bodyRange: null,
+      ema20: null,
+      ema50: null,
+      isPlaceholder: true,
+    }
+  ))
+  const visibleRealEnd = Math.min(win.effEnd, total)
+  const visibleRealCount = Math.max(0, visibleRealEnd - win.start)
+  const visibleRange = visibleRealCount > 0 ? `${win.start + 1}–${visibleRealEnd}` : "0–0"
   const isLive = win.isLive
 
   const bodySize = Math.min(Math.max((win.plotWidth / win.effCount) * 0.6, 1.5), 40)
@@ -86,6 +107,7 @@ export default function CandleChart({
   const CustomTooltip = ({ active, payload }) => {
     if (active && payload && payload.length) {
       const d = payload[0].payload
+      if (!d || d.isPlaceholder) return null
       const isBull = d.close >= d.open
       return (
         <div className="bg-[#08121c]/95 border border-[#16283d] p-2.5 rounded-lg shadow-2xl font-mono text-xs backdrop-blur-md">
@@ -312,8 +334,10 @@ export default function CandleChart({
           <span>DRAG: DESPLAZAR · RUEDA: ZOOM · &lt;&lt; LLEVAR HASTA ATRÁS</span>
         </span>
         <span className="text-white font-medium">
-          {win.start + 1}–{win.effEnd} de {total} velas
-          {!isLive && <span className="text-amber-400 ml-2 font-bold tracking-wider">· HISTORIAL</span>}
+          {visibleRange} de {total} velas
+          {!isLive && win.effEnd <= total && (
+            <span className="text-amber-400 ml-2 font-bold tracking-wider">· HISTORIAL</span>
+          )}
         </span>
       </div>
     </div>

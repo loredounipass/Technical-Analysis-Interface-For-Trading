@@ -15,7 +15,12 @@ const clamp = (v, min, max) => Math.min(Math.max(v, min), max)
  * - count: velas/puntos visibles (zoom)
  * - end: indice final de la ventana; null = siguiendo el dato en vivo
  */
-export default function useChartWindow(total, { defaultCount = 60, minCount = 12 } = {}) {
+export default function useChartWindow(total, {
+  defaultCount = 60,
+  minCount = 12,
+  rightMargin = 0,
+  allowRightPan = false,
+} = {}) {
   const [count, setCount] = useState(defaultCount)
   const [end, setEnd] = useState(null)
   const [width, setWidth] = useState(0)
@@ -25,9 +30,13 @@ export default function useChartWindow(total, { defaultCount = 60, minCount = 12
   const active = total > 0
 
   const effCount = Math.max(1, Math.min(count, total))
-  const effEnd = end === null ? total : clamp(end, effCount, total)
+  const liveEnd = total > 0 ? total + rightMargin : 0
+  const maxEnd = total > 0
+    ? total + (allowRightPan ? Math.max(rightMargin, effCount - 1) : rightMargin)
+    : 0
+  const effEnd = end === null ? liveEnd : clamp(end, effCount, maxEnd)
   const start = Math.max(0, effEnd - effCount)
-  const isLive = effEnd >= total
+  const isLive = end === null
 
   // Ancho del contenedor para escalar tamano de barras con el zoom
   useEffect(() => {
@@ -52,9 +61,10 @@ export default function useChartWindow(total, { defaultCount = 60, minCount = 12
     )
     if (next === effCount) return
     const anchorIdx = start + ratio * effCount
-    const newEnd = clamp(Math.round(anchorIdx + (1 - ratio) * next), next, total)
+    const nextMaxEnd = total + (allowRightPan ? Math.max(rightMargin, next - 1) : rightMargin)
+    const newEnd = clamp(Math.round(anchorIdx + (1 - ratio) * next), next, nextMaxEnd)
     setCount(next)
-    setEnd(newEnd >= total ? null : newEnd)
+    setEnd(newEnd === liveEnd ? null : newEnd)
   }
 
   wheelHandlerRef.current = (e) => {
@@ -83,16 +93,16 @@ export default function useChartWindow(total, { defaultCount = 60, minCount = 12
     const barWidth = plotWidth / effCount
     const deltaCandles = Math.round((e.clientX - d.x) / barWidth)
     if (deltaCandles === 0) return
-    const newEnd = clamp(d.end - deltaCandles, effCount, total)
-    setEnd(newEnd >= total ? null : newEnd)
+    const newEnd = clamp(d.end - deltaCandles, effCount, maxEnd)
+    setEnd(newEnd === liveEnd ? null : newEnd)
   }
   const onPointerUp = () => {
     dragRef.current = null
   }
 
   const panBy = (candles) => {
-    const newEnd = clamp(effEnd + candles, effCount, total)
-    setEnd(newEnd >= total ? null : newEnd)
+    const newEnd = clamp(effEnd + candles, effCount, maxEnd)
+    setEnd(newEnd === liveEnd ? null : newEnd)
   }
   const goLive = () => setEnd(null)
   // Ir al punto mas antiguo del historial (inicio absoluto)
