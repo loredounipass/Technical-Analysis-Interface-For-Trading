@@ -1,22 +1,16 @@
 "use client"
 
 import React from "react"
-import { FlaskConical, ChevronDown, History, Trash2, Minus, X, Cpu, SquarePen } from "lucide-react"
+import { FlaskConical, History, Trash2, Minus, X, SquarePen } from "lucide-react"
 
 /**
  * Encabezado superior de la ventana Cyber-Quant:
  * Icono de matraz, título con metadata (v3.0, símbolo, timeframe),
- * selector de motor de IA y controles de ventana.
+ * estado del activo y controles de ventana.
  */
 export default function ChatHeader({
   symbol,
   interval,
-  currentModelName,
-  selectedModel,
-  setSelectedModel,
-  models,
-  showModelSelect,
-  setShowModelSelect,
   onOpenSidebar,
   onNewChat,
   onClearChat,
@@ -48,18 +42,6 @@ export default function ChatHeader({
               </span>
             </div>
 
-            {/* Subtítulo: Motor de IA y Estado */}
-            <div className="flex items-center gap-1.5 mt-0.5">
-              <Cpu className="w-3 h-3 text-cyan-400 flex-shrink-0" />
-              <button
-                onClick={() => setShowModelSelect(!showModelSelect)}
-                className="text-cyan-400/90 hover:text-cyan-300 font-mono text-[11px] flex items-center gap-1 transition-colors text-left"
-                title="Cambiar motor de IA"
-              >
-                <span>{currentModelName} / Low-Latency Neural Engine</span>
-                <ChevronDown className={`w-3 h-3 transition-transform ${showModelSelect ? "rotate-180" : ""}`} />
-              </button>
-            </div>
           </div>
         </div>
 
@@ -107,30 +89,6 @@ export default function ChatHeader({
         </div>
       </div>
 
-      {/* Menú Desplegable Selector de Modelos */}
-      {showModelSelect && (
-        <div className="px-6 py-2 bg-[#061016]/70 backdrop-blur-md border-b border-emerald-500/20 z-20 flex items-center gap-2 flex-wrap">
-          <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider flex items-center gap-1">
-            <Cpu className="w-3 h-3 text-emerald-400" /> MODELO:
-          </span>
-          {models.map((m) => (
-            <button
-              key={m.key}
-              onClick={() => {
-                setSelectedModel(m.key)
-                setShowModelSelect(false)
-              }}
-              className={`px-2.5 py-1 rounded text-[10px] font-mono transition-all ${
-                selectedModel === m.key
-                  ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/50 font-bold"
-                  : "bg-slate-900/60 text-slate-400 hover:text-white border border-slate-800"
-              }`}
-            >
-              {m.name}
-            </button>
-          ))}
-        </div>
-      )}
     </>
   )
 }

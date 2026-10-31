@@ -35,7 +35,6 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
     return "nvidia-nemotron"
   })
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
-  const [showModelSelect, setShowModelSelect] = useState(false)
   const [typingText, setTypingText] = useState("")
   const [isTyping, setIsTyping] = useState(false)
   const [sessionTime, setSessionTime] = useState("18:12:02")
@@ -507,8 +506,6 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
     currentModelName,
     isSidebarOpen,
     setIsSidebarOpen,
-    showModelSelect,
-    setShowModelSelect,
     typingText,
     isTyping,
     sessionTime,

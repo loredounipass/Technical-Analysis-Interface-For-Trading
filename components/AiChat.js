@@ -78,12 +78,6 @@ export default function AiChat({ symbol, datos, interval = "15m", market = "cryp
         <ChatHeader
           symbol={symbol}
           interval={interval}
-          currentModelName={chat.currentModelName}
-          selectedModel={chat.selectedModel}
-          setSelectedModel={chat.setSelectedModel}
-          models={chat.models}
-          showModelSelect={chat.showModelSelect}
-          setShowModelSelect={chat.setShowModelSelect}
           onOpenSidebar={() => chat.setIsSidebarOpen(true)}
           onNewChat={chat.createNewSession}
           onClearChat={chat.clearChat}
@@ -120,6 +114,10 @@ export default function AiChat({ symbol, datos, interval = "15m", market = "cryp
           interval={interval}
           onSendQuickAction={chat.sendMessage}
           disabled={chat.loading}
+          models={chat.models}
+          selectedModel={chat.selectedModel}
+          setSelectedModel={chat.setSelectedModel}
+          currentModelName={chat.currentModelName}
         />
 
         {/* 5. Barra de Entrada de Comandos */}

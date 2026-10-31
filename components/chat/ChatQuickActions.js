@@ -3,6 +3,8 @@
 import React, { useEffect, useState } from "react"
 import {
   X,
+  Check,
+  ChevronDown,
   ChevronRight,
   Layers,
   Bot,
@@ -26,20 +28,34 @@ import {
  * Barra inferior con botón que abre una ventana emergente de acciones
  * rápidas divididas en dos categorías: ESTRATEGIAS y ANÁLISIS.
  * Al hacer clic en una acción, se cierra la ventana y se envía el
- * comando directamente al agente.
+ * comando directamente al agente. La misma barra contiene el selector
+ * de modelo de IA, también presentado en una ventana emergente.
  */
-export default function ChatQuickActions({ symbol, interval, onSendQuickAction, disabled }) {
+export default function ChatQuickActions({
+  symbol,
+  interval,
+  onSendQuickAction,
+  disabled,
+  models = [],
+  selectedModel,
+  setSelectedModel,
+  currentModelName = "Nemotron 3 Nano Omni",
+}) {
   const [isOpen, setIsOpen] = useState(false)
+  const [isModelOpen, setIsModelOpen] = useState(false)
 
-  // Cerrar la ventana emergente con la tecla Escape
+  // Cerrar cualquier ventana emergente con la tecla Escape
   useEffect(() => {
-    if (!isOpen) return
+    if (!isOpen && !isModelOpen) return
     const onKey = (e) => {
-      if (e.key === "Escape") setIsOpen(false)
+      if (e.key === "Escape") {
+        setIsOpen(false)
+        setIsModelOpen(false)
+      }
     }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
-  }, [isOpen])
+  }, [isOpen, isModelOpen])
 
   const run = (action, category) => {
     setIsOpen(false)
@@ -496,15 +512,21 @@ Veredicto claro basado en todos los datos del terminal: el momentum favorece COM
 
   return (
     <>
-      {/* Barra inferior con acceso a la ventana emergente */}
-      <div className="px-5 py-2.5 sm:px-6 bg-[#050d12]/40 backdrop-blur-sm border-t border-emerald-500/10 flex items-center gap-3 z-10">
+      {/* Barra inferior con accesos a acciones rápidas y modelos */}
+      <div className="px-5 py-2.5 sm:px-6 bg-[#050d12]/40 backdrop-blur-sm border-t border-emerald-500/10 flex flex-wrap items-center gap-2 sm:gap-3 z-10">
         <div className="flex items-center gap-1.5 text-[11px] font-mono text-slate-400 font-semibold flex-shrink-0">
           <Bot className="w-3.5 h-3.5 text-cyan-400" />
           <span>Acciones Rápidas:</span>
         </div>
 
         <button
-          onClick={() => setIsOpen(true)}
+          type="button"
+          onClick={() => {
+            setIsModelOpen(false)
+            setIsOpen(true)
+          }}
+          aria-haspopup="dialog"
+          aria-expanded={isOpen}
           className="bg-[#09151d] hover:bg-emerald-950/60 border border-emerald-500/30 hover:border-emerald-400/60 text-xs font-mono text-slate-300 hover:text-white px-3 py-1.5 rounded-full transition-all cursor-pointer whitespace-nowrap shadow-sm flex items-center gap-2 active:scale-95"
         >
           <Layers className="w-3.5 h-3.5 text-emerald-400" />
@@ -512,6 +534,23 @@ Veredicto claro basado en todos los datos del terminal: el momentum favorece COM
           <span className="text-[9px] bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 px-1.5 py-0.5 rounded-full font-bold">
             {strategies.length + analyses.length}
           </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setIsOpen(false)
+            setIsModelOpen(true)
+          }}
+          aria-haspopup="dialog"
+          aria-expanded={isModelOpen}
+          title={`Modelo actual: ${currentModelName}. Cambiar modelo`}
+          className="ml-auto max-w-full bg-[#09151d] hover:bg-cyan-950/50 border border-cyan-500/30 hover:border-cyan-400/60 text-xs font-mono text-slate-300 hover:text-white px-3 py-1.5 rounded-full transition-all cursor-pointer shadow-sm flex items-center gap-2 active:scale-95"
+        >
+          <Cpu className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0" />
+          <span className="text-slate-500 hidden sm:inline">Modelo:</span>
+          <span className="max-w-[140px] sm:max-w-[190px] truncate">{currentModelName}</span>
+          <ChevronDown className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0" />
         </button>
       </div>
 
@@ -592,6 +631,99 @@ Veredicto claro basado en todos los datos del terminal: el momentum favorece COM
                   {strategies.map((a) => renderAction(a, "Estrategia"))}
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Ventana emergente para seleccionar el modelo de IA */}
+      {isModelOpen && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-150"
+          onClick={() => setIsModelOpen(false)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="model-selector-title"
+            className="relative w-full max-w-[480px] overflow-hidden rounded-2xl border border-cyan-500/30 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.9),0_0_35px_rgba(34,211,238,0.12)] animate-in zoom-in-95 duration-200"
+            style={{
+              background:
+                "linear-gradient(180deg, rgba(8, 18, 25, 0.96) 0%, rgba(5, 12, 17, 0.98) 100%)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-5 py-4 bg-[#071116]/80 backdrop-blur-md border-b border-cyan-500/20 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-cyan-950/40 border border-cyan-500/40 flex items-center justify-center">
+                  <Cpu className="w-4 h-4 text-cyan-300" />
+                </div>
+                <div>
+                  <div id="model-selector-title" className="text-sm font-mono font-bold tracking-wider text-white">
+                    MODELO DE IA
+                  </div>
+                  <div className="text-[10px] font-mono text-slate-500">
+                    Selecciona el motor para las próximas respuestas
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsModelOpen(false)}
+                className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800/40 transition-colors"
+                title="Cerrar selector de modelos"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-4 space-y-2.5">
+              {models.length === 0 && (
+                <div className="rounded-xl border border-slate-800 bg-[#09151d]/80 px-4 py-5 text-center text-xs font-mono text-slate-500">
+                  Cargando modelos disponibles...
+                </div>
+              )}
+              {models.map((model) => {
+                const isSelected = selectedModel === model.key
+                return (
+                  <button
+                    type="button"
+                    key={model.key}
+                    onClick={() => {
+                      setSelectedModel(model.key)
+                      setIsModelOpen(false)
+                    }}
+                    aria-pressed={isSelected}
+                    className={`w-full text-left rounded-xl border px-4 py-3.5 transition-all flex items-center gap-3 ${
+                      isSelected
+                        ? "bg-emerald-950/50 border-emerald-500/60 shadow-[0_0_18px_rgba(16,185,129,0.08)]"
+                        : "bg-[#09151d]/80 border-slate-700/60 hover:border-cyan-500/50 hover:bg-cyan-950/30"
+                    }`}
+                  >
+                    <div className={`w-9 h-9 rounded-lg border flex items-center justify-center flex-shrink-0 ${
+                      isSelected
+                        ? "bg-emerald-950/60 border-emerald-500/40"
+                        : "bg-slate-900/70 border-slate-700/60"
+                    }`}>
+                      <Cpu className={`w-4 h-4 ${isSelected ? "text-emerald-400" : "text-cyan-400"}`} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className={`text-xs font-mono font-bold truncate ${isSelected ? "text-emerald-300" : "text-slate-200"}`}>
+                        {model.name}
+                      </div>
+                      <div className="text-[10px] font-mono text-slate-500 mt-1 uppercase tracking-wider">
+                        {model.provider}
+                      </div>
+                    </div>
+                    {model.free && (
+                      <span className="text-[9px] font-mono font-bold text-cyan-300 bg-cyan-500/10 border border-cyan-500/30 px-2 py-0.5 rounded-full flex-shrink-0">
+                        GRATIS
+                      </span>
+                    )}
+                    {isSelected && <Check className="w-4 h-4 text-emerald-400 flex-shrink-0" />}
+                  </button>
+                )
+              })}
             </div>
           </div>
         </div>
