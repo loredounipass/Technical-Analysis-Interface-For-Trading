@@ -668,24 +668,30 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
   // 6. STOCHASTIC RSI (14, 3, 3)
   if (type === "stochRsi") {
     let stochRsiFullData = []
-    if (datos.history && Array.isArray(datos.history.rsiStoch) && datos.history.rsiStoch.length > 0) {
-      stochRsiFullData = datos.history.rsiStoch.map((v, i) => ({
-        name: `${i}`,
-        stochRsi: v,
-      }))
-      if (datos.rsiStoch !== null && datos.rsiStoch !== undefined && stochRsiFullData.length > 0) {
-        stochRsiFullData[stochRsiFullData.length - 1].stochRsi = datos.rsiStoch
+    const stochRsiHistory = datos.history?.rsiStoch
+    if (Array.isArray(stochRsiHistory) && stochRsiHistory.length > 0) {
+      const kSeries = [...stochRsiHistory]
+      if (datos.rsiStoch !== null && datos.rsiStoch !== undefined) {
+        kSeries[kSeries.length - 1] = datos.rsiStoch
       }
+      stochRsiFullData = kSeries.map((value, index) => {
+        const dWindow = kSeries.slice(Math.max(0, index - 2), index + 1)
+        const hasCompleteDWindow = index >= 2 && dWindow.length === 3 && dWindow.every(
+          (v) => v !== null && v !== undefined && Number.isFinite(Number(v))
+        )
+        const d = hasCompleteDWindow
+          ? dWindow.reduce((sum, v) => sum + Number(v), 0) / 3
+          : null
+        return { name: `${index}`, k: value, d }
+      })
     }
     if (stochRsiFullData.length === 0 && datos.rsiStoch !== null && datos.rsiStoch !== undefined) {
-      stochRsiFullData = [
-        { name: "0", stochRsi: datos.rsiStoch },
-        { name: "1", stochRsi: datos.rsiStoch },
-      ]
+      stochRsiFullData = [{ name: "0", k: datos.rsiStoch, d: null }]
     }
     let stochRsiChartData = ensureMinPoints(stochRsiFullData.slice(win.start, win.effEnd))
 
     const rsiStochVal = Number(datos.rsiStoch) || 50
+    const stochRsiDVal = stochRsiFullData[stochRsiFullData.length - 1]?.d
     const isOB = rsiStochVal >= 80
     const isOS = rsiStochVal <= 20
     const statusText = isOB ? "Overbought" : isOS ? "Oversold" : "Neutral"
@@ -719,15 +725,27 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
                 <YAxis domain={[0, 100]} hide={true} />
                 <Tooltip
                   contentStyle={TOOLTIP_STYLE}
-                  formatter={(value) => [`${safeToFixed(value, 2)}`, "Stoch RSI"]}
+                  formatter={(value, name) => [`${safeToFixed(value, 2)}`, name === "d" ? "%D" : "%K"]}
                 />
                 <ReferenceLine y={80} stroke="#ff3b69" strokeDasharray="3 3" strokeOpacity={0.35} />
                 <ReferenceLine y={20} stroke="#00f5c4" strokeDasharray="3 3" strokeOpacity={0.35} />
                 <Line
                   type="monotone"
-                  dataKey="stochRsi"
-                  stroke="#38bdf8"
+                  dataKey="k"
+                  name="%K"
+                  stroke="#00f5c4"
                   strokeWidth={2}
+                  dot={false}
+                  connectNulls={true}
+                  isAnimationActive={false}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="d"
+                  name="%D"
+                  stroke="#ff3b69"
+                  strokeWidth={1.5}
+                  strokeDasharray="2 2"
                   dot={false}
                   connectNulls={true}
                   isAnimationActive={false}
@@ -745,9 +763,11 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
 
         {/* Footer con letras blancas */}
         <div className="flex items-center justify-between pt-2 border-t border-[#142335] text-[10px] font-mono tracking-wider text-slate-300">
-          <span>Oversold: <span className="text-[#00f5c4] font-medium">20</span></span>
-          <span>Current: <span className="text-white font-medium">{safeToFixed(rsiStochVal, 2)}</span></span>
-          <span>Overbought: <span className="text-[#ff3b69] font-medium">80</span></span>
+          <span>%K: <span className="text-[#00f5c4] font-medium">{safeToFixed(rsiStochVal, 2)}</span></span>
+          <span>%D: <span className="text-[#ff3b69] font-medium">
+            {stochRsiDVal === null || stochRsiDVal === undefined ? "—" : safeToFixed(stochRsiDVal, 2)}
+          </span></span>
+          <span>Zone: <span className="text-white font-medium">20 / 80</span></span>
         </div>
       </div>
     )
