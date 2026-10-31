@@ -442,6 +442,118 @@ def compute_fair_value_gaps(highs, lows, closes, times, lookback=200, limit=12):
     return gaps[:limit]
 
 
+# ORDER FLOW EJECUTADO: recibe trades normalizados con side de AGRESOR,
+# price, size y time en ms. El delta es buy quote volume - sell quote volume
+# dentro de la muestra; no se etiqueta como CVD de sesion.
+def compute_order_flow(trades, sample_limit=200):
+    if not trades:
+        return None
+    sample = trades[-sample_limit:]
+    buy_volume = sum(t['price'] * t['size'] for t in sample if t['side'] == 'buy')
+    sell_volume = sum(t['price'] * t['size'] for t in sample if t['side'] == 'sell')
+    total_volume = buy_volume + sell_volume
+    if total_volume <= 0:
+        return None
+
+    delta = buy_volume - sell_volume
+    recent_trades = [{
+        'id': t['id'],
+        'time': t['time'],
+        'side': t['side'],
+        'price': t['price'],
+        'size': t['size'],
+        'quoteVolume': t['price'] * t['size'],
+    } for t in reversed(sample[-25:])]
+    return {
+        'source': 'coinbase_exchange_executed_trades',
+        'sideClassification': 'aggressor_inferred_from_maker_side',
+        'scope': f'latest_{len(sample)}_executed_trades',
+        'tradeCount': len(sample),
+        'buyTradeCount': sum(1 for t in sample if t['side'] == 'buy'),
+        'sellTradeCount': sum(1 for t in sample if t['side'] == 'sell'),
+        'buyVolume': buy_volume,
+        'sellVolume': sell_volume,
+        'delta': delta,
+        'buyPercent': round(buy_volume / total_volume * 100, 1),
+        'deltaPercent': round(delta / total_volume * 100, 1),
+        'windowStart': sample[0]['time'],
+        'windowEnd': sample[-1]['time'],
+        'recentTrades': recent_trades,
+    }
+
+
+# LIQUIDITY SWINGS: swing high/low confirmado con dos velas a cada lado.
+# Buy-side liquidity reside sobre un swing high; sell-side bajo un swing low.
+# Sweep = mecha que cruza el nivel y cierre de vuelta; broken = cierre aceptado
+# al otro lado. Son niveles potenciales de stops, no volumen institucional real.
+def compute_liquidity_swings(highs, lows, closes, times,
+                             lookback=200, limit=12, left=2, right=2):
+    n = len(closes)
+    if n < left + right + 2 or not all(
+        len(series) == n for series in (highs, lows, times)
+    ):
+        return []
+
+    swings = []
+    for i in range(max(left, n - lookback), n - right):
+        neighbors = [k for k in range(i - left, i + right + 1) if k != i]
+        is_swing_high = all(highs[i] > highs[k] for k in neighbors)
+        is_swing_low = all(lows[i] < lows[k] for k in neighbors)
+        candidates = []
+        if is_swing_high:
+            candidates.append(('buy_side', 'swing_high', highs[i]))
+        if is_swing_low:
+            candidates.append(('sell_side', 'swing_low', lows[i]))
+
+        for side, kind, level in candidates:
+            swing = {
+                'id': f'liquidity-{side}-{times[i]}',
+                'side': side,
+                'kind': kind,
+                'price': level,
+                'swingIndex': i,
+                'confirmationIndex': i + right,
+                'formedAt': times[i],
+                'confirmedAt': times[i + right],
+                'status': 'active',
+                'sweptAt': None,
+                'brokenAt': None,
+                'sweepSizePercent': None,
+            }
+            for j in range(i + right + 1, n):
+                if side == 'buy_side':
+                    if closes[j] > level:
+                        swing['status'] = 'broken'
+                        swing['brokenAt'] = times[j]
+                        break
+                    if highs[j] > level and closes[j] <= level:
+                        swing['status'] = 'swept'
+                        swing['sweptAt'] = times[j]
+                        swing['sweepSizePercent'] = round(
+                            (highs[j] - level) / level * 100, 4
+                        ) if level else None
+                        break
+                else:
+                    if closes[j] < level:
+                        swing['status'] = 'broken'
+                        swing['brokenAt'] = times[j]
+                        break
+                    if lows[j] < level and closes[j] >= level:
+                        swing['status'] = 'swept'
+                        swing['sweptAt'] = times[j]
+                        swing['sweepSizePercent'] = round(
+                            (level - lows[j]) / level * 100, 4
+                        ) if level else None
+                        break
+            swings.append(swing)
+
+    priority = {'active': 0, 'swept': 1, 'broken': 2}
+    swings.sort(key=lambda swing: (
+        priority[swing['status']], -swing['confirmationIndex']
+    ))
+    return swings[:limit]
+
+
 # ─────────────────────────────────────────────────────────────────────
 # PIVOT POINTS
 # ─────────────────────────────────────────────────────────────────────

@@ -13,12 +13,12 @@ from indicators import (
     compute_rsi_series, compute_ema_series, compute_macd_series,
     compute_bollinger_series, compute_stoch_series, compute_stoch_rsi_series,
     compute_cci_series, compute_mfi_series, compute_adx_series, compute_pivots,
-    compute_order_blocks, compute_fair_value_gaps,
-    compute_signal_summary, last_non_none, price_decimals,
+    compute_order_blocks, compute_fair_value_gaps, compute_liquidity_swings,
+    compute_order_flow, compute_signal_summary, last_non_none, price_decimals,
 )
 from data_fetchers import (
     fetch_last_price, fetch_klines_and_volume, interval_seconds,
-    fetch_order_book_depth,
+    fetch_order_book_depth, get_order_flow_trades,
 )
 
 logger = logging.getLogger(__name__)
@@ -182,6 +182,8 @@ def build_payload(symbol, interval_str, market, klines, vol_24h=None):
     # Se expone en el mismo payload REST/WebSocket que el resto de indicadores.
     order_blocks = []
     fair_value_gaps = []
+    liquidity_swings = []
+    order_flow = None
     if klines:
         try:
             order_blocks = compute_order_blocks(
@@ -190,8 +192,16 @@ def build_payload(symbol, interval_str, market, klines, vol_24h=None):
             fair_value_gaps = compute_fair_value_gaps(
                 highs, lows, closes, timestamps
             )
+            liquidity_swings = compute_liquidity_swings(
+                highs, lows, closes, timestamps
+            )
         except Exception as e:
             logger.error(f"[TradingData] price action fallo para {symbol}: {e}")
+    if market == 'crypto':
+        try:
+            order_flow = compute_order_flow(get_order_flow_trades(symbol))
+        except Exception as e:
+            logger.warning(f"[TradingData] order flow fallo para {symbol}: {e}")
 
     # Los indicadores se calculan con toda la historia (convergencia exacta);
     # el historial que se envia al frontend se recorta a 500 velas para navegacion profunda
@@ -374,6 +384,8 @@ def build_payload(symbol, interval_str, market, klines, vol_24h=None):
         'depthRaw': depth_raw,
         'orderBlocks': order_blocks,
         'fairValueGaps': fair_value_gaps,
+        'liquiditySwings': liquidity_swings,
+        'orderFlow': order_flow,
         'timeframe': interval_str,
         'history': history
     }

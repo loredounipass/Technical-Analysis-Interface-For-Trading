@@ -212,6 +212,8 @@ def get_trading_system_prompt(indicator_data=None, global_context=None, model_na
         "- Order-book walls are potential liquidity areas, not guaranteed support/resistance; resting orders can be canceled. Do not present them as certain barriers.\n"
         "- ORDER BLOCKS are OHLC-detected candidate price-action zones, not evidence of bank orders or institutional positioning. Respect their status: never treat an invalidated block as active.\n"
         "- FVGs are measured three-candle imbalances. Use their actual open/partial/filled status and fill percentage; never claim that a gap must fill or assign it an unsupported probability.\n"
+        "- LIQUIDITY SWINGS are confirmed 2-candle swing highs (buy-side liquidity pools) and swing lows (sell-side liquidity pools). Respect their status: active, swept (wick pierced the level but closed back), or broken (closed through). They represent potential stop clusters, not guaranteed reversals.\n"
+        "- ORDER FLOW represents executed market trades and aggressor volume delta (taker buys vs taker sells). Do NOT confuse executed order flow with indicator signals or resting limit order book depth.\n"
         "- Never assign a win rate, certainty, or numerical probability unless it is actually supplied or validly calculable from the provided data.\n\n"
         "=== TRADE SETUP & MANDATORY RISK VALIDATION ===\n"
         "- When a trade is requested, provide a conditional setup only if the data supports one: entry or entry zone, confirmation/trigger, invalidation, stop, and logical target(s). "
@@ -233,7 +235,8 @@ def get_trading_system_prompt(indicator_data=None, global_context=None, model_na
         "Assess available depth, spread, and major bid/ask clusters as potential liquidity, including limitations and implications for execution.\n\n"
         "### Desglose Técnico Completo\n"
         "Synthesize the available indicators rather than mechanically repeating them:\n"
-        "- **Estructura & Tendencia:** EMAs (50, 100, 200), recent Price Action, active Order Block candidates, FVG mitigation, and multi-timeframe alignment.\n"
+        "- **Estructura & Tendencia:** EMAs (50, 100, 200), recent Price Action, active Order Block candidates, FVG mitigation, Liquidity Swings, and multi-timeframe alignment.\n"
+        "- **Flujo de Órdenes & Liquidez:** Executed Order Flow delta (taker volume), Order Book depth (Bubble Map), and liquidity pools / swing levels.\n"
         "- **Momentum & Timing:** RSI, Stochastic RSI, Stochastic %K/%D, MACD, CCI, and MFI, emphasizing changes and conflicts.\n"
         "- **Volatilidad & Fuerza:** Bollinger Bands and ADX with +DI/-DI.\n\n"
         "### Niveles Clave (Soporte & Resistencia)\n"
@@ -304,6 +307,14 @@ def get_trading_system_prompt(indicator_data=None, global_context=None, model_na
         if liquidity_walls:
             data_block += f"| Top Bid Liquidity Walls | {liquidity_walls['top_bids']} | Potential bid liquidity; orders may be canceled |\n"
             data_block += f"| Top Ask Liquidity Walls | {liquidity_walls['top_asks']} | Potential ask liquidity; orders may be canceled |\n"
+        of = indicator_data.get('orderFlow')
+        if isinstance(of, dict):
+            data_block += f"| Executed Order Flow | Net Delta: ${_fmt(of.get('delta'))} ({of.get('deltaPercent', 0):+.1f}%) | Aggressor Buy Vol: {of.get('buyPercent', 0)}% ({of.get('tradeCount', 0)} executed trades) |\n"
+        lswings = indicator_data.get('liquiditySwings')
+        if isinstance(lswings, list):
+            act_cnt = sum(1 for s in lswings if s.get('status') == 'active')
+            swp_cnt = sum(1 for s in lswings if s.get('status') == 'swept')
+            data_block += f"| Liquidity Swings | Active: {act_cnt} | Swept: {swp_cnt} | 2L/2R confirmed structural swing high/lows |\n"
         data_block += f"| Last Candle OHLC | O: {_fmt(opens[-1] if opens else None)} H: {_fmt(highs[-1] if highs else None)} L: {_fmt(lows[-1] if lows else None)} C: {_fmt(closes[-1] if closes else None)} | Forming candle |\n"
         data_block += f"| RSI (14) | {_fmt(indicator_data.get('rsi'))} | Momentum Oscillator (OS <30, OB >70) |\n"
         data_block += f"| Stoch RSI (14, 3, 3) | {_fmt(indicator_data.get('rsiStoch'))} | Stochastic RSI (OS <20, OB >80) |\n"
@@ -507,14 +518,21 @@ def _fmt_ts(ms):
 
 
 def _format_price_action_context(indicator_data):
-    """Serializa las zonas reales de price action para el contexto del modelo."""
+    """Serializa las zonas reales de price action, liquidity swings y order flow para el contexto del modelo."""
     order_blocks = indicator_data.get('orderBlocks')
     fair_value_gaps = indicator_data.get('fairValueGaps')
+    liquidity_swings = indicator_data.get('liquiditySwings')
+    order_flow = indicator_data.get('orderFlow')
+    current_price = indicator_data.get('precio')
+
     lines = [
-        "\n=== PRICE ACTION ZONES (REAL OHLC, LATEST 200 CANDLES) ===",
+        "\n=== PRICE ACTION, LIQUIDITY SWINGS & ORDER FLOW (REAL OHLC & EXECUTED TRADES) ===",
         "Order Blocks are candidates, not confirmed institutional orders. FVG fill is measured, never guaranteed.",
+        "Liquidity Swings are confirmed 2L/2R structural swing high/lows (potential stop clusters).",
+        "Order Flow measures executed taker trades (volume delta), distinct from resting order book depth.",
     ]
 
+    # 1. ORDER BLOCKS
     if not isinstance(order_blocks, list):
         lines.append("ORDER BLOCKS: N/A (field not supplied)")
     elif not order_blocks:
@@ -530,6 +548,7 @@ def _format_price_action_context(indicator_data):
                 f"Confirmed: {_fmt_ts(zone.get('confirmationTime'))}"
             )
 
+    # 2. FAIR VALUE GAPS
     if not isinstance(fair_value_gaps, list):
         lines.append("FAIR VALUE GAPS: N/A (field not supplied)")
     elif not fair_value_gaps:
@@ -544,6 +563,78 @@ def _format_price_action_context(indicator_data):
                 f"Filled: {_fmt(gap.get('fillPercent'))}% | "
                 f"Size: {_fmt(gap.get('sizePercent'))}% | Formed: {_fmt_ts(gap.get('formedAt'))}"
             )
+
+    # 3. LIQUIDITY SWINGS (Stop Clusters)
+    if not isinstance(liquidity_swings, list):
+        lines.append("LIQUIDITY SWINGS: N/A (field not supplied)")
+    elif not liquidity_swings:
+        lines.append("LIQUIDITY SWINGS: No swing levels detected in latest 200 candles")
+    else:
+        lines.append("LIQUIDITY SWINGS (2L/2R Swing Confirmation — Potential Stop Clusters):")
+        for swing in liquidity_swings:
+            side_str = "BUY-SIDE (Swing High)" if swing.get('side') == 'buy_side' else "SELL-SIDE (Swing Low)"
+            status = str(swing.get('status', 'N/A')).upper()
+            price_val = swing.get('price')
+
+            dist_str = ""
+            if current_price and price_val:
+                try:
+                    pct = ((float(price_val) - float(current_price)) / float(current_price)) * 100
+                    dist_str = f" | Dist to Spot: {pct:+.2f}%"
+                except Exception:
+                    pass
+
+            extra_info = ""
+            if status == "SWEPT" and swing.get('sweepSizePercent') is not None:
+                extra_info = f" | Sweep Penetration: {swing.get('sweepSizePercent'):.3f}% (pierced & closed inside)"
+            elif status == "BROKEN" and swing.get('brokenAt'):
+                extra_info = f" | Broken: {_fmt_ts(swing.get('brokenAt'))}"
+
+            lines.append(
+                f"- {side_str} | Status: {status} | Level: ${_fmt(price_val)}"
+                f"{dist_str}{extra_info} | Formed: {_fmt_ts(swing.get('formedAt'))}"
+            )
+
+    # 4. EXECUTED ORDER FLOW (Aggressor Trades)
+    if not isinstance(order_flow, dict):
+        lines.append("ORDER FLOW: N/A (only available for crypto / executed trades feed)")
+    else:
+        scope = order_flow.get('scope', 'executed trades')
+        delta = order_flow.get('delta', 0)
+        delta_pct = order_flow.get('deltaPercent', 0)
+        buy_pct = order_flow.get('buyPercent', 0)
+        buy_vol = order_flow.get('buyVolume', 0)
+        sell_vol = order_flow.get('sellVolume', 0)
+        trade_count = order_flow.get('tradeCount', 0)
+        buy_trades = order_flow.get('buyTradeCount', 0)
+        sell_trades = order_flow.get('sellTradeCount', 0)
+        source = order_flow.get('source', 'exchange')
+        side_class = order_flow.get('sideClassification', 'aggressor')
+
+        bias = "NET BUY DELTA (Aggressive Buying Predominance)" if delta > 0 else (
+            "NET SELL DELTA (Aggressive Selling Predominance)" if delta < 0 else "FLAT DELTA"
+        )
+
+        lines.append("EXECUTED ORDER FLOW (REAL TRADES TAPE):")
+        lines.append(
+            f"- Flow State: {bias} | Delta: ${_fmt(delta)} ({delta_pct:+.1f}%)"
+        )
+        lines.append(
+            f"- Volume Split: Buy Vol ${_fmt(buy_vol)} ({buy_pct}%) vs Sell Vol ${_fmt(sell_vol)} ({100 - buy_pct:.1f}%)"
+        )
+        lines.append(
+            f"- Trade Activity: {trade_count} trades ({buy_trades} aggressive buys, {sell_trades} aggressive sells) | Scope: {scope}"
+        )
+        lines.append(
+            f"- Source: {source} (aggressor inferred by inverting Coinbase maker side)"
+        )
+        recent = order_flow.get('recentTrades')
+        if recent and isinstance(recent, list):
+            recent_summary = ", ".join(
+                f"{t.get('side', '?').upper()} {t.get('size', '?')} @ ${_fmt(t.get('price'))}"
+                for t in recent[:6]
+            )
+            lines.append(f"- Recent Prints: {recent_summary}")
 
     return "\n".join(lines) + "\n"
 

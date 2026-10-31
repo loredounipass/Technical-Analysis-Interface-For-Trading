@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 
 import websocket
 
-from data_fetchers import coinbase_product_id
+from data_fetchers import coinbase_product_id, record_order_flow_trade
 
 logger = logging.getLogger(__name__)
 
@@ -123,6 +123,7 @@ class CoinbaseStreamThread:
         symbol = self.product_to_symbol.get(data.get('product_id'))
         if not symbol:
             return
+        record_order_flow_trade(symbol, data)
         try:
             price = float(data['price'])
             size = float(data['size'])
