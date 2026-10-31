@@ -170,7 +170,10 @@ const IndicatorGrid = ({ datos = {} }) => {
                       fontSize: "11px",
                       fontFamily: "ui-monospace, monospace",
                     }}
-                    formatter={(v) => [formatVolume(v), "Volume"]}
+                    formatter={(v) => [
+                      <span style={{ color: "#ffffff" }}>{formatVolume(v)}</span>,
+                      <span style={{ color: "#ffffff" }}>Volume</span>,
+                    ]}
                     labelStyle={{ color: "#ffffff" }}
                     itemStyle={{ color: "#ffffff" }}
                   />

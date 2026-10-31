@@ -229,6 +229,16 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
                   contentStyle={TOOLTIP_STYLE}
                   labelStyle={{ color: "#ffffff" }}
                   itemStyle={{ color: "#ffffff" }}
+                  formatter={(value, name) => {
+                    const formattedValue = safeToFixed(value, 2)
+                    if (name === "hist") {
+                      return [
+                        <span style={{ color: "#ffffff" }}>{formattedValue}</span>,
+                        <span style={{ color: "#ffffff" }}>hist</span>,
+                      ]
+                    }
+                    return [formattedValue, name]
+                  }}
                 />
 
                 {/* Histogram Bars */}
