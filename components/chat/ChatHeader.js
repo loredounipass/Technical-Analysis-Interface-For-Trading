@@ -5,18 +5,28 @@ import { FlaskConical, History, Trash2, Minus, X, SquarePen } from "lucide-react
 
 /**
  * Encabezado superior de la ventana Cyber-Quant:
- * Icono de matraz, título con metadata (v3.0, símbolo, timeframe),
- * estado del activo y controles de ventana.
+ * Icono de matraz, título con símbolo, timeframe y precio actual,
+ * junto a los controles de ventana.
  */
 export default function ChatHeader({
   symbol,
   interval,
+  price,
+  decimals = 2,
   onOpenSidebar,
   onNewChat,
   onClearChat,
   onMinimize,
   onClose,
 }) {
+  const numericPrice = Number(price)
+  const formattedPrice = price !== null && price !== undefined && Number.isFinite(numericPrice)
+    ? numericPrice.toLocaleString("en-US", {
+        minimumFractionDigits: decimals,
+        maximumFractionDigits: decimals,
+      })
+    : "—"
+
   return (
     <>
       <div className="relative px-5 py-3.5 sm:px-6 sm:py-4 bg-[#071116]/50 backdrop-blur-md border-b border-emerald-500/15 flex items-center justify-between z-10">
@@ -33,12 +43,13 @@ export default function ChatHeader({
               <span className="text-white font-mono font-bold tracking-wider text-sm sm:text-base">
                 WOODY AGENT
               </span>
-              <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[10px] font-mono px-2 py-0.5 rounded-full font-semibold">
-                v3.0
-              </span>
               <span className="text-slate-600 font-mono">•</span>
               <span className="text-slate-400 font-mono text-xs">
                 {symbol} @ {interval}
+              </span>
+              <span className="text-slate-600 font-mono">•</span>
+              <span className="text-emerald-300 font-mono text-xs font-semibold">
+                ${formattedPrice}
               </span>
             </div>
 

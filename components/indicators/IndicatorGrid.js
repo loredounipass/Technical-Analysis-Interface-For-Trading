@@ -171,6 +171,8 @@ const IndicatorGrid = ({ datos = {} }) => {
                       fontFamily: "ui-monospace, monospace",
                     }}
                     formatter={(v) => [formatVolume(v), "Volume"]}
+                    labelStyle={{ color: "#ffffff" }}
+                    itemStyle={{ color: "#ffffff" }}
                   />
                   <Bar dataKey="volume" barSize={volBarSize} isAnimationActive={false}>
                     {recentVolumeData.map((entry, index) => (
@@ -204,7 +206,7 @@ const IndicatorGrid = ({ datos = {} }) => {
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-between pt-2 border-t border-[#142335] text-[10px] font-mono tracking-wider text-slate-300">
+          <div className="flex items-center justify-between pt-2 border-t border-[#142335] text-[10px] font-mono tracking-wider text-white">
             <span>
               Raw Vol:{" "}
               <span className="text-white font-medium">

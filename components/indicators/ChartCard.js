@@ -225,7 +225,11 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
               <ComposedChart data={macdChartData} margin={{ top: 5, right: 10, left: 10, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="2 2" stroke="#132235" vertical={false} />
                 <ReferenceLine y={0} stroke="#1f3752" />
-                <Tooltip contentStyle={TOOLTIP_STYLE} />
+                <Tooltip
+                  contentStyle={TOOLTIP_STYLE}
+                  labelStyle={{ color: "#ffffff" }}
+                  itemStyle={{ color: "#ffffff" }}
+                />
 
                 {/* Histogram Bars */}
                 <Bar dataKey="hist" barSize={histBarSize} isAnimationActive={false}>
@@ -271,7 +275,7 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
         {renderNavControls()}
 
         {/* Footer con letras blancas */}
-        <div className="flex items-center justify-between pt-2 border-t border-[#142335] text-[10px] font-mono tracking-wider text-slate-300">
+        <div className="flex items-center justify-between pt-2 border-t border-[#142335] text-[10px] font-mono tracking-wider text-white">
           <span>
             Histogram:{" "}
             <span className={histVal >= 0 ? "text-[#00f5c4] font-medium" : "text-[#ff3b69] font-medium"}>
