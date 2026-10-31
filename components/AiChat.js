@@ -99,7 +99,6 @@ export default function AiChat({ symbol, datos, interval = "15m", market = "cryp
         <ChatMessageList
           chatContainerRef={chat.chatContainerRef}
           onScroll={chat.handleScroll}
-          sessionTime={chat.sessionTime}
           messages={chat.messages}
           symbol={symbol}
           interval={interval}

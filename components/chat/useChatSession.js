@@ -37,7 +37,6 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [typingText, setTypingText] = useState("")
   const [isTyping, setIsTyping] = useState(false)
-  const [sessionTime, setSessionTime] = useState("18:12:02")
 
   const typingRef = useRef(null)
   const abortRef = useRef(null)
@@ -508,7 +507,6 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
     setIsSidebarOpen,
     typingText,
     isTyping,
-    sessionTime,
     marketTelemetry,
     inputRef,
     chatContainerRef,

@@ -49,7 +49,7 @@ export default function ChatHeader({
               </span>
               <span className="text-slate-600 font-mono">•</span>
               <span className="text-emerald-300 font-mono text-xs font-semibold">
-                ${formattedPrice}
+                PRECIO ${formattedPrice}
               </span>
             </div>
 

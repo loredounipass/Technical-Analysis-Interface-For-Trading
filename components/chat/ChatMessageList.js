@@ -105,7 +105,6 @@ function AgentPanel({ statusLabel, statusPulse, steps, children }) {
 export default function ChatMessageList({
   chatContainerRef,
   onScroll,
-  sessionTime,
   messages,
   symbol,
   interval,
@@ -122,13 +121,6 @@ export default function ChatMessageList({
       className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5 space-y-5 cyber-scrollbar relative z-10"
       style={{ background: "rgba(4, 9, 14, 0.25)" }}
     >
-      {/* Píldora de Sesión Iniciada centrada */}
-      <div className="flex justify-center my-1">
-        <div className="px-3.5 py-1 rounded-full bg-slate-900/90 border border-slate-800 text-[10px] font-mono text-slate-400 tracking-wider">
-          SESIÓN INICIADA • {sessionTime} UTC • SERVIDOR SINCRONIZADO
-        </div>
-      </div>
-
       {/* Lista de Mensajes */}
       {messages.map((msg, idx) => {
         if (msg.role === "user") {
