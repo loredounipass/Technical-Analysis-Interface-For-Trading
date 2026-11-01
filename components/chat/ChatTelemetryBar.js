@@ -41,13 +41,6 @@ export default function ChatTelemetryBar({ buyerPercent, trendLabel, orderBookLi
           VOLUMEN COMPRADOR: <strong className="text-white font-bold">{buyerPercent}</strong>
         </span>
       </div>
-
-      {/* Lado Derecho: Píldora de Tendencia de Mercado */}
-      <div>
-        <span className="border border-emerald-500/40 bg-emerald-950/40 text-emerald-400 text-[10px] sm:text-[11px] font-semibold px-2.5 py-0.5 rounded tracking-wider uppercase">
-          TENDENCIA: {trendLabel}
-        </span>
-      </div>
     </div>
   )
 }

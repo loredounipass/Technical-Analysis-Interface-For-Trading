@@ -220,6 +220,11 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
   useEffect(() => {
     return () => {
       if (typingRef.current) clearInterval(typingRef.current)
+      // Aborta el stream SSE en vuelo al desmontar (navegar fuera del chat,
+      // cerrar el terminal): sin esto el fetch sigue corriendo hasta terminar,
+      // gastando cuota de NVIDIA/SerpApi y dejando lecturas sobre un componente
+      // ya desmontado. El catch de sendMessage trata AbortError de forma limpia.
+      abortRef.current?.abort()
     }
   }, [])
 
