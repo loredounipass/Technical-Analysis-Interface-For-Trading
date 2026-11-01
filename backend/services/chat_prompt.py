@@ -327,7 +327,8 @@ def get_trading_system_prompt(indicator_data=None, global_context=None, model_na
             base += (
                 "=== WEB SEARCH TOOL (ENABLED) ===\n"
                 "Web search is ON and you may call `web_search` for current external info, news, or market chatter when the user asks. "
-                "For social reaction/memes use source='reddit' or source='x'. Keep it short and conversational; when you actually search, cite the source with an inline markdown link [Title](URL) and its date.\n\n"
+                "For social reaction/memes use source='reddit' or source='x'. Keep it short and conversational; when you actually search, cite the source with an inline markdown link [Title](URL) and its date. "
+                "If the result has `widened: true` or a `note`, say briefly that the specific social source had no fresh posts and the search was widened to the general web; do not present those general-web results as if they came from that source.\n\n"
             )
         return base
 
@@ -373,7 +374,8 @@ def get_trading_system_prompt(indicator_data=None, global_context=None, model_na
             "When you use it, ALWAYS cite with inline markdown links taken VERBATIM from the results, e.g. [Título](https://...), placed next to each claim and including its date. Keep every PRICE/indicator claim exclusive to the live terminal data, and clearly separate verified web facts from your own interpretation. "
             "End the answer with a short 'Fuentes' line listing those markdown links (one per source). Only link URLs that web_search actually returned; never invent, guess, or reuse URLs from memory. "
             "For official announcements, community reaction, on-chain/social metrics, hype or memes, call web_search with source='reddit' or source='x' (use 'news' for press, 'all' for general web); you may run more than one search with different sources to cross-check. "
-            "If the search returns 0 results, say the search found nothing (and suggest trying different keywords) instead of claiming you have no internet access.\n\n"
+            "If the search returns 0 results, say the search found nothing (and suggest trying different keywords) instead of claiming you have no internet access. "
+            "The tool result may include `widened` and `note` fields: if `widened` is true or a `note` appears, the requested source filter (e.g. 'reddit'/'x') returned nothing and the search was automatically widened to the general web — you MUST tell the user the specific source had no results and these come from the general web, and you MUST NOT present them as that source's content.\n\n"
         )
     base += personality
     base += (

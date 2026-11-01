@@ -1,12 +1,17 @@
-"""Búsqueda web para el agente de chat.
+"""Búsqueda web para el agente de chat usando DuckDuckGo (sin API key).
 
-Provider principal: Google Custom Search JSON API (requiere GOOGLE_CSE_API_KEY
-+ GOOGLE_CSE_CX en backend/.env). Fallback automático: DuckDuckGo sin API key
-(vqd handshake + i.js + lite HTML + POST), sólo si Google no está configurado
-o devuelve error de cuota/red.
+Estrategia por búsqueda (ordenado por costo de requests):
+  1) POST lite/html  -> 1 request, sin handshake.
+  2) i.js JSON       -> usa token vqd cacheado (mejor calidad).
+  3) lite+vqd HTML   -> alternativa HTML con la misma sesión.
+
+Mejoras de robustez: sesión persistente (cookie jar compartida), cache global
+de vqd (5 min), throttle para no provocar el bot-check, filtro de URLs basura
+(analytics/twitter tracking, redirects de publicidad) y auto-ampliación: si un
+filtro `source` (reddit/x) rinde 0, reintenta sin `site:` y marca `widened`.
 
 Interfaz estable: web_search(query, max_results, time_range, source) ->
-  { query, count, results: [{title, url, snippet}], provider, [error], [widened] }
+  { query, count, results: [{title, url, snippet}], provider, [error], [widened], [note] }
 
 `source`: 'all' | 'news' | 'reddit' | 'x'. `time_range`: 'day'|'week'|'month'|'year'.
 Nunca lanza excepción al caller: devuelve count=0 con 'error' en su lugar.
@@ -15,52 +20,64 @@ Nunca lanza excepción al caller: devuelve count=0 con 'error' en su lugar.
 import html as _html
 import json
 import logging
-import os
 import re
 import threading
 import time
 from http.cookiejar import CookieJar
-from urllib.error import HTTPError
 from urllib.parse import unquote, urlencode, urlsplit, parse_qs
-from urllib.request import Request, build_opener, HTTPCookieProcessor, HTTPHandler, urlopen
+from urllib.request import Request, build_opener, HTTPCookieProcessor, HTTPHandler
 
 logger = logging.getLogger(__name__)
-
-_TIMEOUT = 8
-_MAX_RESULTS_CAP = 10
 
 _UA = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
     "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
 )
+_TIMEOUT = 8
+_MAX_RESULTS_CAP = 10
 
-# ─── Config: Google CSE ──────────────────────────────────────────────────────
-_GOOGLE_API_KEY = (os.environ.get("GOOGLE_CSE_API_KEY") or "").strip()
-_GOOGLE_CX = (os.environ.get("GOOGLE_CSE_CX") or "").strip()
-_GOOGLE_ENDPOINT = "https://www.googleapis.com/customsearch/v1"
-_GOOGLE_TIMEOUT = 10
-_HAS_GOOGLE = bool(_GOOGLE_API_KEY and _GOOGLE_CX)
+logger.info("[WebSearch] provider=duckduckgo")
 
-if _HAS_GOOGLE:
-    logger.info(
-        f"[WebSearch] provider=google (cx={_GOOGLE_CX[:8]}…, "
-        f"key={_GOOGLE_API_KEY[:6]}…{_GOOGLE_API_KEY[-4:]})"
-    )
-else:
-    logger.info("[WebSearch] provider=duckduckgo (GOOGLE_CSE_* no configurados)")
+# --- Session persistente + cache global de vqd -------------------------------
+# Un unico opener con cookie jar compartido entre todas las busquedas. Reduce
+# la probabilidad de que DDG sirva el desafio anti-bot (HTTP 202/403).
+_OPENER_LOCK = threading.Lock()
+_OPENER = None
 
-# ─── Params / filtros ────────────────────────────────────────────────────────
-# Google `dateRestrict` usa una letra seguida de optional count; 'd'/'w'/'m'/'y'
-# sin prefijo significan "en las ultimas 24h / semana / mes / anio".
-_GOOGLE_DF = {
+
+def _get_opener():
+    global _OPENER
+    with _OPENER_LOCK:
+        if _OPENER is None:
+            _OPENER = build_opener(HTTPCookieProcessor(CookieJar()), HTTPHandler())
+        return _OPENER
+
+
+_VQD_LOCK = threading.Lock()
+_VQD_STATE = {"token": None, "home_url": None, "ts": 0.0}
+_VQD_TTL = 300.0  # 5 minutos
+
+# --- Throttle global: espaciar requests para no provocar bot-check -----------
+_THROTTLE_LOCK = threading.Lock()
+_last_call = [0.0]
+_MIN_INTERVAL = 1.2
+
+
+def _wait_slot():
+    with _THROTTLE_LOCK:
+        wait = _MIN_INTERVAL - (time.monotonic() - _last_call[0])
+        if wait > 0:
+            time.sleep(wait)
+        _last_call[0] = time.monotonic()
+
+
+# --- Params / filtros --------------------------------------------------------
+_DF_MAP = {
     "day": "d", "d": "d",
     "week": "w", "w": "w",
     "month": "m", "mo": "m",
     "year": "y", "y": "y",
 }
-
-# DuckDuckGo `df` (mismo vocabulario).
-_DD_DF = dict(_GOOGLE_DF)
 
 _SOURCE_MAP = {
     "reddit": "site:reddit.com",
@@ -107,119 +124,6 @@ def _resolve(href):
     return unquote(uddg) if uddg else href
 
 
-# ═══════════════════════════════════════════════════════════════════════════
-# GOOGLE CUSTOM SEARCH JSON API (primary)
-# ═══════════════════════════════════════════════════════════════════════════
-def _google_search(query_text, n, df=None):
-    """Una sola request REST. Devuelve (results_list, err_str_or_None).
-
-    results_list=None -> fallo de red/auth/quota (caller puede hacer fallback).
-    results_list=[]   -> Google respondio OK pero sin items (no fallback).
-    """
-    params = {"key": _GOOGLE_API_KEY, "cx": _GOOGLE_CX, "q": query_text, "num": str(n)}
-    if df:
-        params["dateRestrict"] = df
-    url = _GOOGLE_ENDPOINT + "?" + urlencode(params)
-    req = Request(url, headers={"User-Agent": _UA, "Accept": "application/json"})
-    try:
-        with urlopen(req, timeout=_GOOGLE_TIMEOUT) as resp:
-            raw = resp.read().decode("utf-8", "replace")
-    except HTTPError as e:
-        try:
-            body = e.read().decode("utf-8", "replace")
-            err_data = json.loads(body).get("error", {})
-            msg = err_data.get("message") or f"HTTP {e.code}"
-        except Exception:
-            msg = f"HTTP {e.code}"
-        logger.warning(f"[WebSearch/Google] {query_text[:40]!r} -> {msg}")
-        return None, msg
-    except Exception as e:
-        logger.warning(f"[WebSearch/Google] network error: {e}")
-        return None, str(e)
-
-    try:
-        data = json.loads(raw)
-    except (json.JSONDecodeError, ValueError):
-        return None, "invalid json"
-
-    if "error" in data:
-        err = data.get("error") or {}
-        msg = err.get("message", "google api error")
-        status = err.get("status", "")
-        logger.warning(f"[WebSearch/Google] api error {status}: {msg}")
-        return None, msg
-
-    items = data.get("items") or []
-    out = []
-    for it in items[:n]:
-        title = _clean(it.get("title", ""))
-        url_r = it.get("link", "") or ""
-        snippet = _clean(it.get("snippet", ""))
-        if not title or not url_r or _is_junk(url_r):
-            continue
-        out.append({"title": title, "url": url_r, "snippet": snippet})
-    return out, None
-
-
-def _web_search_google(query, n, df, src_key, site):
-    """Ruta Google con auto-widening si el filtro `site:` no dio nada."""
-    filtered = f"{query} {site}".strip() if site else query
-    results, err = _google_search(filtered, n, df)
-
-    if results is None:
-        # Error (cuota, auth, red) -> se cae a DDG desde el caller.
-        return None, err, False
-
-    if not results and site:
-        # Reintentar sin el site: operator (el mismo problema de indexado que
-        # teniamos con DDG en X, pero Google lo hace mejor, asi que raramente
-        # pasa; igual cubrimos el caso).
-        widened_results, werr = _google_search(query, n, df)
-        if widened_results:
-            logger.info(
-                f"[WebSearch/Google] '{query[:40]}' widened (site filter '{src_key}' dio 0)"
-            )
-            return widened_results, None, True
-        if widened_results is None:
-            return None, werr, False
-
-    return results, None, False
-
-
-# ═══════════════════════════════════════════════════════════════════════════
-# DUCKDUCKGO (fallback / sin API key)
-# ═══════════════════════════════════════════════════════════════════════════
-# Session persistente + cache global de vqd para reducir handshakes.
-_OPENER_LOCK = threading.Lock()
-_OPENER = None
-
-
-def _get_opener():
-    global _OPENER
-    with _OPENER_LOCK:
-        if _OPENER is None:
-            _OPENER = build_opener(HTTPCookieProcessor(CookieJar()), HTTPHandler())
-        return _OPENER
-
-
-_VQD_LOCK = threading.Lock()
-_VQD_STATE = {"token": None, "home_url": None, "ts": 0.0}
-_VQD_TTL = 300.0
-
-# Throttle global: espaciar requests para no provocar bot-check de DDG.
-_THROTTLE_LOCK = threading.Lock()
-_last_call = [0.0]
-_MIN_INTERVAL = 1.2
-
-
-def _wait_slot():
-    with _THROTTLE_LOCK:
-        wait = _MIN_INTERVAL - (time.monotonic() - _last_call[0])
-        if wait > 0:
-            time.sleep(wait)
-        _last_call[0] = time.monotonic()
-
-
 def _get(opener, url, referer="https://duckduckgo.com/"):
     req = Request(url, headers={
         "User-Agent": _UA,
@@ -231,6 +135,7 @@ def _get(opener, url, referer="https://duckduckgo.com/"):
         return resp.read().decode("utf-8", "replace")
 
 
+# --- vqd handshake (con cache global) ----------------------------------------
 def _fetch_vqd(opener, sample_query="Ethereum"):
     params = {"q": sample_query, "kl": "wt-wt"}
     url = "https://duckduckgo.com/?" + urlencode(params)
@@ -246,6 +151,7 @@ def _fetch_vqd(opener, sample_query="Ethereum"):
 
 
 def _ensure_vqd():
+    """Devuelve el vqd cacheado; refresca si expiró."""
     with _VQD_LOCK:
         if _VQD_STATE["token"] and (time.time() - _VQD_STATE["ts"]) < _VQD_TTL:
             return _VQD_STATE["token"], _VQD_STATE["home_url"]
@@ -266,6 +172,7 @@ def _invalidate_vqd():
         _VQD_STATE["ts"] = 0.0
 
 
+# --- Methods ------------------------------------------------------------------
 def _try_ijs(opener, search_query, vqd, home_url, n, df=None):
     params = {"q": search_query, "l": "wt-wt", "o": "json",
               "vqd": vqd, "f": ",,,", "no_html": "1"}
@@ -358,6 +265,7 @@ def _parse_ddg_html(page, n):
     return results
 
 
+# --- Pipeline ----------------------------------------------------------------
 def _ddg_pipeline(query_text, n, df):
     """POST barato primero, luego vqd + i.js + lite+vqd si hace falta."""
     opener = _get_opener()
@@ -374,38 +282,24 @@ def _ddg_pipeline(query_text, n, df):
         results = _try_lite_vqd(opener, query_text, vqd, home_url, n, df)
         if results:
             return results, "lite+vqd"
+        # vqd pudo quedar invalido (nos bot-chequearon), refrescar proxima vez.
         _invalidate_vqd()
 
     return [], None
-
-
-def _web_search_ddg(query, n, df, src_key, site):
-    filtered = f"{query} {site}".strip() if site else query
-    _wait_slot()
-    results, method = _ddg_pipeline(filtered, n, df)
-
-    widened = False
-    if not results and site:
-        _wait_slot()
-        results, method = _ddg_pipeline(query, n, df)
-        if results:
-            widened = True
-            logger.info(f"[WebSearch/DDG] '{query[:40]}' widened (site filter dio 0)")
-
-    return results, method, widened
 
 
 # ═══════════════════════════════════════════════════════════════════════════
 # Public API
 # ═══════════════════════════════════════════════════════════════════════════
 def web_search(query, max_results=6, time_range=None, source=None):
-    """Busca en la web. Google CSE si esta configurado, DDG como fallback.
+    """Busca en DuckDuckGo (sin API key).
 
     source: 'reddit'|'x'|'news'|'all'. time_range: 'day'|'week'|'month'|'year'.
     Nunca lanza: devuelve count=0 con 'error' en caso de bloqueo/fallo.
 
-    Si `source` rinde 0 resultados utiles, reintenta sin el filtro `site:` y
-    marca `widened=True` en la respuesta.
+    Si `source` rinde 0 resultados utiles (DDG no indexa bien ciertos dominios,
+    sobre todo X/Twitter), reintenta sin el filtro `site:` y marca `widened=True`
+    + `note` para que el modelo y la UI informen honestamente al usuario.
     """
     query = (query or "").strip()
     if not query:
@@ -419,33 +313,21 @@ def web_search(query, max_results=6, time_range=None, source=None):
 
     src_key = str(source or "all").lower()
     site = _SOURCE_MAP.get(src_key, "")
-    df = _GOOGLE_DF.get(str(time_range or "").lower()) if _HAS_GOOGLE else _DD_DF.get(str(time_range or "").lower())
+    df = _DF_MAP.get(str(time_range or "").lower())
 
-    # 1) Google como provider principal si esta configurado.
-    if _HAS_GOOGLE:
-        results, err, widened = _web_search_google(query, n, df, src_key, site)
-        if results is not None:
-            if results:
-                logger.info(
-                    f"[WebSearch] '{query[:40]}' -> {len(results)} via google"
-                    + (" (widened)" if widened else "")
-                )
-                out = {"query": query, "count": len(results),
-                       "results": results, "provider": "google"}
-                if widened:
-                    out["widened"] = True
-                    out["widened_reason"] = f"sin resultados con filtro '{src_key}'"
-                return out
-            # Google respondio OK pero 0 items (y no hay site filter, o widening
-            # ya se intento): devolver vacio sin caer a DDG.
-            logger.info(f"[WebSearch] '{query[:40]}' -> 0 via google (no error)")
-            return {"query": query, "count": 0, "results": [], "provider": "google",
-                    "error": "sin resultados"}
-        # Google fallo (quota/auth/red) -> fallback DDG.
-        logger.info(f"[WebSearch] google unavailable ({err}), usando DDG fallback")
+    filtered = f"{query} {site}".strip() if site else query
+    _wait_slot()
+    results, method = _ddg_pipeline(filtered, n, df)
 
-    # 2) DuckDuckGo (fallback automatico, o provider unico si no hay Google).
-    results, method, widened = _web_search_ddg(query, n, df, src_key, site)
+    # Si el filtro site: no dio nada, reintenta sin el.
+    widened = False
+    if not results and site:
+        _wait_slot()
+        results, method = _ddg_pipeline(query, n, df)
+        if results:
+            widened = True
+            logger.info(f"[WebSearch] '{query[:40]}' widened (site filter '{src_key}' dio 0)")
+
     if results:
         logger.info(
             f"[WebSearch] '{query[:40]}' -> {len(results)} via ddg:{method}"
@@ -456,8 +338,13 @@ def web_search(query, max_results=6, time_range=None, source=None):
         if widened:
             out["widened"] = True
             out["widened_reason"] = f"sin resultados con filtro '{src_key}'"
+            out["note"] = (
+                f"AVISO: el filtro source='{src_key}' no devolvio resultados y la busqueda "
+                f"se AMPLIO a web general via DuckDuckGo. Los resultados NO son de '{src_key}'. "
+                f"Informalo al usuario."
+            )
         return out
 
-    logger.info(f"[WebSearch] '{query[:40]}' -> 0 results (todos los metodos)")
+    logger.info(f"[WebSearch] '{query[:40]}' -> 0 results")
     return {"query": query, "count": 0, "results": [],
             "provider": "duckduckgo", "error": "DDG bot-check o búsqueda vacía"}

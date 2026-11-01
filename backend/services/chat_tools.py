@@ -28,7 +28,8 @@ def _run_tool_call(fn_name, args, *, prompt, all_sessions, current_session_id):
             source=args.get("source"),
         )
         meta = {"tool": "web_search", "query": query, "source": args.get("source") or "all",
-                "found": result.get("count", 0), "results": result.get("results", [])}
+                "found": result.get("count", 0), "results": result.get("results", []),
+                "provider": result.get("provider"), "widened": bool(result.get("widened"))}
     else:
         result = {"error": f"herramienta desconocida: {fn_name}"}
         meta = {"tool": fn_name, "found": 0}

@@ -350,7 +350,9 @@ def nvidia_chat_stream(
                 tools_used.append(meta)
 
                 if fn_name == "web_search":
-                    yield {"type": "tool", "name": "web_search", "query": query, "source": src, "found": result.get("count", 0), "results": result.get("results", [])}
+                    yield {"type": "tool", "name": "web_search", "query": query, "source": src, "found": result.get("count", 0), "results": result.get("results", []), "provider": result.get("provider"), "widened": bool(result.get("widened"))}
+                    if result.get("widened"):
+                        yield {"type": "thought", "chunk": f"\n[\u26a0\ufe0f Sin resultados con filtro '{src}'; busqueda ampliada a web general via {result.get('provider') or 'web'}]\n"}
                 else:
                     yield {"type": "tool", "query": query, "found": result.get("found_records", 0)}
 

@@ -252,9 +252,11 @@ export default function ChatMessageList({
                   }
                 })
               )
-              const lastWebQuery = web.length ? web[web.length - 1].query : ""
+              const lastWeb = web.length ? web[web.length - 1] : null
+              const lastWebQuery = lastWeb ? lastWeb.query : ""
               const SRC_LABELS = { reddit: "Reddit", x: "X / Twitter", twitter: "X / Twitter", news: "Noticias", all: "" }
-              const lastSrc = web.length ? SRC_LABELS[(web[web.length - 1].source || "all").toLowerCase()] || "" : ""
+              const lastSrc = lastWeb ? SRC_LABELS[(lastWeb.source || "all").toLowerCase()] || "" : ""
+              const lastWidened = !!(lastWeb && lastWeb.widened)
               return (
                 <>
                   {mem.length > 0 && (
@@ -277,7 +279,9 @@ export default function ChatMessageList({
                     <div className="mb-2.5 rounded-lg border border-cyan-500/25 bg-[#071218]/70 p-2.5 shadow-[0_0_10px_rgba(34,211,238,0.08)]">
                       <div className="flex items-center gap-1.5 mb-2 text-[10px] font-mono font-bold uppercase tracking-wider text-cyan-300">
                         <Globe className="w-3.5 h-3.5" />
-                        <span>Fuentes{lastSrc ? ` · ${lastSrc}` : " de la web"}{lastWebQuery ? ` · ${lastWebQuery}` : ""}</span>
+                        <span>
+                          Fuentes{lastSrc ? ` · ${lastSrc}${lastWidened ? " (sin resultados → web general)" : ""}` : " de la web"}{lastWebQuery ? ` · ${lastWebQuery}` : ""}
+                        </span>
                       </div>
                       <div className="flex flex-col gap-1">
                         {sources.map((s, i) => (
