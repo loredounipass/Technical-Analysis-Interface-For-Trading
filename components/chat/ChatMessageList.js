@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useMemo, useState } from "react"
+import React, { useEffect, useMemo, useState, useRef } from "react"
 import { User, CheckCircle2, Circle, Bot, ChevronDown, ChevronUp, Brain } from "lucide-react"
 import { renderMarkdown } from "./MarkdownRenderer"
 import DiagnosticCard from "./DiagnosticCard"
@@ -118,6 +118,19 @@ export default function ChatMessageList({
   isThinking,
 }) {
   const intervalLabel = INTERVAL_LABELS[interval] || interval
+  const thoughtBoxRef = useRef(null)
+
+  // Auto-scroll reactivo en tiempo real mientras el modelo razona
+  useEffect(() => {
+    if (streamingThought) {
+      if (thoughtBoxRef.current) {
+        thoughtBoxRef.current.scrollTop = thoughtBoxRef.current.scrollHeight
+      }
+      if (chatContainerRef?.current) {
+        chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight
+      }
+    }
+  }, [streamingThought, chatContainerRef])
 
   return (
     <div
@@ -286,7 +299,10 @@ export default function ChatMessageList({
             </div>
             <div className="flex-1 min-w-0">
               {streamingThought ? (
-                <div className="text-xs sm:text-[13px] font-mono leading-relaxed text-slate-200 max-h-40 overflow-y-auto cyber-scrollbar pr-2 whitespace-pre-wrap break-words">
+                <div
+                  ref={thoughtBoxRef}
+                  className="text-xs sm:text-[13px] font-mono leading-relaxed text-slate-200 max-h-48 sm:max-h-56 overflow-y-auto cyber-scrollbar pr-2 whitespace-pre-wrap break-words"
+                >
                   <span className="text-[#00f5c4] font-bold mr-2 select-none animate-pulse">›</span>
                   <span>{streamingThought}</span>
                   <span className="inline-block w-1.5 h-3.5 ml-1 bg-[#00f5c4] animate-pulse align-middle" />

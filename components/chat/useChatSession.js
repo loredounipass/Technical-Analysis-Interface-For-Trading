@@ -207,7 +207,7 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
     if (!isAutoScrollPausedRef.current) {
       container.scrollTo({ top: container.scrollHeight, behavior: "auto" })
     }
-  }, [messages, typingText])
+  }, [messages, typingText, streamingThought])
 
   useEffect(() => {
     return () => {
