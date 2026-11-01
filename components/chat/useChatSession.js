@@ -29,7 +29,7 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
   const [selectedModel, setSelectedModel] = useState(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("trading_terminal_model")
-      if (saved && ["nvidia-nemotron", "meta-muse", "google-diffusiongemma"].includes(saved)) {
+      if (saved && ["nvidia-nemotron", "nvidia-nemotron-bolt", "nvidia-nemotron-ultra", "meta-muse", "google-diffusiongemma"].includes(saved)) {
         return saved
       }
     }
@@ -187,6 +187,8 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
       } catch (e) {
         setModels([
           { key: "nvidia-nemotron", name: "Nemotron 3 Nano Omni", provider: "NVIDIA", free: true },
+          { key: "nvidia-nemotron-bolt", name: "Nemotron 3.5 Bolt E4B", provider: "NVIDIA", free: true },
+          { key: "nvidia-nemotron-ultra", name: "Nemotron 3 Ultra 550B", provider: "NVIDIA", free: true },
           { key: "meta-muse", name: "Muse Glimmer 30B", provider: "Meta", free: true },
           { key: "google-diffusiongemma", name: "DiffusionGemma 26B", provider: "Google", free: true },
         ])

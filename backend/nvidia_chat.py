@@ -96,6 +96,20 @@ AVAILABLE_MODELS = {
         "free": True,
         "timeout": 180,
     },
+    "nvidia-nemotron-bolt": {
+        "id": "nvidia/nemotron-3.5-bolt-e4b",
+        "name": "Nemotron 3.5 Bolt E4B",
+        "provider": "NVIDIA",
+        "free": True,
+        "timeout": 180,
+    },
+    "nvidia-nemotron-ultra": {
+        "id": "nvidia/nemotron-3-ultra-550b-a55b",
+        "name": "Nemotron 3 Ultra 550B",
+        "provider": "NVIDIA",
+        "free": True,
+        "timeout": 180,
+    },
     "meta-muse": {
         "id": "meta/muse-glimmer-30b",
         "name": "Muse Glimmer 30B",
