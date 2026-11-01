@@ -76,7 +76,7 @@ export default function PriceCard({
   const pctFormatted = `${isPositive ? "+" : ""}${pctChange.toFixed(2)}%`
 
   return (
-    <div className="synapse-card p-4 relative overflow-hidden flex flex-col justify-between min-h-[160px] group transition-all duration-300">
+    <div className="synapse-card p-5 relative overflow-hidden flex flex-col justify-between min-h-[200px] group transition-all duration-300">
       {/* Top row: CURRENT PRICE + LIVE FEED badge | HIGH 24H */}
       <div className="flex items-center justify-between text-[11px] font-mono tracking-wider mb-2">
         <div className="flex items-center gap-2">
@@ -118,7 +118,7 @@ export default function PriceCard({
         </div>
 
         {/* Right sparkline chart */}
-        <div className="sm:col-span-5 h-[55px] w-full relative">
+        <div className="sm:col-span-5 h-[70px] w-full relative">
           {priceChartData.length > 1 ? (
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={priceChartData} margin={{ top: 2, right: 2, left: 2, bottom: 2 }}>
