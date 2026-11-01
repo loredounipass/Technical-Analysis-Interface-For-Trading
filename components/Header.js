@@ -1,7 +1,8 @@
 "use client"
 
-import { ArrowLeftRight, Newspaper, Activity, Diamond } from "lucide-react"
-import { useRouter } from "next/navigation"
+import { useState, useEffect } from "react"
+import { ArrowLeftRight, Newspaper, Activity, Diamond, LayoutDashboard } from "lucide-react"
+import { useRouter, usePathname } from "next/navigation"
 
 export default function Header({
   moneda,
@@ -13,12 +14,57 @@ export default function Header({
   time = "",
 }) {
   const router = useRouter()
+  const pathname = usePathname()
+  const isNewsPage = pathname === "/news"
+
+  const [activeAsset, setActiveAsset] = useState(moneda)
+  const [currentTime, setCurrentTime] = useState(time)
+
+  useEffect(() => {
+    if (moneda) {
+      setActiveAsset(moneda)
+    } else {
+      try {
+        const raw = window.localStorage.getItem("woody-terminal-asset")
+        if (raw) {
+          const parsed = JSON.parse(raw)
+          if (parsed && parsed.symbol) setActiveAsset(parsed)
+        }
+      } catch (e) {}
+    }
+  }, [moneda])
+
+  useEffect(() => {
+    if (time) {
+      setCurrentTime(time)
+    } else {
+      const updateTime = () => {
+        const now = new Date()
+        setCurrentTime(now.toLocaleTimeString("en-US", { hour12: false, timeZone: "America/Chicago" }))
+      }
+      updateTime()
+      const interval = setInterval(updateTime, 1000)
+      return () => clearInterval(interval)
+    }
+  }, [time])
+
+  const handleCambiarMoneda = () => {
+    if (onCambiarMoneda) {
+      onCambiarMoneda()
+    } else {
+      try {
+        window.localStorage.removeItem("woody-terminal-asset")
+      } catch (e) {}
+      router.push("/")
+    }
+  }
+
   const timeframes = ["1m", "5m", "15m", "1h", "4h", "1d"]
 
   // Par formateado con slash: ETHUSDT -> ETH/USDT (stocks quedan igual)
-  const rawSymbol = moneda?.symbol || "ETHUSDT"
+  const rawSymbol = activeAsset?.symbol || "ETHUSDT"
   const pairLabel =
-    moneda?.market === "stock"
+    activeAsset?.market === "stock"
       ? rawSymbol
       : rawSymbol.includes("/")
         ? rawSymbol
@@ -29,19 +75,22 @@ export default function Header({
       <div className="max-w-[1600px] mx-auto flex flex-wrap items-center justify-between gap-y-2.5 gap-x-3 text-xs font-mono">
         {/* Left: Brand + Status + Coin badge */}
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-          {/* Brand */}
-          <div className="flex items-center gap-2 pr-1">
-            <div className="w-6 h-6 rounded-md bg-[#00f5c4]/10 border border-[#00f5c4]/40 flex items-center justify-center text-[#00f5c4] shadow-[0_0_10px_rgba(0,245,196,0.25)]">
-              <Activity className="w-3.5 h-3.5 animate-pulse" />
+          {/* Brand - Slightly larger logo and title */}
+          <div
+            onClick={() => router.push("/dashboard")}
+            className="flex items-center gap-2.5 pr-1 cursor-pointer group"
+          >
+            <div className="w-8 h-8 rounded-lg bg-[#00f5c4]/10 border border-[#00f5c4]/40 flex items-center justify-center text-[#00f5c4] shadow-[0_0_12px_rgba(0,245,196,0.3)] group-hover:scale-105 transition-transform">
+              <Activity className="w-4.5 h-4.5 animate-pulse" />
             </div>
-            <span className="font-bold tracking-wider text-white text-sm whitespace-nowrap">
+            <span className="font-extrabold tracking-wider text-white text-base sm:text-lg whitespace-nowrap group-hover:text-[#00f5c4] transition-colors">
               SYNAPSE TERMINAL
             </span>
           </div>
 
           {/* Coin / Pair badge con ETH/USDT y SPOT claramente separados */}
           <button
-            onClick={onCambiarMoneda}
+            onClick={handleCambiarMoneda}
             title="Click para cambiar activo"
             className="group flex items-center gap-2.5 px-3 py-1.5 rounded-full bg-[#09111b] border border-[#16283d] hover:border-[#00f5c4]/40 transition-all shadow-sm"
           >
@@ -50,25 +99,41 @@ export default function Header({
             </div>
             <span className="font-bold text-white tracking-wider text-xs">{pairLabel}</span>
             <span className="px-2 py-0.5 rounded-full bg-[#00f5c4]/15 border border-[#00f5c4]/30 text-[#00f5c4] font-bold text-[9px] tracking-widest uppercase shadow-[0_0_8px_rgba(0,245,196,0.15)]">
-              {moneda?.market === "stock" ? (moneda?.badge || "STOCK") : "SPOT"}
+              {activeAsset?.market === "stock" ? (activeAsset?.badge || "STOCK") : "SPOT"}
             </span>
           </button>
         </div>
 
         {/* Center: Actions & Timeframes */}
         <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+          {/* Dashboard button (shown when on news page) */}
+          {isNewsPage && (
+            <button
+              onClick={() => router.push("/dashboard")}
+              className="flex items-center gap-2 px-4 py-2 rounded-full bg-[#09111b] border border-[#16283d] hover:border-[#00f5c4]/40 hover:bg-[#00f5c4]/5 text-white transition-all text-sm font-semibold tracking-wide shadow-sm"
+              title="Return to Trading Dashboard"
+            >
+              <LayoutDashboard className="w-4 h-4 text-[#00f5c4]" />
+              <span className="text-white font-semibold whitespace-nowrap">Dashboard</span>
+            </button>
+          )}
+
           {/* Market News button */}
           <button
             onClick={() => router.push("/news")}
-            className="flex items-center gap-2 px-4 py-2 rounded-full bg-[#09111b] border border-[#16283d] hover:border-cyan-400/40 hover:bg-cyan-400/5 text-white transition-all text-sm font-semibold tracking-wide shadow-sm"
+            className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all text-sm font-semibold tracking-wide shadow-sm ${
+              isNewsPage
+                ? "bg-cyan-400/15 border border-cyan-400 text-cyan-400 shadow-[0_0_12px_rgba(6,182,212,0.25)]"
+                : "bg-[#09111b] border border-[#16283d] hover:border-cyan-400/40 hover:bg-cyan-400/5 text-white"
+            }`}
           >
             <Newspaper className="w-4 h-4 text-cyan-400" />
-            <span className="hidden sm:inline text-white font-semibold whitespace-nowrap">MarketNews</span>
+            <span className="hidden sm:inline font-semibold whitespace-nowrap">MarketNews</span>
           </button>
 
           {/* Change pair button */}
           <button
-            onClick={onCambiarMoneda}
+            onClick={handleCambiarMoneda}
             className="flex items-center gap-2 px-4 py-2 rounded-full bg-[#09111b] border border-[#16283d] hover:border-[#00f5c4]/40 hover:bg-[#00f5c4]/5 text-white transition-all text-sm font-semibold tracking-wide shadow-sm"
             title="Change Trading Pair"
           >
@@ -111,7 +176,7 @@ export default function Header({
           </div>
 
           <div className="text-slate-300 font-semibold tracking-wider">
-            CT <span className="text-white font-bold">{time || "18:14:02"}</span>
+            CT <span className="text-white font-bold">{currentTime || "18:14:02"}</span>
           </div>
         </div>
       </div>
