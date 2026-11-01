@@ -17,6 +17,10 @@ services:
         sync: false # opcional, para el chat IA
       - key: CRYPTOCOMPARE_API_KEY
         sync: false # opcional
+      - key: SERPAPI_API_KEY
+        sync: false # web search: private key de https://serpapi.com/manage-api-key
+      - key: WEB_SEARCH_PROVIDER
+        value: serpapi # en Render usar SerpApi primero (DDG bloqueado desde datacenter)
 
   # ============ FRONTEND ============
   - type: web

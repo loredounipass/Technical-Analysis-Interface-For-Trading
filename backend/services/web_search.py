@@ -64,9 +64,18 @@ _SERPAPI_ENDPOINT = "https://serpapi.com/search.json"
 _SERPAPI_TIMEOUT = 15
 _HAS_SERPAPI = bool(_SERPAPI_API_KEY)
 
+# Orden de proveedores via env WEB_SEARCH_PROVIDER:
+#   'duckduckgo' (default, ideal local): DDG primero y SerpApi de respaldo (ahorra cuota).
+#   'serpapi'    (ideal Render/nube): SerpApi primero porque DDG esta siempre bloqueado
+#                desde IP de datacenter; evita el hang de ~25s reintentando DDG.
+_PROVIDER_ORDER = (os.environ.get("WEB_SEARCH_PROVIDER") or "duckduckgo").strip().lower()
+if _PROVIDER_ORDER == "serpapi" and not _HAS_SERPAPI:
+    _PROVIDER_ORDER = "duckduckgo"  # sin key no se puede usar serpapi
+
 if _HAS_SERPAPI:
+    _fb = "duckduckgo" if _PROVIDER_ORDER == "serpapi" else "serpapi"
     logger.info(
-        f"[WebSearch] provider=duckduckgo (fallback=serpapi, "
+        f"[WebSearch] provider={_PROVIDER_ORDER} (fallback={_fb}, "
         f"key={_SERPAPI_API_KEY[:6]}…{_SERPAPI_API_KEY[-4:]})"
     )
 else:
@@ -439,17 +448,45 @@ def _finalize(query, results, provider, src_key, widened, method=None):
     return out
 
 
-def web_search(query, max_results=6, time_range=None, source=None):
-    """Busca primero en DuckDuckGo; si no da resultados, fallback a SerpApi.
+def _ddg_search(query, n, site, src_key, df):
+    """Pipeline DDG con widening. Devuelve (results, widened, method)."""
+    filtered = f"{query} {site}".strip() if site else query
+    _wait_slot()
+    results, method = _ddg_pipeline(filtered, n, df)
+    widened = False
+    if not results and site:
+        _wait_slot()
+        results, method = _ddg_pipeline(query, n, df)
+        if results:
+            widened = True
+    return results, widened, method
 
-    SerpApi se usa LO MINIMO POSIBLE (cuota de 250/mes): solo se llama cuando
-    DDG devuelve 0 (bot-check/timeout/vacio).
+
+def _serp_search(query, n, df, src_key, has_domain):
+    """SerpApi con widening por host. Devuelve (results, widened, err).
+    err no-None => SerpApi no respondio (red/auth/cuota)."""
+    sres, serr = _serpapi_search(query, n, df, src_key)
+    if sres is None:
+        return [], False, serr
+    widened = False
+    if not sres and has_domain:
+        plain, _ = _serpapi_search(query, n, df, "all")
+        if plain:
+            sres, widened = plain, True
+    return sres, widened, None
+
+
+def web_search(query, max_results=6, time_range=None, source=None):
+    """Busqueda web con orden de proveedores configurable (WEB_SEARCH_PROVIDER).
+
+    - 'duckduckgo' (default, ideal local): DDG primero (gratis, sin cuota) y SerpApi
+      de respaldo cuando DDG da 0. Ahorra la cuota de SerpApi (250/mes).
+    - 'serpapi' (ideal Render/nube): SerpApi primero y DDG de respaldo.
 
     source: 'reddit'|'x'|'news'|'all'. time_range: 'day'|'week'|'month'|'year'.
     Nunca lanza: devuelve count=0 con 'error' en caso de bloqueo/fallo.
-
     Auto-ampliacion: si un `source` (reddit/x) rinde 0, reintenta sin filtro y
-    marca `widened=True` + `note` para que el modelo y la UI informen honestamente.
+    marca `widened=True` + `note` para informar honestamente.
     """
     query = (query or "").strip()
     if not query:
@@ -469,38 +506,34 @@ def web_search(query, max_results=6, time_range=None, source=None):
     # Identidad fresca por busqueda (UA rotado + session nueva) para el scrapeo DDG.
     _rotate_ua()
 
-    # --- Ruta primaria: DuckDuckGo (gratis, sin cuota) ----------------------
-    filtered = f"{query} {site}".strip() if site else query
-    _wait_slot()
-    results, method = _ddg_pipeline(filtered, n, df)
+    def _try_ddg():
+        res, wid, method = _ddg_search(query, n, site, src_key, df)
+        if res:
+            return _finalize(query, res, "duckduckgo", src_key, wid, method=method)
+        return None
 
-    widened = False
-    if not results and site:
-        _wait_slot()
-        results, method = _ddg_pipeline(query, n, df)
-        if results:
-            widened = True
+    def _try_serp():
+        if not _HAS_SERPAPI:
+            return None
+        res, wid, err = _serp_search(query, n, df, src_key, has_domain)
+        if err is not None:
+            logger.info(f"[WebSearch] serpapi fallo ({err})")
+            return None
+        if res:
+            return _finalize(query, res, "serpapi", src_key, wid)
+        # SerpApi respondio pero 0 resultados reales -> vacio autoritativo.
+        return {"query": query, "count": 0, "results": [],
+                "provider": "serpapi", "error": "SerpApi sin resultados"}
 
-    if results:
-        return _finalize(query, results, "duckduckgo", src_key, widened, method=method)
+    if _PROVIDER_ORDER == "serpapi" and _HAS_SERPAPI:
+        out = _try_serp() or _try_ddg()
+    else:
+        out = _try_ddg() or _try_serp()
 
-    # --- Fallback: SerpApi (solo si DDG no dio nada) ------------------------
-    if _HAS_SERPAPI:
-        logger.info(f"[WebSearch] '{query[:40]}' ddg vacio; probando serpapi (fallback)")
-        sres, serr = _serpapi_search(query, n, df, src_key)
-        if sres is not None:  # SerpApi respondio (no error de red/auth/cuota)
-            s_widened = False
-            if not sres and has_domain:
-                plain, _ = _serpapi_search(query, n, df, "all")
-                if plain:
-                    sres, s_widened = plain, True
-            if sres:
-                return _finalize(query, sres, "serpapi", src_key, s_widened)
-            logger.info(f"[WebSearch] '{query[:40]}' -> 0 results (serpapi)")
-            return {"query": query, "count": 0, "results": [],
-                    "provider": "serpapi", "error": "SerpApi sin resultados"}
-        logger.info(f"[WebSearch] serpapi fallo ({serr})")
+    if out:
+        return out
 
     logger.info(f"[WebSearch] '{query[:40]}' -> 0 results")
     return {"query": query, "count": 0, "results": [],
-            "provider": "duckduckgo", "error": "DDG bot-check o búsqueda vacía"}
+            "provider": _PROVIDER_ORDER or "duckduckgo",
+            "error": "sin resultados (DDG bot-check / SerpApi)"}
