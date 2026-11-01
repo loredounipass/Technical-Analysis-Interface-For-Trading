@@ -462,7 +462,6 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
           indicator_data: datos,
           history: cleanHistory,
           global_context: globalContext,
-          temperature: 0.3,
           all_sessions: sessions,
           current_session_id: activeSessionId,
           web_search: webSearchEnabled,
