@@ -168,13 +168,18 @@ WEB_SEARCH_TOOL = {
     "type": "function",
     "function": {
         "name": "web_search",
-        "description": "Busca informacion actualizada en internet (noticias, eventos macro, anuncios, listados, regulacion, contexto externo reciente). Usala cuando la respuesta dependa de datos externos que NO estan en los indicadores del terminal ni en el historial. NO la uses para el precio en vivo ni para senales tecnicas: eso viene exclusivamente del terminal.",
+        "description": "Busca informacion actualizada en internet: noticias, eventos macro, anuncios, listados, regulacion, y TAMBIEN redes sociales (X/Twitter y Reddit) para announcements oficiales, metricas de comunidad, sentimiento, hype y memes del mercado. Usala cuando la respuesta dependa de datos externos que NO estan en los indicadores del terminal ni en el historial. NO la uses para el precio en vivo ni para senales tecnicas: eso viene exclusivamente del terminal.",
         "parameters": {
             "type": "object",
             "properties": {
                 "query": {
                     "type": "string",
-                    "description": "Consulta concreta y especifica (ej: 'Bitcoin ETF inflows November 2026', 'ultimo anuncio Fed tasas')"
+                    "description": "Consulta concreta y especifica (ej: 'Bitcoin ETF inflows November 2026', 'ultimo anuncio Fed tasas', 'ETH roadmap sentiment')"
+                },
+                "source": {
+                    "type": "string",
+                    "enum": ["all", "news", "reddit", "x"],
+                    "description": "Donde buscar: 'news' = prensa/medios; 'reddit' = r/CryptoCurrency, r/Bitcoin, r/ethereum (sentimiento/metricas/memes); 'x' = posts de X/Twitter (anuncios, hype); 'all' (o omitir) = web general sin restringir. Para announcements o reaccion de la comunidad usa 'reddit' o 'x'."
                 },
                 "time_range": {
                     "type": "string",
@@ -334,8 +339,8 @@ def get_trading_system_prompt(indicator_data=None, global_context=None, model_na
         if web_search_enabled:
             base += (
                 "=== WEB SEARCH TOOL (ENABLED) ===\n"
-                "Web search is ON and you may call `web_search` for current external info or news when the user asks. "
-                "Keep it short and conversational; when you actually search, cite the source with an inline markdown link [Title](URL) and its date.\n\n"
+                "Web search is ON and you may call `web_search` for current external info, news, or market chatter when the user asks. "
+                "For social reaction/memes use source='reddit' or source='x'. Keep it short and conversational; when you actually search, cite the source with an inline markdown link [Title](URL) and its date.\n\n"
             )
         return base
 
@@ -380,6 +385,7 @@ def get_trading_system_prompt(indicator_data=None, global_context=None, model_na
             "Use it whenever the answer depends on external, current, or post-cutoff information that is NOT in the terminal indicators or the chat history. "
             "When you use it, ALWAYS cite with inline markdown links taken VERBATIM from the results, e.g. [Título](https://...), placed next to each claim and including its date. Keep every PRICE/indicator claim exclusive to the live terminal data, and clearly separate verified web facts from your own interpretation. "
             "End the answer with a short 'Fuentes' line listing those markdown links (one per source). Only link URLs that web_search actually returned; never invent, guess, or reuse URLs from memory. "
+            "For official announcements, community reaction, on-chain/social metrics, hype or memes, call web_search with source='reddit' or source='x' (use 'news' for press, 'all' for general web); you may run more than one search with different sources to cross-check. "
             "If the search returns 0 results, say the search found nothing (and suggest trying different keywords) instead of claiming you have no internet access.\n\n"
         )
     base += personality
@@ -874,9 +880,10 @@ def _run_tool_call(fn_name, args, *, prompt, all_sessions, current_session_id):
         query = args.get("query", prompt)
         result = web_search(
             query=query, max_results=args.get("max_results", 6), time_range=args.get("time_range"),
+            source=args.get("source"),
         )
-        meta = {"tool": "web_search", "query": query, "found": result.get("count", 0),
-                "results": result.get("results", [])}
+        meta = {"tool": "web_search", "query": query, "source": args.get("source") or "all",
+                "found": result.get("count", 0), "results": result.get("results", [])}
     else:
         result = {"error": f"herramienta desconocida: {fn_name}"}
         meta = {"tool": fn_name, "found": 0}
@@ -1164,8 +1171,10 @@ def nvidia_chat_stream(
                     args = {"query": str(raw_args)}
 
                 query = args.get("query", prompt)
+                src = (str(args.get("source") or "all")).lower() if fn_name == "web_search" else None
                 if fn_name == "web_search":
-                    yield {"type": "thought", "chunk": f"\n[\U0001F50D Buscando en la web: '{query}']\n"}
+                    label = {"reddit": "en Reddit", "x": "en X/Twitter", "twitter": "en X/Twitter", "news": "de noticias"}.get(src, "en la web")
+                    yield {"type": "thought", "chunk": f"\n[\U0001F50D Buscando {label}: '{query}']\n"}
                 else:
                     yield {"type": "thought", "chunk": f"\n[Accediendo a memoria MCP: '{query}']\n"}
 
@@ -1176,7 +1185,7 @@ def nvidia_chat_stream(
                 tools_used.append(meta)
 
                 if fn_name == "web_search":
-                    yield {"type": "tool", "name": "web_search", "query": query, "found": result.get("count", 0), "results": result.get("results", [])}
+                    yield {"type": "tool", "name": "web_search", "query": query, "source": src, "found": result.get("count", 0), "results": result.get("results", [])}
                 else:
                     yield {"type": "tool", "query": query, "found": result.get("found_records", 0)}
 

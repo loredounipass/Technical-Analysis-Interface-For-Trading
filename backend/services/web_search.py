@@ -22,6 +22,16 @@ _UA = (
 _TIMEOUT = 12
 _MAX_RESULTS_CAP = 10
 
+# Restriccion de fuente para buscar tambien en redes sociales.
+# 'reddit' y 'x' usan el operador site: de DuckDuckGo; 'news'/'all' = web general.
+_SOURCE_MAP = {
+    "reddit": "site:reddit.com",
+    "x": "site:x.com OR site:twitter.com",
+    "twitter": "site:x.com OR site:twitter.com",
+    "news": "",
+    "all": "",
+}
+
 # Ventana de frescura solicitada al buscador (param 'df' de DuckDuckGo).
 _DF_MAP = {
     "day": "d", "d": "d",
@@ -112,9 +122,12 @@ def _build_results(links, snippets, n):
     return out
 
 
-def web_search(query, max_results=6, time_range=None):
+def web_search(query, max_results=6, time_range=None, source=None):
     """Busca en DuckDuckGo (lite y, si no hay resultados, html) y devuelve
     {'query','count','results',...}.
+
+    'source' ('reddit'|'x'|'news'|'all') restringe la busqueda a redes sociales
+    o la deja como web general.
 
     Nunca lanza: ante cualquier fallo devuelve count=0 con 'error' para que el
     agente declare que no encontró información en lugar de romperse.
@@ -129,7 +142,10 @@ def web_search(query, max_results=6, time_range=None):
         n = 6
     n = max(1, min(n, _MAX_RESULTS_CAP))
 
-    form = {"q": query, "kl": "wt-wt"}
+    site = _SOURCE_MAP.get(str(source or "all").lower(), "")
+    search_query = f"{query} {site}".strip() if site else query
+
+    form = {"q": search_query, "kl": "wt-wt"}
     df = _DF_MAP.get(str(time_range or "").lower())
     if df:
         form["df"] = df
