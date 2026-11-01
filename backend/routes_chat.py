@@ -225,5 +225,6 @@ def get_models():
             'name': config['name'],
             'provider': config['provider'],
             'free': config.get('free', False),
+            'reasoning': config.get('reasoning', False),
         })
     return jsonify(models)

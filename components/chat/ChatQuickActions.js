@@ -711,8 +711,20 @@ Veredicto claro basado en todos los datos del terminal: el momentum favorece COM
                       <div className={`text-xs font-mono font-bold truncate ${isSelected ? "text-emerald-300" : "text-slate-200"}`}>
                         {model.name}
                       </div>
-                      <div className="text-[10px] font-mono text-slate-500 mt-1 uppercase tracking-wider">
-                        {model.provider}
+                      <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                        <span className="text-[10px] font-mono text-slate-500 uppercase tracking-wider">
+                          {model.provider}
+                        </span>
+                        <span
+                          title={model.reasoning ? "Muestra su razonamiento paso a paso" : "Responde directo, sin cadena de pensamiento"}
+                          className={`text-[8.5px] font-mono font-bold px-1.5 py-0.5 rounded uppercase tracking-wider border ${
+                            model.reasoning
+                              ? "text-emerald-300 bg-emerald-500/10 border-emerald-500/30"
+                              : "text-amber-300 bg-amber-500/10 border-amber-500/30"
+                          }`}
+                        >
+                          {model.reasoning ? "Razona" : "Rapido"}
+                        </span>
                       </div>
                     </div>
                     {model.free && (

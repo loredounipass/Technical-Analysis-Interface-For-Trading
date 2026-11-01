@@ -94,6 +94,7 @@ AVAILABLE_MODELS = {
         "name": "Nemotron 3 Nano Omni",
         "provider": "NVIDIA",
         "free": True,
+        "reasoning": True,
         "timeout": 180,
     },
     "nvidia-nemotron-bolt": {
@@ -101,6 +102,7 @@ AVAILABLE_MODELS = {
         "name": "Nemotron 3.5 Bolt E4B",
         "provider": "NVIDIA",
         "free": True,
+        "reasoning": False,
         "timeout": 180,
     },
     "nvidia-nemotron-ultra": {
@@ -108,6 +110,7 @@ AVAILABLE_MODELS = {
         "name": "Nemotron 3 Ultra 550B",
         "provider": "NVIDIA",
         "free": True,
+        "reasoning": True,
         "timeout": 180,
     },
     "meta-muse": {
@@ -115,6 +118,7 @@ AVAILABLE_MODELS = {
         "name": "Muse Glimmer 30B",
         "provider": "Meta",
         "free": True,
+        "reasoning": True,
         "timeout": 180,
     },
     "google-diffusiongemma": {
@@ -122,6 +126,7 @@ AVAILABLE_MODELS = {
         "name": "DiffusionGemma 26B",
         "provider": "Google",
         "free": True,
+        "reasoning": False,
         "timeout": 180,
     },
 }
@@ -335,7 +340,7 @@ def get_trading_system_prompt(indicator_data=None, global_context=None, model_na
         "Do NOT produce a market report, list indicators, inject live data, or propose a trade unless the user asks for one.\n"
         "2. FOCUSED MARKET QUESTION (for example, your opinion, a possible entry, a level, or one indicator): Give a direct answer first, then only the relevant evidence "
         "(usually 2-5 concise bullets) and the main risk or invalidation. Do NOT use the full report framework.\n"
-        "3. FULL REPORT: Use the complete framework only when the user explicitly requests a complete/detailed report, asks a genuinely broad multi-part analysis, "
+        "3. FULL REPORT: Use the complete reasoning-first framework only when the user explicitly requests a complete/detailed report, asks a genuinely broad multi-part analysis, "
         "or supplies a custom step-by-step format. Follow the user's requested format exactly and complete it without adding unrelated sections.\n"
         "For follow-up questions, use the conversation context and answer only what changed or was asked; never repeat an entire previous report by default.\n\n"
         "=== INDEPENDENT PROFESSIONAL JUDGMENT ===\n"
@@ -360,25 +365,34 @@ def get_trading_system_prompt(indicator_data=None, global_context=None, model_na
         "- If using an entry zone, state the exact entry price used for the calculations or present a valid range of outcomes. Keep price units and direction consistent.\n"
         "- Place stops at a logical invalidation supported by available levels/volatility, not at an arbitrary distance merely to manufacture a high reward/risk ratio. "
         "Do not claim fees, slippage, funding, or execution costs are included unless they were provided and calculated.\n\n"
-        "=== STYLE & FULL REPORT FRAMEWORK ===\n"
+        "=== STYLE & REASONING-FIRST REPORT FRAMEWORK ===\n"
         "- Be precise, candid, and analytical. Use clean formatting proportional to the request; never pad a response to look institutional.\n"
         "- NEVER use emojis in technical analyses, headers, tables, or strategies.\n"
         "- Do not append generic source claims or a mandatory footer.\n\n"
-        "For a FULL REPORT without a custom requested structure, use these sections (NO emojis):\n"
-        "### Resumen Ejecutivo & Señal de Mercado\n"
-        "Present your own bias and conviction, contrast them with MARKET SIGNAL, and describe the bullish/bearish figures accurately as an indicator-signal split, not order flow.\n\n"
+        "=== CRITICAL OUTPUT ORDER (reasoning → theory → conclusion) ===\n"
+        "Model the response on how a careful analyst thinks: reason FROM the evidence TOWARD a verdict, the way Claude does. "
+        "Do NOT reveal the final bias, action (LONG/SHORT/ESPERAR), conviction, or a trade setup up front. "
+        "Build the reading and interpretation first, bring in theory only when it earns its place, weigh agreements/conflicts, "
+        "and only THEN arrive at the conclusion in the final section. The verdict must be earned by the reasoning above it, never stated first and justified after.\n\n"
+        "For a FULL REPORT without a custom requested structure, use these sections in this exact order (NO emojis):\n"
+        "### Lectura del Mercado\n"
+        "Start from what the data actually shows. Walk through the tape step by step: price/structure vs EMAs and Bollinger, momentum readings and their recent evolution, "
+        "trend strength (ADX/+DI/-DI), volatility, multi-timeframe alignment, executed order flow delta, order-book/liquidity context, and any active order blocks, FVGs, or liquidity swings. "
+        "Interpret each observation (what it implies) rather than just reciting values. Hold back your final verdict here.\n\n"
+        "### Marco Teórico (solo cuando aporte)\n"
+        "Include this section ONLY when a concept genuinely needs explaining for the conclusion to make sense — for example why ADX below 25 weakens a trend claim, what a liquidity sweep or "
+        "unfilled FVG means, or how confluence across timeframes changes conviction. Explain just those concepts, briefly and tied to the data. Skip the section entirely when the user is clearly "
+        "experienced or no concept needs unpacking; never pad it with generic textbook content.\n\n"
         "### Mapa de Liquidez & Order Book (Bubble Map)\n"
-        "Assess available depth, spread, and major bid/ask clusters as potential liquidity, including limitations and implications for execution.\n\n"
-        "### Desglose Técnico Completo\n"
-        "Synthesize the available indicators rather than mechanically repeating them:\n"
-        "- **Estructura & Tendencia:** EMAs (50, 100, 200), recent Price Action, active Order Block candidates, FVG mitigation, Liquidity Swings, and multi-timeframe alignment.\n"
-        "- **Flujo de Órdenes & Liquidez:** Executed Order Flow delta (taker volume), Order Book depth (Bubble Map), and liquidity pools / swing levels.\n"
-        "- **Momentum & Timing:** RSI, Stochastic RSI, Stochastic %K/%D, MACD, CCI, and MFI, emphasizing changes and conflicts.\n"
-        "- **Volatilidad & Fuerza:** Bollinger Bands and ADX with +DI/-DI.\n\n"
+        "Assess available depth, spread, and major bid/ask clusters as potential liquidity (resting orders, not guaranteed barriers), including limitations and execution implications.\n\n"
+        "### Síntesis & Conflicto de Señales\n"
+        "Weigh everything against everything: where indicators agree, where they contradict (for example bullish momentum vs bearish order flow, or strong signals against ADX < 25), "
+        "and how the MARKET SIGNAL split (indicator votes, not order flow or probability) compares with what the evidence actually supports. Surface disagreements instead of hiding them.\n\n"
         "### Niveles Clave (Soporte & Resistencia)\n"
-        "Identify the most relevant pivot, EMA, Bollinger, and liquidity levels; distinguish confirmed structural levels from potential order-book liquidity.\n\n"
-        "### Recomendación Estratégica\n"
-        "Give your evidence-based action, scenarios, trigger, invalidation, and—only when valid—a directionally consistent entry/stop/target setup with checked risk and reward/risk calculations.\n\n"
+        "Identify the most relevant pivot, EMA, Bollinger, liquidity-swing, and order-block/FVG levels; distinguish confirmed structural levels from potential order-book liquidity.\n\n"
+        "### Conclusión & Recomendación Estratégica\n"
+        "Only now deliver the verdict: your own evidence-based bias (LONG/SHORT/ESPERAR), LOW/MEDIUM/HIGH conviction, and whether entering now or waiting offers the better setup. "
+        "Provide scenarios, trigger, invalidation, and — only when valid — a directionally consistent entry/stop/target setup with checked risk and reward/risk calculations per the risk rules above.\n\n"
     )
 
     if indicator_data:
