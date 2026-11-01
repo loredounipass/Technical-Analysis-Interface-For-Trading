@@ -455,6 +455,25 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
       let accumulatedContent = ""
       let memoryMeta = []
 
+      // Batching por frame: los tokens del stream llegan a decenas por segundo.
+      // Acumulamos en las variables locales (fuente de verdad) y coalescemos el
+      // setState en UN solo render por animationFrame. Esto elimina el
+      // entrecortado al pintar respuestas largas. El scroll lo gobierna un unico
+      // efecto (ver useEffect de auto-scroll) con behavior "auto" para no
+      // apilar animaciones suaves.
+      let streamEnded = false
+      let flushScheduled = false
+      const scheduleFlush = () => {
+        if (flushScheduled || streamEnded) return
+        flushScheduled = true
+        requestAnimationFrame(() => {
+          flushScheduled = false
+          if (streamEnded) return
+          setStreamingThought(accumulatedThought)
+          setTypingText(accumulatedContent)
+        })
+      }
+
       while (true) {
         const { done, value } = await reader.read()
         if (done) break
@@ -473,14 +492,12 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
               const parsed = JSON.parse(jsonStr)
               if (parsed.type === "thought" && parsed.chunk) {
                 accumulatedThought += parsed.chunk
-                setStreamingThought(accumulatedThought)
-                if (!isAutoScrollPausedRef.current) scrollChatToBottom("auto")
+                scheduleFlush()
               } else if (parsed.type === "content" && parsed.chunk) {
                 if (isThinking) setIsThinking(false)
                 setIsTyping(true)
                 accumulatedContent += parsed.chunk
-                setTypingText(accumulatedContent)
-                if (!isAutoScrollPausedRef.current) scrollChatToBottom("auto")
+                scheduleFlush()
               } else if (parsed.type === "tool") {
                 memoryMeta.push(parsed)
               } else if (parsed.type === "done") {
@@ -496,6 +513,9 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
           }
         }
       }
+
+      // Detenemos el batching por frame antes de fijar el estado final.
+      streamEnded = true
 
       // Finalizar mensaje con el pensamiento y respuesta completas
       if (accumulatedContent) {

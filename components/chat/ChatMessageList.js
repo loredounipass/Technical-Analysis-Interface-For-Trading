@@ -123,17 +123,14 @@ export default function ChatMessageList({
   const thoughtBoxRef = useRef(null)
   const currentModelReasons = models.find((m) => m.key === selectedModel)?.reasoning ?? true
 
-  // Auto-scroll reactivo en tiempo real mientras el modelo razona
+  // Auto-scroll SOLO de la caja interna de razonamiento. El scroll del
+  // contenedor de la conversacion lo gobierna en exclusiva useChatSession
+  // (un unico efecto), para que dos escritores no peleen y la vista tiemble.
   useEffect(() => {
-    if (streamingThought) {
-      if (thoughtBoxRef.current) {
-        thoughtBoxRef.current.scrollTop = thoughtBoxRef.current.scrollHeight
-      }
-      if (chatContainerRef?.current) {
-        chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight
-      }
+    if (streamingThought && thoughtBoxRef.current) {
+      thoughtBoxRef.current.scrollTop = thoughtBoxRef.current.scrollHeight
     }
-  }, [streamingThought, chatContainerRef])
+  }, [streamingThought])
 
   return (
     <div
@@ -142,8 +139,10 @@ export default function ChatMessageList({
       className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5 space-y-5 cyber-scrollbar relative z-10"
       style={{ background: "rgba(4, 9, 14, 0.25)" }}
     >
-      {/* Lista de Mensajes */}
-      {messages.map((msg, idx) => {
+      {/* Lista de Mensajes: memoizada para que los mensajes ya completados no
+          se re-rendericen ni re-analicen (renderMarkdown) en cada frame del
+          streaming; solo se recalcula cuando cambia el historico o el simbolo. */}
+      {useMemo(() => messages.map((msg, idx) => {
         if (msg.role === "user") {
           const meta = msg.meta
           /* Mensaje del Usuario */
@@ -273,7 +272,7 @@ export default function ChatMessageList({
             )}
           </div>
         )
-      })}
+      }), [messages, symbol, interval, intervalLabel])}
 
       {/* Efecto de Escritura en Vivo (texto plano) */}
       {isTyping && typingText && (
