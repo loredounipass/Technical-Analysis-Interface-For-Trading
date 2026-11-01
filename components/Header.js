@@ -68,10 +68,10 @@ export default function Header({
           {/* Market News button */}
           <button
             onClick={() => router.push("/news")}
-            className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#09111b] border border-[#16283d] hover:border-[#2b4c73] text-white transition-all"
+            className="flex items-center gap-2 px-4 py-2 rounded-full bg-[#09111b] border border-[#16283d] hover:border-cyan-400/40 hover:bg-cyan-400/5 text-white transition-all text-sm font-semibold tracking-wide shadow-sm"
           >
-            <Newspaper className="w-3 h-3 text-cyan-400" />
-            <span className="hidden sm:inline text-white font-medium">MarketNews</span>
+            <Newspaper className="w-4 h-4 text-cyan-400" />
+            <span className="hidden sm:inline text-white font-semibold whitespace-nowrap">MarketNews</span>
           </button>
 
           {/* Change pair button */}
@@ -86,43 +86,43 @@ export default function Header({
 
           {/* Timeframe pill selector */}
           {onTimeframeChange && (
-            <div className="flex items-center gap-1 p-0.5 rounded-full bg-[#09111b] border border-[#16283d]">
-              {timeframes.map((tf) => {
-                const isActive = timeframe.toLowerCase() === tf.toLowerCase()
-                return (
-                  <button
-                    key={tf}
-                    onClick={() => onTimeframeChange(tf)}
-                    className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold tracking-wider transition-all uppercase ${isActive
+              <div className="flex items-center gap-1 p-1 rounded-full bg-[#09111b] border border-[#16283d]">
+                {timeframes.map((tf) => {
+                  const isActive = timeframe.toLowerCase() === tf.toLowerCase()
+                  return (
+                    <button
+                      key={tf}
+                      onClick={() => onTimeframeChange(tf)}
+                    className={`px-3.5 py-1.5 rounded-full text-sm font-semibold tracking-wide transition-all uppercase ${isActive
                         ? "bg-[#00f5c4]/15 border border-[#00f5c4] text-[#00f5c4] shadow-[0_0_12px_rgba(0,245,196,0.35)]"
                         : "text-slate-300 hover:text-white border border-transparent"
-                      }`}
-                  >
-                    {tf}
-                  </button>
-                )
-              })}
-            </div>
+                        }`}
+                    >
+                      {tf}
+                    </button>
+                  )
+                })}
+              </div>
           )}
-        </div>
+            </div>
 
         {/* Right: Latency Connection + UTC Clock */}
-        <div className="flex items-center gap-3 text-[11px]">
-          <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#09111b] border border-[#16283d]">
-            <span
-              className={`w-1.5 h-1.5 rounded-full ${isConnected ? "bg-[#00f5c4] shadow-[0_0_8px_#00f5c4]" : "bg-[#ff3b69]"
-                }`}
-            />
-            <span className={isConnected ? "text-slate-200" : "text-[#ff3b69]"}>
-              {isConnected ? `CONN. STABLE (${latency})` : "CONN. LOST"}
-            </span>
-          </div>
+          <div className="flex items-center gap-3 text-[11px]">
+            <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#09111b] border border-[#16283d]">
+              <span
+                className={`w-1.5 h-1.5 rounded-full ${isConnected ? "bg-[#00f5c4] shadow-[0_0_8px_#00f5c4]" : "bg-[#ff3b69]"
+                  }`}
+              />
+              <span className={isConnected ? "text-slate-200" : "text-[#ff3b69]"}>
+                {isConnected ? `CONN. STABLE (${latency})` : "CONN. LOST"}
+              </span>
+            </div>
 
-          <div className="text-slate-300 font-semibold tracking-wider">
-            CT <span className="text-white font-bold">{time || "18:14:02"}</span>
+            <div className="text-slate-300 font-semibold tracking-wider">
+              CT <span className="text-white font-bold">{time || "18:14:02"}</span>
+            </div>
           </div>
         </div>
-      </div>
     </header>
   )
 }
