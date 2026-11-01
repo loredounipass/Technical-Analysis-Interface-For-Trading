@@ -258,6 +258,7 @@ def nvidia_chat_stream(
     MAX_TOOL_ROUNDS = 5
     messages = list(initial_messages)
     tools_used = []
+    answered = False
 
     try:
         for _round in range(MAX_TOOL_ROUNDS):
@@ -315,6 +316,7 @@ def nvidia_chat_stream(
 
             # Sin tool_calls => la respuesta final ya fue streamiada en esta ronda.
             if not tool_calls_acc:
+                answered = True
                 break
 
             assistant_tool_msg = {"role": "assistant", "content": "", "tool_calls": []}
@@ -362,6 +364,39 @@ def nvidia_chat_stream(
                     "name": fn_name,
                     "content": json.dumps(result, ensure_ascii=False),
                 })
+
+        if not answered:
+            # Se agotaron las rondas de herramientas sin que el modelo redacte una
+            # respuesta final (pasa cuando las busquedas devuelven 0 y reintenta).
+            # Forzar una ultima generacion SIN tools para que conteste con lo reunido.
+            logger.info("[NvidiaChatStream] rondas agotadas; forzando respuesta final")
+            final_payload = {
+                "model": model_id,
+                "messages": messages,
+                "temperature": temperature,
+                "max_tokens": effective_max_tokens,
+                "stream": True,
+            }
+            req = Request(url, data=json.dumps(final_payload).encode("utf-8"), headers=headers, method="POST")
+            with urlopen(req, timeout=timeout) as resp:
+                for raw_line in resp:
+                    line = raw_line.decode("utf-8").strip()
+                    if not line or line == "data: [DONE]":
+                        continue
+                    if not line.startswith("data: "):
+                        continue
+                    try:
+                        chunk_json = json.loads(line[6:])
+                        choices = chunk_json.get("choices", [])
+                        if not choices:
+                            continue
+                        delta = choices[0].get("delta", {})
+                        if delta.get("reasoning_content"):
+                            yield {"type": "thought", "chunk": delta["reasoning_content"]}
+                        if delta.get("content"):
+                            yield {"type": "content", "chunk": delta["content"]}
+                    except Exception:
+                        pass
 
         yield {"type": "done", "model": model_key, "memory_accessed": tools_used}
 
