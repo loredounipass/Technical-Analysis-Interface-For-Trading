@@ -32,7 +32,7 @@ CRYPTOCOMPARE_API_KEY = os.getenv('CRYPTOCOMPARE_API_KEY')
 
 @news_bp.route('/api/news/<symbol>')
 def get_news(symbol):
-    from cache import rate_limited
+    from common.cache import rate_limited
     ip = request.remote_addr or 'unknown'
     if rate_limited(ip):
         return jsonify({'error': 'Too many requests'}), 429

@@ -15,13 +15,13 @@ load_dotenv()
 # ─────────────────────────────────────────────────────────────────────
 # Modulos internos
 # ─────────────────────────────────────────────────────────────────────
-from cache import get_trading_cached
-from payload_builder import fetch_trading_data
-from routes_trading import trading_bp, init_trading_routes
-from routes_news import news_bp
-from routes_chat import chat_bp, init_chat_routes
-from sockets import init_sockets
-from stream_manager import init_market_streams
+from common.cache import get_trading_cached
+from services.payload_builder import fetch_trading_data
+from controllers.routes_trading import trading_bp, init_trading_routes
+from controllers.routes_news import news_bp
+from controllers.routes_chat import chat_bp, init_chat_routes
+from common.sockets import init_sockets
+from gateways.stream_manager import init_market_streams
 
 # ─────────────────────────────────────────────────────────────────────
 # Flask app + CORS + SocketIO

@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 
 import websocket
 
-from data_fetchers import coinbase_product_id, record_order_flow_trade
+from services.data_fetchers import coinbase_product_id, record_order_flow_trade
 
 logger = logging.getLogger(__name__)
 

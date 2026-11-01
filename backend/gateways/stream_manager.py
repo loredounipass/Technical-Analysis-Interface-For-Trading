@@ -4,14 +4,14 @@ Centraliza la configuración y el cableado de callbacks para los streams
 de mercado en vivo, desacoplando app.py de los detalles de streaming.
 """
 
-from sockets import subscriber_rooms
-from coinbase_stream import init_coinbase_stream
-from yahoo_stream import init_yahoo_stream
-from data_fetchers import (
+from common.sockets import subscriber_rooms
+from gateways.coinbase_stream import init_coinbase_stream
+from gateways.yahoo_stream import init_yahoo_stream
+from services.data_fetchers import (
     fetch_klines_and_volume, fetch_quote_volume_24h, update_ticker_cache,
 )
-from cache import store_payload, CRYPTO_SYMBOLS, STOCK_SYMBOLS
-from payload_builder import build_payload
+from common.cache import store_payload, CRYPTO_SYMBOLS, STOCK_SYMBOLS
+from services.payload_builder import build_payload
 
 STREAM_TIMEFRAMES = ['1m', '5m', '15m', '1h', '6h', '1d']
 

@@ -6,7 +6,7 @@ con soporte para crypto y stocks, rate limiting y cache.
 
 import logging
 from flask import Blueprint, jsonify, request
-from cache import rate_limited
+from common.cache import rate_limited
 
 logger = logging.getLogger(__name__)
 

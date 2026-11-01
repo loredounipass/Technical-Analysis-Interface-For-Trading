@@ -7,8 +7,8 @@ import logging
 
 import json
 from flask import Blueprint, jsonify, request, Response, stream_with_context
-from nvidia_chat import nvidia_chat, nvidia_chat_stream, NvidiaChatError, AVAILABLE_MODELS, classify_intent
-from cache import rate_limited
+from services.nvidia_chat import nvidia_chat, nvidia_chat_stream, NvidiaChatError, AVAILABLE_MODELS, classify_intent
+from common.cache import rate_limited
 
 logger = logging.getLogger(__name__)
 
