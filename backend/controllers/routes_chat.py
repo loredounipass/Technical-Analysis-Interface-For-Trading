@@ -90,6 +90,7 @@ def chat_endpoint():
     temperature = data.get('temperature', 0.3)
     all_sessions = data.get('all_sessions', [])
     current_session_id = data.get('current_session_id')
+    web_search_enabled = bool(data.get('web_search', False))
 
     # ── Intent classification: decide if we need market data ──
     intent = classify_intent(prompt)
@@ -141,6 +142,7 @@ def chat_endpoint():
                     intent=intent,
                     all_sessions=all_sessions,
                     current_session_id=current_session_id,
+                    web_search_enabled=web_search_enabled,
                 ):
                     yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
             except Exception as e:
@@ -169,6 +171,7 @@ def chat_endpoint():
             intent=intent,
             all_sessions=all_sessions,
             current_session_id=current_session_id,
+            web_search_enabled=web_search_enabled,
         )
         return jsonify({
             'response': response,
@@ -193,6 +196,7 @@ def chat_endpoint():
                     intent=intent,
                     all_sessions=all_sessions,
                     current_session_id=current_session_id,
+                    web_search_enabled=web_search_enabled,
                 )
                 return jsonify({
                     'response': response,

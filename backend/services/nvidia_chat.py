@@ -7,6 +7,8 @@ from typing import Optional
 from urllib.request import Request, urlopen
 from urllib.error import URLError, HTTPError
 
+from services.web_search import web_search
+
 logger = logging.getLogger(__name__)
 
 NVIDIA_API_KEY_ENV = "NVIDIA_API_KEY"
@@ -160,6 +162,36 @@ CHAT_TOOLS = [
 ]
 
 
+# Herramienta de busqueda web (solo se expone al modelo cuando el usuario la
+# activa desde la barra de Acciones Rapidas). Backed by services.web_search.
+WEB_SEARCH_TOOL = {
+    "type": "function",
+    "function": {
+        "name": "web_search",
+        "description": "Busca informacion actualizada en internet (noticias, eventos macro, anuncios, listados, regulacion, contexto externo reciente). Usala cuando la respuesta dependa de datos externos que NO estan en los indicadores del terminal ni en el historial. NO la uses para el precio en vivo ni para senales tecnicas: eso viene exclusivamente del terminal.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "Consulta concreta y especifica (ej: 'Bitcoin ETF inflows November 2026', 'ultimo anuncio Fed tasas')"
+                },
+                "time_range": {
+                    "type": "string",
+                    "enum": ["day", "week", "month", "year"],
+                    "description": "Ventana de frescura. Usa 'day' o 'week' para noticias de mercado recientes."
+                },
+                "max_results": {
+                    "type": "integer",
+                    "description": "Numero maximo de resultados (por defecto 6, maximo 10)."
+                }
+            },
+            "required": ["query"]
+        }
+    }
+}
+
+
 def search_chat_history(
     query: str,
     symbol: Optional[str] = None,
@@ -252,7 +284,7 @@ class NvidiaChatError(Exception):
         self.code = code
 
 
-def get_trading_system_prompt(indicator_data=None, global_context=None, model_name="AI", intent="analysis"):
+def get_trading_system_prompt(indicator_data=None, global_context=None, model_name="AI", intent="analysis", web_search_enabled=False):
     """Build a specialized trading agent system prompt.
 
     Args:
@@ -297,6 +329,12 @@ def get_trading_system_prompt(indicator_data=None, global_context=None, model_na
         if global_context:
             base += f"\n=== CROSS-SESSION CONTEXT (MEMORY) ===\n"
             base += f"The user has other active sessions: {global_context}. Use this for continuity if referenced.\n"
+        if web_search_enabled:
+            base += (
+                "=== WEB SEARCH TOOL (ENABLED) ===\n"
+                "Web search is ON and you may call `web_search` for current external info or news when the user asks. "
+                "Keep it short and conversational; cite source and date when you actually search.\n\n"
+            )
         return base
 
     # ── ANALYSIS or AMBIGUOUS mode ──
@@ -332,6 +370,16 @@ def get_trading_system_prompt(indicator_data=None, global_context=None, model_na
         "YOU MUST CALL `search_chat_history` to query past messages and retrieve the real context before answering. "
         "Do NOT guess or say you don't remember without searching first.\n\n"
     )
+    if web_search_enabled:
+        base += (
+            "=== WEB SEARCH TOOL (ENABLED) ===\n"
+            "The user has ENABLED live web search and you are equipped with the tool `web_search`. "
+            "Use it whenever the answer depends on external, current, or post-cutoff information "
+            "(news, macro events, announcements, listings, regulation) that is NOT in the terminal indicators or the chat history. "
+            "When you use it: cite the source (title + URL) and its date, keep every PRICE/indicator claim exclusive to the live terminal data, "
+            "and clearly separate verified web facts from your own interpretation. "
+            "If the search returns nothing useful, say so explicitly instead of inventing data. Never claim to have searched unless you actually called the tool.\n\n"
+        )
     base += personality
     base += (
         "=== ADAPTIVE RESPONSE DEPTH ===\n"
@@ -819,6 +867,7 @@ def nvidia_chat(
     intent: str = "analysis",
     all_sessions: list | None = None,
     current_session_id: str | None = None,
+    web_search_enabled: bool = False,
 ) -> tuple[str, list]:
     """Call the NVIDIA API with MCP-style tool calling support for memory recall.
     Returns (response_text, tools_used). Raises NvidiaChatError on failure."""
@@ -834,7 +883,7 @@ def nvidia_chat(
     timeout = float(model_config.get("timeout", REQUEST_TIMEOUT))
 
     effective_data = indicator_data if intent in ('analysis', 'ambiguous') else None
-    system_prompt = get_trading_system_prompt(effective_data, global_context, model_name, intent=intent)
+    system_prompt = get_trading_system_prompt(effective_data, global_context, model_name, intent=intent, web_search_enabled=web_search_enabled)
 
     effective_max_tokens = 512 if intent == 'casual' else max_tokens
     url = f"{NVIDIA_API_BASE}/chat/completions"
@@ -842,6 +891,10 @@ def nvidia_chat(
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
     }
+
+    request_tools = list(CHAT_TOOLS)
+    if web_search_enabled:
+        request_tools.append(WEB_SEARCH_TOOL)
 
     initial_messages = build_messages(prompt, system_prompt, history)
 
@@ -851,7 +904,7 @@ def nvidia_chat(
         "messages": initial_messages,
         "temperature": temperature,
         "max_tokens": effective_max_tokens,
-        "tools": CHAT_TOOLS,
+        "tools": request_tools,
         "tool_choice": "auto",
     }
     payload = json.dumps(payload_dict).encode("utf-8")
@@ -900,6 +953,25 @@ def nvidia_chat(
                             "query": query,
                             "symbol": sym,
                             "found": result.get("found_records", 0)
+                        })
+                        second_messages.append({
+                            "role": "tool",
+                            "tool_call_id": tc_id,
+                            "name": fn_name,
+                            "content": json.dumps(result, ensure_ascii=False)
+                        })
+
+                    elif fn_name == "web_search":
+                        query = args.get("query", prompt)
+                        result = web_search(
+                            query=query,
+                            max_results=args.get("max_results", 6),
+                            time_range=args.get("time_range"),
+                        )
+                        tools_used.append({
+                            "tool": "web_search",
+                            "query": query,
+                            "found": result.get("count", 0)
                         })
                         second_messages.append({
                             "role": "tool",
@@ -986,6 +1058,7 @@ def nvidia_chat_stream(
     intent: str = "analysis",
     all_sessions: list | None = None,
     current_session_id: str | None = None,
+    web_search_enabled: bool = False,
 ):
     """Generates real-time SSE events for model reasoning (thoughts) and response content."""
     api_key = get_api_key()
@@ -1002,7 +1075,7 @@ def nvidia_chat_stream(
     timeout = float(model_config.get("timeout", REQUEST_TIMEOUT))
 
     effective_data = indicator_data if intent in ('analysis', 'ambiguous') else None
-    system_prompt = get_trading_system_prompt(effective_data, global_context, model_name, intent=intent)
+    system_prompt = get_trading_system_prompt(effective_data, global_context, model_name, intent=intent, web_search_enabled=web_search_enabled)
     effective_max_tokens = 512 if intent == 'casual' else max_tokens
     url = f"{NVIDIA_API_BASE}/chat/completions"
     headers = {
@@ -1011,6 +1084,10 @@ def nvidia_chat_stream(
         "Accept": "text/event-stream",
     }
 
+    request_tools = list(CHAT_TOOLS)
+    if web_search_enabled:
+        request_tools.append(WEB_SEARCH_TOOL)
+
     initial_messages = build_messages(prompt, system_prompt, history)
 
     payload_dict = {
@@ -1018,7 +1095,7 @@ def nvidia_chat_stream(
         "messages": initial_messages,
         "temperature": temperature,
         "max_tokens": effective_max_tokens,
-        "tools": CHAT_TOOLS,
+        "tools": request_tools,
         "tool_choice": "auto",
         "stream": True,
     }
@@ -1104,6 +1181,27 @@ def nvidia_chat_stream(
                         "found": result.get("found_records", 0)
                     })
                     yield {"type": "tool", "query": query, "found": result.get("found_records", 0)}
+                    second_messages.append({
+                        "role": "tool",
+                        "tool_call_id": tc.get("id") or "call_0",
+                        "name": fn_name,
+                        "content": json.dumps(result, ensure_ascii=False)
+                    })
+
+                elif fn_name == "web_search":
+                    query = args.get("query", prompt)
+                    yield {"type": "thought", "chunk": f"\n[\U0001F50D Buscando en la web: '{query}']\n"}
+                    result = web_search(
+                        query=query,
+                        max_results=args.get("max_results", 6),
+                        time_range=args.get("time_range"),
+                    )
+                    tools_used.append({
+                        "tool": "web_search",
+                        "query": query,
+                        "found": result.get("count", 0)
+                    })
+                    yield {"type": "tool", "name": "web_search", "query": query, "found": result.get("count", 0), "results": result.get("results", [])}
                     second_messages.append({
                         "role": "tool",
                         "tool_call_id": tc.get("id") or "call_0",

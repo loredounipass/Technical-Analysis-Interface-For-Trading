@@ -35,6 +35,14 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
     return "nvidia-nemotron"
   })
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  // Habilidad de busqueda web (DuckDuckGo). Persistente entre sesiones; solo
+  // afecta el payload y el estado del boton (no la estructura renderizada).
+  const [webSearchEnabled, setWebSearchEnabled] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("trading_terminal_web_search") === "true"
+    }
+    return false
+  })
   const [typingText, setTypingText] = useState("")
   const [isTyping, setIsTyping] = useState(false)
   const [streamingThought, setStreamingThought] = useState("")
@@ -271,6 +279,14 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
   }, [selectedModel])
 
   useEffect(() => {
+    try {
+      localStorage.setItem("trading_terminal_web_search", String(webSearchEnabled))
+    } catch {
+      // localStorage no disponible
+    }
+  }, [webSearchEnabled])
+
+  useEffect(() => {
     if (activeSessionId) {
       setSessions((prev) =>
         prev.map((s) => (s.id === activeSessionId ? { ...s, messages: messages } : s))
@@ -429,6 +445,7 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
           temperature: 0.3,
           all_sessions: sessions,
           current_session_id: activeSessionId,
+          web_search: webSearchEnabled,
           stream: true,
         },
         controller.signal
@@ -588,6 +605,8 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
   const currentModelName =
     models.find((m) => m.key === selectedModel)?.name || "Nemotron 3 Nano Omni"
 
+  const toggleWebSearch = () => setWebSearchEnabled((v) => !v)
+
   return {
     sessions,
     activeSessionId,
@@ -610,6 +629,8 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
     chatContainerRef,
     ttsEnabled,
     toggleTTS,
+    webSearchEnabled,
+    toggleWebSearch,
     createNewSession,
     switchSession,
     deleteSession,

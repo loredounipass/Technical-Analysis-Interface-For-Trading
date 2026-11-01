@@ -147,6 +147,8 @@ export default function AiChat({ symbol, datos, interval = "15m", market = "cryp
           selectedModel={chat.selectedModel}
           setSelectedModel={chat.setSelectedModel}
           currentModelName={chat.currentModelName}
+          webSearchEnabled={chat.webSearchEnabled}
+          onToggleWebSearch={chat.toggleWebSearch}
         />
 
         {/* 5. Barra de Entrada de Comandos */}

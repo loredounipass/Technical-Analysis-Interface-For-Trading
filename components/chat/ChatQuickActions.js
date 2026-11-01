@@ -22,6 +22,7 @@ import {
   LayoutGrid,
   LineChart,
   Waves,
+  Globe,
 } from "lucide-react"
 
 /**
@@ -40,6 +41,8 @@ export default function ChatQuickActions({
   selectedModel,
   setSelectedModel,
   currentModelName = "Nemotron 3 Nano Omni",
+  webSearchEnabled = false,
+  onToggleWebSearch,
 }) {
   const [isOpen, setIsOpen] = useState(false)
   const [isModelOpen, setIsModelOpen] = useState(false)
@@ -533,6 +536,31 @@ Veredicto claro basado en todos los datos del terminal: el momentum favorece COM
           <span>Estrategias y Análisis</span>
           <span className="text-[9px] bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 px-1.5 py-0.5 rounded-full font-bold">
             {strategies.length + analyses.length}
+          </span>
+        </button>
+
+        {/* Habilidad de busqueda web (DuckDuckGo) — toggle ON/OFF */}
+        <button
+          type="button"
+          onClick={onToggleWebSearch}
+          aria-pressed={webSearchEnabled}
+          title="Buscar en la web (DuckDuckGo). Activar o desactivar esta habilidad"
+          className={`text-xs font-mono px-3 py-1.5 rounded-full transition-all cursor-pointer whitespace-nowrap shadow-sm flex items-center gap-2 active:scale-95 border ${
+            webSearchEnabled
+              ? "bg-emerald-500/20 border-emerald-400/60 text-emerald-200"
+              : "bg-[#09151d] border-slate-700/60 text-slate-400 hover:border-slate-500/60 hover:text-slate-200"
+          }`}
+        >
+          <Globe className={`w-3.5 h-3.5 ${webSearchEnabled ? "text-emerald-300" : "text-slate-500"}`} />
+          <span>Web Search</span>
+          <span
+            className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full border ${
+              webSearchEnabled
+                ? "text-emerald-200 bg-emerald-500/20 border-emerald-400/50"
+                : "text-slate-500 bg-slate-800/40 border-slate-700"
+            }`}
+          >
+            {webSearchEnabled ? "ON" : "OFF"}
           </span>
         </button>
 
