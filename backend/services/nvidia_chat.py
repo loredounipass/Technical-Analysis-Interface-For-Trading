@@ -335,7 +335,7 @@ def get_trading_system_prompt(indicator_data=None, global_context=None, model_na
             base += (
                 "=== WEB SEARCH TOOL (ENABLED) ===\n"
                 "Web search is ON and you may call `web_search` for current external info or news when the user asks. "
-                "Keep it short and conversational; cite source and date when you actually search.\n\n"
+                "Keep it short and conversational; when you actually search, cite the source with an inline markdown link [Title](URL) and its date.\n\n"
             )
         return base
 
@@ -378,8 +378,8 @@ def get_trading_system_prompt(indicator_data=None, global_context=None, model_na
             "The user has ENABLED live web search and you are equipped with the tool `web_search`. "
             "Use it whenever the answer depends on external, current, or post-cutoff information "
             "(news, macro events, announcements, listings, regulation) that is NOT in the terminal indicators or the chat history. "
-            "When you use it: cite the source (title + URL) and its date, keep every PRICE/indicator claim exclusive to the live terminal data, "
-            "and clearly separate verified web facts from your own interpretation. "
+            "When you use it, ALWAYS cite with inline markdown links taken VERBATIM from the results, e.g. [Título](https://...), placed next to each claim and including its date. Keep every PRICE/indicator claim exclusive to the live terminal data, and clearly separate verified web facts from your own interpretation. "
+            "End the answer with a short 'Fuentes' line listing those markdown links (one per source). Only link URLs that web_search actually returned; never invent, guess, or reuse URLs from memory. "
             "If the search returns nothing useful, say so explicitly instead of inventing data. Never claim to have searched unless you actually called the tool.\n\n"
         )
     base += personality

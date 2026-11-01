@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useEffect, useMemo, useState, useRef } from "react"
-import { User, CheckCircle2, Circle, Bot, ChevronDown, ChevronUp, Brain } from "lucide-react"
+import { User, CheckCircle2, Circle, Bot, ChevronDown, ChevronUp, Brain, Globe, ExternalLink } from "lucide-react"
 import { renderMarkdown } from "./MarkdownRenderer"
 import DiagnosticCard from "./DiagnosticCard"
 import { INTERVAL_LABELS } from "./useChatSession"
@@ -10,6 +10,14 @@ function formatTime(timestamp) {
   if (!timestamp) return ""
   const d = new Date(timestamp)
   return d.toTimeString().split(" ")[0]
+}
+
+function getHost(url) {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "")
+  } catch {
+    return url
+  }
 }
 
 const LOADING_STEPS = [
@@ -229,22 +237,71 @@ export default function ChatMessageList({
         /* Respuesta del Agente: texto plano sin tarjeta */
         return (
           <div key={idx} className="w-full my-2">
-            {/* Indicador de Herramienta MCP de Memoria */}
-            {msg.memoryAccessed && msg.memoryAccessed.length > 0 && (
-              <div className="mb-2.5 flex flex-wrap gap-2">
-                {msg.memoryAccessed.map((m, mIdx) => (
-                  <div
-                    key={mIdx}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#00f5c4]/10 border border-[#00f5c4]/30 text-[#00f5c4] text-[10.5px] font-mono shadow-[0_0_8px_rgba(0,245,196,0.1)]"
-                  >
-                    <Brain className="w-3.5 h-3.5 text-[#00f5c4] animate-pulse" />
-                    <span>
-                      MCP Memory Tool: Accedió al historial ({m.found} resultado{m.found === 1 ? "" : "s"} para "{m.query}")
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
+            {/* Herramientas usadas por el agente: memoria + fuentes web */}
+            {(() => {
+              const tools = Array.isArray(msg.memoryAccessed) ? msg.memoryAccessed : []
+              const mem = tools.filter((m) => !m.tool || m.tool === "search_chat_history")
+              const web = tools.filter((m) => m.tool === "web_search")
+              const seen = new Set()
+              const sources = []
+              web.forEach((w) =>
+                (w.results || []).forEach((r) => {
+                  if (r && r.url && !seen.has(r.url)) {
+                    seen.add(r.url)
+                    sources.push(r)
+                  }
+                })
+              )
+              const lastWebQuery = web.length ? web[web.length - 1].query : ""
+              return (
+                <>
+                  {mem.length > 0 && (
+                    <div className="mb-2.5 flex flex-wrap gap-2">
+                      {mem.map((m, mIdx) => (
+                        <div
+                          key={mIdx}
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#00f5c4]/10 border border-[#00f5c4]/30 text-[#00f5c4] text-[10.5px] font-mono shadow-[0_0_8px_rgba(0,245,196,0.1)]"
+                        >
+                          <Brain className="w-3.5 h-3.5 text-[#00f5c4] animate-pulse" />
+                          <span>
+                            MCP Memory Tool: Accedió al historial ({m.found} resultado{m.found === 1 ? "" : "s"} para "{m.query}")
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {sources.length > 0 && (
+                    <div className="mb-2.5 rounded-lg border border-cyan-500/25 bg-[#071218]/70 p-2.5 shadow-[0_0_10px_rgba(34,211,238,0.08)]">
+                      <div className="flex items-center gap-1.5 mb-2 text-[10px] font-mono font-bold uppercase tracking-wider text-cyan-300">
+                        <Globe className="w-3.5 h-3.5" />
+                        <span>Fuentes de la web{lastWebQuery ? ` · ${lastWebQuery}` : ""}</span>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        {sources.map((s, i) => (
+                          <a
+                            key={i}
+                            href={s.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="group flex items-center gap-2 text-[11px] font-sans px-1.5 py-1 rounded-md hover:bg-cyan-500/10 transition-colors"
+                          >
+                            <span className="flex-shrink-0 w-4 h-4 grid place-items-center rounded bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 text-[9px] font-mono font-bold">
+                              {i + 1}
+                            </span>
+                            <span className="truncate text-slate-200 group-hover:text-cyan-200 max-w-[62%]">
+                              {s.title || getHost(s.url)}
+                            </span>
+                            <span className="text-slate-500 truncate">{getHost(s.url)}</span>
+                            <ExternalLink className="w-3 h-3 ml-auto text-slate-500 group-hover:text-cyan-300 flex-shrink-0" />
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )
+            })()}
 
             {/* Pensamiento / Razonamiento interno desplegable */}
             {msg.thought && (

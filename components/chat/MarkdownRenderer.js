@@ -15,6 +15,35 @@ const HEADING_COLORS = [
   "#f0abfc", // fuchsia
 ]
 
+// Convierte enlaces markdown [texto](http...) en <a> clicables (nueva pestana).
+const LINK_RE = /\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g
+
+function withLinks(str, key) {
+  if (!str || str.indexOf("](") === -1) return [str]
+  const out = []
+  let last = 0
+  let k = 0
+  let m
+  LINK_RE.lastIndex = 0
+  while ((m = LINK_RE.exec(str)) !== null) {
+    if (m.index > last) out.push(str.slice(last, m.index))
+    out.push(
+      <a
+        key={`${key}-link-${k++}`}
+        href={m[2]}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-[#7dd3fc] underline decoration-[#7dd3fc]/40 underline-offset-2 hover:text-[#bae6fd] break-words"
+      >
+        {m[1]}
+      </a>,
+    )
+    last = m.index + m[0].length
+  }
+  if (last < str.length) out.push(str.slice(last))
+  return out
+}
+
 /**
  * Renderizador de Markdown adaptado a la estética Anthropic / Synapse Terminal.
  * Procesa encabezados, tablas, bloques de código, listas y citas con tipografía
@@ -157,7 +186,7 @@ export function renderMarkdown(text, currentSymbol, currentInterval) {
                   </em>
                 )
               } else if (iPart) {
-                result.push(iPart)
+                result.push(...withLinks(iPart, `${keyPrefix}-t-${keyIdx++}`))
               }
             })
           }
