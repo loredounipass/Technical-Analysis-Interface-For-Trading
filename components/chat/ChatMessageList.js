@@ -26,12 +26,13 @@ const LOADING_STEPS = [
 function ProcessingStatus({ symbol }) {
   const phases = useMemo(
     () => [
-      `Analizando datos de mercado de ${symbol}...`,
-      `Consultando memoria e historial de sesiones previas...`,
-      `Calculando indicadores técnicos (RSI, MACD, ADX)...`,
-      `Evaluando estructura de precio y niveles clave...`,
-      `Procesando flujo de órdenes del libro de compra/venta...`,
-      `Sintetizando informe cuantitativo...`,
+      `Ingestando telemetría de mercado y libro L2/L3 [${symbol}]...`,
+      `Consultando memoria vectorial MCP y contexto institucional...`,
+      `Computando matriz técnica cuantitativa (EMAs, RSI, MACD, ADX)...`,
+      `Detectando Order Blocks, Fair Value Gaps (FVG) y Swings de liquidez...`,
+      `Decodificando microestructura de Order Flow y Delta acumulativo...`,
+      `Evaluando confluencia multi-temporalidad y fractales de precio...`,
+      `Sintetizando inferencia neuronal de alta precisión y proyecciones de riesgo...`,
     ],
     [symbol]
   )
@@ -41,14 +42,26 @@ function ProcessingStatus({ symbol }) {
   useEffect(() => {
     const timer = setInterval(() => {
       setPhase((p) => (p + 1) % phases.length)
-    }, 1500)
+    }, 1600)
     return () => clearInterval(timer)
   }, [phases.length])
 
   return (
-    <span className="text-xs font-mono text-slate-400">
-      {phases[phase]}
-    </span>
+    <div className="flex flex-col gap-1 min-w-0">
+      <div className="flex items-center gap-2">
+        <span className="text-[9px] sm:text-[9.5px] font-mono font-bold tracking-widest text-[#00f5c4] bg-[#00f5c4]/10 border border-[#00f5c4]/30 px-1.5 py-0.5 rounded uppercase shadow-[0_0_8px_rgba(0,245,196,0.15)] flex items-center gap-1.5">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#00f5c4] animate-ping" />
+          SKYNET NEURAL CORE
+        </span>
+        <span className="text-[9.5px] sm:text-[10px] font-mono text-slate-500 tracking-wider">
+          FASE 0{phase + 1}/0{phases.length}
+        </span>
+      </div>
+      <div className="text-xs sm:text-[13px] font-mono tracking-wide font-medium flex items-center gap-2 text-slate-200">
+        <span className="text-[#00f5c4] font-bold select-none">›</span>
+        <span className="truncate">{phases[phase]}</span>
+      </div>
+    </div>
   )
 }
 
