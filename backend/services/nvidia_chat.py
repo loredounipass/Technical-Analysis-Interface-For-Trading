@@ -58,8 +58,8 @@ def build_messages(prompt: str, system_prompt: str, history: list | None = None)
 def nvidia_chat(
     prompt: str,
     model_key: str = "nvidia-nemotron",
-    temperature: float = 0.3,
-    max_tokens: int = 4096,
+    temperature: float | None = None,
+    max_tokens: int | None = None,
     history: list | None = None,
     global_context: str | None = None,
     indicator_data: dict | None = None,
@@ -84,7 +84,18 @@ def nvidia_chat(
     effective_data = indicator_data if intent in ('analysis', 'ambiguous') else None
     system_prompt = get_trading_system_prompt(effective_data, global_context, model_name, intent=intent, web_search_enabled=web_search_enabled)
 
-    effective_max_tokens = 512 if intent == 'casual' else max_tokens
+    # Resuelve los parametros de inferencia POR MODELO (ver AVAILABLE_MODELS),
+    # salvo que el caller los pase explicitos. Nemotron/Muse/DiffusionGemma
+    # esperan temperature=1.0 / top_p=0.95; usar 0.3 los degrada.
+    if temperature is None:
+        temperature = float(model_config.get("temperature", 0.6))
+    cfg_max = int(model_config.get("max_tokens", 8192))
+    effective_max_tokens = 512 if intent == "casual" else (int(max_tokens) if max_tokens else cfg_max)
+    sampling = {"temperature": temperature}
+    if model_config.get("top_p") is not None:
+        sampling["top_p"] = float(model_config["top_p"])
+    if model_config.get("top_k") is not None:
+        sampling["top_k"] = int(model_config["top_k"])
     url = f"{NVIDIA_API_BASE}/chat/completions"
     headers = {
         "Authorization": f"Bearer {api_key}",
@@ -106,7 +117,7 @@ def nvidia_chat(
             payload_dict = {
                 "model": model_id,
                 "messages": messages,
-                "temperature": temperature,
+                **sampling,
                 "max_tokens": effective_max_tokens,
                 # `tools` se mantiene en TODAS las rondas: si desaparece, el modelo
                 # emite el tool_call como texto (XML) y se filtra al usuario.
@@ -156,7 +167,7 @@ def nvidia_chat(
         payload_final = json.dumps({
             "model": model_id,
             "messages": messages,
-            "temperature": temperature,
+            **sampling,
             "max_tokens": effective_max_tokens,
         }).encode("utf-8")
         req_final = Request(url, data=payload_final, headers=headers, method="POST")
@@ -175,7 +186,7 @@ def nvidia_chat(
             payload_no_tools = json.dumps({
                 "model": model_id,
                 "messages": initial_messages,
-                "temperature": temperature,
+                **sampling,
                 "max_tokens": effective_max_tokens,
             }).encode("utf-8")
             req_retry = Request(url, data=payload_no_tools, headers=headers, method="POST")
@@ -215,8 +226,8 @@ def nvidia_chat(
 def nvidia_chat_stream(
     prompt: str,
     model_key: str = "nvidia-nemotron",
-    temperature: float = 0.3,
-    max_tokens: int = 4096,
+    temperature: float | None = None,
+    max_tokens: int | None = None,
     history: list | None = None,
     global_context: str | None = None,
     indicator_data: dict | None = None,
@@ -241,7 +252,18 @@ def nvidia_chat_stream(
 
     effective_data = indicator_data if intent in ('analysis', 'ambiguous') else None
     system_prompt = get_trading_system_prompt(effective_data, global_context, model_name, intent=intent, web_search_enabled=web_search_enabled)
-    effective_max_tokens = 512 if intent == 'casual' else max_tokens
+    # Resuelve los parametros de inferencia POR MODELO (ver AVAILABLE_MODELS),
+    # salvo que el caller los pase explicitos. Nemotron/Muse/DiffusionGemma
+    # esperan temperature=1.0 / top_p=0.95; usar 0.3 los degrada.
+    if temperature is None:
+        temperature = float(model_config.get("temperature", 0.6))
+    cfg_max = int(model_config.get("max_tokens", 8192))
+    effective_max_tokens = 512 if intent == "casual" else (int(max_tokens) if max_tokens else cfg_max)
+    sampling = {"temperature": temperature}
+    if model_config.get("top_p") is not None:
+        sampling["top_p"] = float(model_config["top_p"])
+    if model_config.get("top_k") is not None:
+        sampling["top_k"] = int(model_config["top_k"])
     url = f"{NVIDIA_API_BASE}/chat/completions"
     headers = {
         "Authorization": f"Bearer {api_key}",
@@ -259,13 +281,14 @@ def nvidia_chat_stream(
     messages = list(initial_messages)
     tools_used = []
     answered = False
+    MAX_CONTINUATIONS = 4
 
     try:
         for _round in range(MAX_TOOL_ROUNDS):
             payload_dict = {
                 "model": model_id,
                 "messages": messages,
-                "temperature": temperature,
+                **sampling,
                 "max_tokens": effective_max_tokens,
                 # `tools` en TODAS las rondas: si desaparece, el modelo emite el
                 # tool_call como texto (XML) y se filtra al usuario.
@@ -276,6 +299,8 @@ def nvidia_chat_stream(
             req = Request(url, data=json.dumps(payload_dict).encode("utf-8"), headers=headers, method="POST")
 
             tool_calls_acc = []
+            round_content = []
+            finish_reason = None
             with urlopen(req, timeout=timeout) as resp:
                 for raw_line in resp:
                     line = raw_line.decode("utf-8").strip()
@@ -288,6 +313,8 @@ def nvidia_chat_stream(
                         choices = chunk_json.get("choices", [])
                         if not choices:
                             continue
+                        if choices[0].get("finish_reason"):
+                            finish_reason = choices[0]["finish_reason"]
                         delta = choices[0].get("delta", {})
 
                         # Stream real-time reasoning / thoughts
@@ -296,6 +323,7 @@ def nvidia_chat_stream(
 
                         # Stream real-time response content
                         if "content" in delta and delta["content"]:
+                            round_content.append(delta["content"])
                             yield {"type": "content", "chunk": delta["content"]}
 
                         # Accumulate tool calls (memoria o web_search) de esta ronda
@@ -314,9 +342,55 @@ def nvidia_chat_stream(
                     except Exception:
                         pass
 
-            # Sin tool_calls => la respuesta final ya fue streamiada en esta ronda.
+            # Sin tool_calls => la respuesta final fue streamiada en esta ronda.
             if not tool_calls_acc:
                 answered = True
+                # Si el modelo se corto por limite de tokens (finish_reason=='length'),
+                # continuar la generacion hasta completar el informe, sin repetir.
+                full_text = "".join(round_content)
+                cont = 0
+                while finish_reason == "length" and cont < MAX_CONTINUATIONS:
+                    cont += 1
+                    logger.info(f"[NvidiaChatStream] respuesta cortada por longitud; continuando {cont}/{MAX_CONTINUATIONS}")
+                    req_messages = messages + [
+                        {"role": "assistant", "content": full_text},
+                        {"role": "user", "content": "Continuá EXACTAMENTE desde donde quedaste, sin repetir lo ya escrito y sin títulos nuevos: completá la respuesta hasta el final."},
+                    ]
+                    cont_payload = {
+                        "model": model_id,
+                        "messages": req_messages,
+                        **sampling,
+                        "max_tokens": effective_max_tokens,
+                        "stream": True,
+                    }
+                    req2 = Request(url, data=json.dumps(cont_payload).encode("utf-8"), headers=headers, method="POST")
+                    more = []
+                    finish_reason = None
+                    with urlopen(req2, timeout=timeout) as resp2:
+                        for raw_line in resp2:
+                            line = raw_line.decode("utf-8").strip()
+                            if not line or line == "data: [DONE]":
+                                continue
+                            if not line.startswith("data: "):
+                                continue
+                            try:
+                                cj = json.loads(line[6:])
+                                ch2 = cj.get("choices", [])
+                                if not ch2:
+                                    continue
+                                if ch2[0].get("finish_reason"):
+                                    finish_reason = ch2[0]["finish_reason"]
+                                d2 = ch2[0].get("delta", {})
+                                if d2.get("content"):
+                                    more.append(d2["content"])
+                                    yield {"type": "content", "chunk": d2["content"]}
+                            except Exception:
+                                pass
+                    full_text += "".join(more)
+                    if not more:
+                        break  # sin progreso: evitar bucle infinito
+                if finish_reason == "length":
+                    yield {"type": "thought", "chunk": "\n[\u26a0\ufe0f La respuesta se cortó por el límite de tokens del modelo]\n"}
                 break
 
             assistant_tool_msg = {"role": "assistant", "content": "", "tool_calls": []}
@@ -373,7 +447,7 @@ def nvidia_chat_stream(
             final_payload = {
                 "model": model_id,
                 "messages": messages,
-                "temperature": temperature,
+                **sampling,
                 "max_tokens": effective_max_tokens,
                 "stream": True,
             }

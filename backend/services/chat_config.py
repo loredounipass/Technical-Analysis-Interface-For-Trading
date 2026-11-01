@@ -17,6 +17,17 @@ NVIDIA_API_BASE = "https://integrate.api.nvidia.com/v1"
 REQUEST_TIMEOUT = 180
 
 
+# Catalogo de modelos con SUS parametros de inferencia correctos por modelo
+# (verificado contra la API real de integrate.api.nvidia.com y las model cards
+# de build.nvidia.com / docs.nvidia.com).
+#   - temperature/top_p: Nemotron-3, Muse Glimmer y DiffusionGemma recomiendan
+#     temperature=1.0 y top_p=0.95 (estan RL-trained esperando temp alta; usar
+#     0.3 los degrada).
+#   - top_k: Muse Glimmer recomienda top_k=64.
+#   - max_tokens: techo de salida por modelo (los de razonamiento necesitan
+#     headroom porque el razonamiento consume presupuesto; finish_reason='length'
+#     se recupera con auto-continuacion en nvidia_chat_stream).
+#   - timeout: los grandes (Ultra 550B, Muse) son mas lentos -> timeout mayor.
 AVAILABLE_MODELS = {
     "nvidia-nemotron": {
         "id": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning",
@@ -24,6 +35,9 @@ AVAILABLE_MODELS = {
         "provider": "NVIDIA",
         "free": True,
         "reasoning": True,
+        "temperature": 1.0,
+        "top_p": 0.95,
+        "max_tokens": 16384,
         "timeout": 180,
     },
     "nvidia-nemotron-bolt": {
@@ -32,6 +46,9 @@ AVAILABLE_MODELS = {
         "provider": "NVIDIA",
         "free": True,
         "reasoning": False,
+        "temperature": 1.0,
+        "top_p": 0.95,
+        "max_tokens": 8192,
         "timeout": 180,
     },
     "nvidia-nemotron-ultra": {
@@ -40,7 +57,10 @@ AVAILABLE_MODELS = {
         "provider": "NVIDIA",
         "free": True,
         "reasoning": True,
-        "timeout": 180,
+        "temperature": 1.0,
+        "top_p": 0.95,
+        "max_tokens": 16384,
+        "timeout": 240,
     },
     "meta-muse": {
         "id": "meta/muse-glimmer-30b",
@@ -48,7 +68,11 @@ AVAILABLE_MODELS = {
         "provider": "Meta",
         "free": True,
         "reasoning": True,
-        "timeout": 180,
+        "temperature": 1.0,
+        "top_p": 0.95,
+        "top_k": 64,
+        "max_tokens": 16384,
+        "timeout": 240,
     },
     "google-diffusiongemma": {
         "id": "google/diffusiongemma-26b-a4b-it",
@@ -56,6 +80,9 @@ AVAILABLE_MODELS = {
         "provider": "Google",
         "free": True,
         "reasoning": False,
+        "temperature": 1.0,
+        "top_p": 0.95,
+        "max_tokens": 8192,
         "timeout": 180,
     },
 }

@@ -87,7 +87,7 @@ def chat_endpoint():
         market = 'crypto'
     history = data.get('history', [])
     global_context = data.get('global_context', '')
-    temperature = data.get('temperature', 0.3)
+    temperature = data.get('temperature')  # None -> usa el default por modelo
     all_sessions = data.get('all_sessions', [])
     current_session_id = data.get('current_session_id')
     web_search_enabled = bool(data.get('web_search', False))
@@ -135,7 +135,6 @@ def chat_endpoint():
                     prompt=prompt,
                     model_key=model_key,
                     temperature=temperature,
-                    max_tokens=4096,
                     history=history,
                     global_context=global_context,
                     indicator_data=indicator_data,
@@ -164,7 +163,6 @@ def chat_endpoint():
             prompt=prompt,
             model_key=model_key,
             temperature=temperature,
-            max_tokens=4096,
             history=history,
             global_context=global_context,
             indicator_data=indicator_data,
@@ -189,7 +187,6 @@ def chat_endpoint():
                     prompt=prompt,
                     model_key=model_key,
                     temperature=temperature,
-                    max_tokens=4096,
                     history=None,
                     global_context=global_context,
                     indicator_data=indicator_data,
