@@ -47,20 +47,9 @@ function ProcessingStatus({ symbol }) {
   }, [phases.length])
 
   return (
-    <div className="flex flex-col gap-1 min-w-0">
-      <div className="flex items-center gap-2">
-        <span className="text-[9px] sm:text-[9.5px] font-mono font-bold tracking-widest text-[#00f5c4] bg-[#00f5c4]/10 border border-[#00f5c4]/30 px-1.5 py-0.5 rounded uppercase shadow-[0_0_8px_rgba(0,245,196,0.15)] flex items-center gap-1.5">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#00f5c4] animate-ping" />
-          SKYNET NEURAL CORE
-        </span>
-        <span className="text-[9.5px] sm:text-[10px] font-mono text-slate-500 tracking-wider">
-          FASE 0{phase + 1}/0{phases.length}
-        </span>
-      </div>
-      <div className="text-xs sm:text-[13px] font-mono tracking-wide font-medium flex items-center gap-2 text-slate-200">
-        <span className="text-[#00f5c4] font-bold select-none">›</span>
-        <span className="truncate">{phases[phase]}</span>
-      </div>
+    <div className="flex items-center gap-2 min-w-0 text-xs sm:text-[13px] font-mono tracking-wide text-slate-300">
+      <span className="text-[#00f5c4] font-bold select-none animate-pulse">›</span>
+      <span className="truncate">{phases[phase]}</span>
     </div>
   )
 }
