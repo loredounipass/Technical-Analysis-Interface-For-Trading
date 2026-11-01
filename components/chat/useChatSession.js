@@ -420,6 +420,10 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
     setIsThinking(true)
 
     try {
+      // Armamos el watchdog ANTES del fetch: sin esto, un backend colgado que
+      // nunca devuelve cabeceras dejaría el `await` trabado indefinidamente
+      // (el reader y su resetStall solo existen una vez recibida la Response).
+      resetStall()
       const res = await openChatStream(
         {
           prompt: trimmed,
