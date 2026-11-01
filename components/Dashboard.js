@@ -87,12 +87,14 @@ export default function Dashboard({ moneda, market = "crypto", onCambiarMoneda }
           className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full opacity-15 pointer-events-none"
           style={{ background: "radial-gradient(circle, rgba(0, 245, 196, 0.2) 0%, transparent 70%)" }}
         />
-        <div className="relative z-10 flex flex-col items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-[#00f5c4]/10 border border-[#00f5c4]/40 flex items-center justify-center text-[#00f5c4] animate-pulse shadow-[0_0_20px_rgba(0,245,196,0.3)]">
+        <div className="relative z-10 flex flex-col items-center justify-center text-center gap-3.5 w-full max-w-xl mx-auto px-4">
+          <div className="w-11 h-11 rounded-xl bg-[#00f5c4]/10 border border-[#00f5c4]/40 flex items-center justify-center text-[#00f5c4] animate-pulse shadow-[0_0_25px_rgba(0,245,196,0.35)]">
             <span className="w-3 h-3 rounded-full bg-[#00f5c4] animate-ping" />
           </div>
-          <div className="text-white text-sm font-bold tracking-[0.25em] animate-pulse">
-            SYNAPSE TERMINAL • LOADING FEED...
+          <div className="text-white text-xs sm:text-sm font-bold tracking-[0.2em] sm:tracking-[0.25em] animate-pulse text-center w-full flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1">
+            <span>SYNAPSE TERMINAL</span>
+            <span className="text-[#00f5c4]">•</span>
+            <span className="text-[#00f5c4]">SYNCHRONIZING TELEMETRY PIPELINE...</span>
           </div>
         </div>
       </div>
