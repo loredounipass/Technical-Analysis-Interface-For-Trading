@@ -75,7 +75,7 @@ export default function AiChat({ symbol, datos, interval = "15m", market = "cryp
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 md:p-6 bg-black/35 backdrop-blur-[2px] animate-in fade-in duration-200">
       {/* Contenedor Principal de la Ventana del Chat (Translúcido / Glassmorphism) */}
       <div
-        className="relative flex flex-col w-full max-w-[940px] h-[92vh] sm:h-[86vh] max-h-[820px] rounded-2xl overflow-hidden shadow-[0_25px_60px_-15px_rgba(0,0,0,0.85),0_0_35px_rgba(0,255,178,0.12)] border border-emerald-500/30 font-sans backdrop-blur-xl"
+        className="relative flex flex-col w-full max-w-[1080px] h-[92vh] sm:h-[86vh] max-h-[820px] rounded-2xl overflow-hidden shadow-[0_25px_60px_-15px_rgba(0,0,0,0.85),0_0_35px_rgba(0,255,178,0.12)] border border-emerald-500/30 font-sans backdrop-blur-xl"
         style={{
           background: "linear-gradient(180deg, rgba(8, 18, 25, 0.52) 0%, rgba(5, 12, 17, 0.58) 100%)",
         }}
