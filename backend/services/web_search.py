@@ -61,7 +61,7 @@ _MAX_RESULTS_CAP = 10
 # --- Config: SerpApi (fallback) ---------------------------------------------
 _SERPAPI_API_KEY = (os.environ.get("SERPAPI_API_KEY") or "").strip()
 _SERPAPI_ENDPOINT = "https://serpapi.com/search.json"
-_SERPAPI_TIMEOUT = 15
+_SERPAPI_TIMEOUT = 20
 _HAS_SERPAPI = bool(_SERPAPI_API_KEY)
 
 # Orden de proveedores via env WEB_SEARCH_PROVIDER:
@@ -506,24 +506,32 @@ def web_search(query, max_results=6, time_range=None, source=None):
     # Identidad fresca por busqueda (UA rotado + session nueva) para el scrapeo DDG.
     _rotate_ua()
 
+    # Diagnosticos por proveedor: permiten ver en logs/health QUE paso realmente
+    # (key cargada? DDG da 0? SerpApi errored/timout o 0?).
+    dbg = {"order": _PROVIDER_ORDER, "serpapi_key": bool(_HAS_SERPAPI)}
+
     def _try_ddg():
         res, wid, method = _ddg_search(query, n, site, src_key, df)
+        dbg["ddg"] = {"count": len(res), "widened": bool(wid), "method": method}
         if res:
             return _finalize(query, res, "duckduckgo", src_key, wid, method=method)
         return None
 
     def _try_serp():
         if not _HAS_SERPAPI:
+            dbg["serpapi"] = {"skipped": "no SERPAPI_API_KEY"}
             return None
         res, wid, err = _serp_search(query, n, df, src_key, has_domain)
         if err is not None:
+            dbg["serpapi"] = {"error": str(err)}
             logger.info(f"[WebSearch] serpapi fallo ({err})")
             return None
+        dbg["serpapi"] = {"count": len(res), "widened": bool(wid)}
         if res:
             return _finalize(query, res, "serpapi", src_key, wid)
         # SerpApi respondio pero 0 resultados reales -> vacio autoritativo.
         return {"query": query, "count": 0, "results": [],
-                "provider": "serpapi", "error": "SerpApi sin resultados"}
+                "provider": "serpapi", "error": "SerpApi sin resultados", "debug": dbg}
 
     if _PROVIDER_ORDER == "serpapi" and _HAS_SERPAPI:
         out = _try_serp() or _try_ddg()
@@ -531,9 +539,11 @@ def web_search(query, max_results=6, time_range=None, source=None):
         out = _try_ddg() or _try_serp()
 
     if out:
+        if isinstance(out, dict):
+            out.setdefault("debug", dbg)
         return out
 
-    logger.info(f"[WebSearch] '{query[:40]}' -> 0 results")
+    logger.info(f"[WebSearch] '{query[:40]}' -> 0 results | debug={dbg}")
     return {"query": query, "count": 0, "results": [],
             "provider": _PROVIDER_ORDER or "duckduckgo",
-            "error": "sin resultados (DDG bot-check / SerpApi)"}
+            "error": "sin resultados (DDG bot-check / SerpApi)", "debug": dbg}

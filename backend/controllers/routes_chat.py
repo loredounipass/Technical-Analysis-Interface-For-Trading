@@ -232,3 +232,39 @@ def get_models():
             'reasoning': config.get('reasoning', False),
         })
     return jsonify(models)
+
+
+@chat_bp.route('/api/search/health')
+def search_health():
+    """Diagnostico de busqueda web para depurar en el servidor desplegado.
+
+    Uso: GET /api/search/health?q=Binance+hack&source=all&time_range=week
+    Devuelve config real (orden de proveedores, key cargada) + una busqueda en
+    vivo con temporizacion y errores crudos. No revela la key completa.
+    """
+    import time as _t
+    from urllib.parse import unquote
+    import services.web_search as ws
+
+    q = unquote(request.args.get('q', 'Binance hack'))
+    src = (request.args.get('source') or 'all').lower()
+    tr = request.args.get('time_range') or None
+
+    t0 = _t.monotonic()
+    r = ws.web_search(q, max_results=5, source=src, time_range=tr)
+    secs = round(_t.monotonic() - t0, 2)
+
+    key = ws._SERPAPI_API_KEY
+    return jsonify({
+        'config': {
+            'WEB_SEARCH_PROVIDER': ws._PROVIDER_ORDER,
+            'SERPAPI_KEY_LOADED': bool(ws._HAS_SERPAPI),
+            'SERPAPI_KEY_HEAD': (key[:6] + '…' + key[-4:]) if ws._HAS_SERPAPI else None,
+        },
+        'query': q, 'source': src, 'time_range': tr,
+        'seconds': secs,
+        'count': r.get('count'), 'provider': r.get('provider'),
+        'error': r.get('error'), 'widened': r.get('widened'),
+        'debug': r.get('debug'),
+        'sample_urls': [x.get('url') for x in (r.get('results') or [])[:5]],
+    })
