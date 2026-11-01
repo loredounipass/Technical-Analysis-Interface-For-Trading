@@ -2,8 +2,7 @@
 
 import { useState, useRef, useCallback } from "react"
 import { Mic, MicOff } from "lucide-react"
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000/api"
+import { fetchTtsAudioBlob } from "@/services/api/ttsApi"
 
 export function MicIcon({ active }) {
   return (
@@ -42,16 +41,8 @@ export function useVoiceTTS() {
     if (!ttsEnabled || !text) return
     stopAudio()
     try {
-      const resp = await fetch(`${API_BASE_URL}/tts`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text }),
-      })
-      if (!resp.ok) {
-        console.warn("[VoiceTTS] TTS API error:", resp.status)
-        return
-      }
-      const blob = await resp.blob()
+      const blob = await fetchTtsAudioBlob(text)
+      if (!blob) return
       const url = URL.createObjectURL(blob)
       const audio = new Audio(url)
       audioRef.current = audio

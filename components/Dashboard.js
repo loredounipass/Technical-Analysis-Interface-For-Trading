@@ -6,7 +6,7 @@ import RecommendationCard from "@/components/indicators/RecommendationCard"
 import IndicatorGrid from "@/components/indicators/IndicatorGrid"
 import AiChat from "@/components/AiChat"
 import { getRecommendation } from "@/utils/dataUtils"
-import { fetchTradingData } from "@/utils/apiService"
+import { fetchTradingData } from "@/services/api/tradingApi"
 import { useState, useEffect, useRef } from "react"
 import useTradingSocket from "@/hooks/useTradingSocket"
 

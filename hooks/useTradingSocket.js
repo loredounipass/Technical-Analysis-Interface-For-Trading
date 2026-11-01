@@ -1,18 +1,15 @@
 import { useEffect, useState } from "react"
-import { io } from "socket.io-client"
-
-const SOCKET_URL =
-  process.env.NEXT_PUBLIC_SOCKET_URL ||
-  (process.env.NEXT_PUBLIC_API_BASE_URL
-    ? process.env.NEXT_PUBLIC_API_BASE_URL.replace(/\/+$/, "").replace(/\/api$/, "")
-    : "http://localhost:5000")
+import { connectTradingRoom } from "@/services/realtime/tradingSocketClient"
 
 /**
- * Custom hook to handle real-time trading data via WebSockets.
- * @param {string} symbol - The trading pair (e.g., 'BTC').
- * @param {string} interval - The timeframe (e.g., '15m').
- * @param {string} market - The market type ('crypto' | 'stock').
- * @returns {Object} - The latest market data and connection status.
+ * Custom hook (capa de lógica) que expone los datos de trading en tiempo real.
+ * El transporte socket.io vive en services/realtime/tradingSocketClient; acá
+ * solo se mantiene el estado React y se reacciona a los callbacks.
+ *
+ * @param {string} symbol   - Par de trading (p.ej. 'BTC').
+ * @param {string} interval - Timeframe (p.ej. '15m').
+ * @param {string} market   - Tipo de mercado ('crypto' | 'stock').
+ * @returns {{ liveData: Object|null, isConnected: boolean, error: string|null }}
  */
 export default function useTradingSocket(symbol, interval, market = "crypto") {
   const [liveData, setLiveData] = useState(null)
@@ -22,41 +19,21 @@ export default function useTradingSocket(symbol, interval, market = "crypto") {
   useEffect(() => {
     if (!symbol || !interval) return
 
-    const socket = io(SOCKET_URL, {
-      reconnectionAttempts: 5,
-      timeout: 10000,
+    return connectTradingRoom({
+      symbol,
+      interval,
+      market,
+      onConnected: () => {
+        setIsConnected(true)
+        setError(null)
+      },
+      onConnectError: (msg) => {
+        setError(msg)
+        setIsConnected(false)
+      },
+      onDataUpdate: (data) => setLiveData(data),
+      onDisconnected: () => setIsConnected(false),
     })
-
-    const room = `${market}:${symbol}:${interval}`
-
-    socket.on("connect", () => {
-      console.log(`[Socket] Connected. Joining room: ${room}`)
-      setIsConnected(true)
-      setError(null)
-      socket.emit("join", { room })
-    })
-
-    socket.on("connect_error", (err) => {
-      console.error("[Socket] Connection Error:", err.message)
-      setError("Fallo de conexión en tiempo real")
-      setIsConnected(false)
-    })
-
-    socket.on("trading_data_update", (data) => {
-      console.log(`[Socket] Data update for ${data.symbol}`)
-      setLiveData(data)
-    })
-
-    socket.on("disconnect", (reason) => {
-      console.log("[Socket] Disconnected:", reason)
-      setIsConnected(false)
-    })
-
-    return () => {
-      console.log(`[Socket] Cleaning up connection for ${room}`)
-      socket.emit("leave", { room })
-      socket.disconnect()
-    }
   }, [symbol, interval, market])
 
   return { liveData, isConnected, error }

@@ -20,6 +20,7 @@ from services.payload_builder import fetch_trading_data
 from controllers.routes_trading import trading_bp, init_trading_routes
 from controllers.routes_news import news_bp
 from controllers.routes_chat import chat_bp, init_chat_routes
+from controllers.routes_tts import tts_bp
 from common.sockets import init_sockets
 from gateways.stream_manager import init_market_streams
 
@@ -100,6 +101,9 @@ app.register_blueprint(news_bp)
 
 init_chat_routes(_get_trading_cached)
 app.register_blueprint(chat_bp)
+
+# TTS: no requiere inyeccion de cache; expone POST /api/tts (audio/wav).
+app.register_blueprint(tts_bp)
 
 
 # ─────────────────────────────────────────────────────────────────────

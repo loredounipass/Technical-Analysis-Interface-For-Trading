@@ -4,8 +4,7 @@ import { useState, useEffect, useRef } from "react"
 import { Newspaper, ExternalLink, Loader2, Globe, Clock, TrendingUp, Zap, ArrowUpRight, Bitcoin, LineChart, ChevronLeft, ChevronRight } from "lucide-react"
 import Link from "next/link"
 import Header from "@/components/Header"
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000/api"
+import { fetchNewsBySymbol } from "@/services/api/newsApi"
 
 const COINS = [
   { symbol: "BTCUSDT", name: "Bitcoin", short: "BTC", color: "#f7931a", gradient: "from-amber-500/20 to-orange-600/5" },
@@ -49,10 +48,7 @@ export default function NewsPage() {
 
     Promise.all(
       marketList.map(item =>
-        fetch(`${API_BASE_URL}/news/${item.symbol}?market=${market}`)
-          .then(r => r.json())
-          .then(articles => ({ symbol: item.symbol, articles: Array.isArray(articles) ? articles : [] }))
-          .catch(() => ({ symbol: item.symbol, articles: [] }))
+        fetchNewsBySymbol(item.symbol, market).then(articles => ({ symbol: item.symbol, articles }))
       )
     ).then(results => {
       if (!cancelled) {

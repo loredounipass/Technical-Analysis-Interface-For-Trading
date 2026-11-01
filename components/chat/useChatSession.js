@@ -2,8 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo } from "react"
 import { useVoiceTTS } from "../VoiceTTS"
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000/api"
+import { fetchChatModels, openChatStream } from "@/services/api/chatApi"
 
 export const INTERVAL_LABELS = {
   "1m": "1 minuto",
@@ -176,9 +175,8 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
   useEffect(() => {
     async function fetchModels() {
       try {
-        const res = await fetch(`${API_BASE_URL}/models`)
-        if (res.ok) {
-          const data = await res.json()
+        const data = await fetchChatModels()
+        if (data) {
           setModels(data)
           if (!data.some((m) => m.key === selectedModel)) {
             setSelectedModel("nvidia-nemotron")
@@ -415,11 +413,8 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
     setIsThinking(true)
 
     try {
-      const res = await fetch(`${API_BASE_URL}/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        signal: controller.signal,
-        body: JSON.stringify({
+      const res = await openChatStream(
+        {
           prompt: trimmed,
           model: selectedModel,
           symbol: symbol,
@@ -432,8 +427,9 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
           all_sessions: sessions,
           current_session_id: activeSessionId,
           stream: true,
-        }),
-      })
+        },
+        controller.signal
+      )
 
       if (!res.ok) {
         const errJson = await res.json().catch(() => ({}))
