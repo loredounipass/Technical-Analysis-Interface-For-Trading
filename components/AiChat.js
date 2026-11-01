@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useChatSession } from "./chat/useChatSession"
 import ChatHeader from "./chat/ChatHeader"
 import ChatTelemetryBar from "./chat/ChatTelemetryBar"
@@ -9,6 +9,9 @@ import ChatQuickActions from "./chat/ChatQuickActions"
 import ChatCommandBar from "./chat/ChatCommandBar"
 import ChatSessionsDrawer from "./chat/ChatSessionsDrawer"
 import ChatLauncherButton from "./chat/ChatLauncherButton"
+
+// Clave de localStorage para recordar si el terminal estaba abierto.
+const CHAT_OPEN_KEY = "trading_terminal_open"
 
 /**
  * Componente Principal AiChat (Woody Agent Terminal):
@@ -23,7 +26,30 @@ import ChatLauncherButton from "./chat/ChatLauncherButton"
  * - ChatLauncherButton: Botón de reapertura cuando está minimizado
  */
 export default function AiChat({ symbol, datos, interval = "15m", market = "crypto", onAnalysisChange }) {
+  // Estado de apertura persistido: el chat debe seguir abierto tras un refresh
+  // y cerrarse SOLO cuando el usuario lo cierra desde la X. Se restaura en
+  // cliente (no en el render inicial de SSR) para evitar un mismatch de
+  // hidratación, ya que el subárbol cambia (lanzador flotante vs ventana).
   const [isOpen, setIsOpen] = useState(false)
+  const [chatHydrated, setChatHydrated] = useState(false)
+
+  useEffect(() => {
+    try {
+      if (localStorage.getItem(CHAT_OPEN_KEY) === "true") setIsOpen(true)
+    } catch {
+      // localStorage no disponible
+    }
+    setChatHydrated(true)
+  }, [])
+
+  useEffect(() => {
+    if (!chatHydrated) return
+    try {
+      localStorage.setItem(CHAT_OPEN_KEY, String(isOpen))
+    } catch {
+      // localStorage no disponible
+    }
+  }, [isOpen, chatHydrated])
 
   const chat = useChatSession({
     symbol,

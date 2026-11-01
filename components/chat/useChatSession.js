@@ -333,6 +333,9 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
       } else {
         createNewSession()
       }
+      // switchSession/createNewSession cierran el panel, pero al eliminar desde
+      // el drawer el usuario espera seguir viendo la lista: lo reabrimos.
+      setIsSidebarOpen(true)
     }
   }
 
