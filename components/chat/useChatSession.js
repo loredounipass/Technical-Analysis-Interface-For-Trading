@@ -333,7 +333,7 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
     }
   }
 
-  const startTypingEffect = (fullText, model) => {
+  const startTypingEffect = (fullText, model, memoryMeta = null) => {
     activeModelRef.current = model
     setIsTyping(true)
     setTypingText("")
@@ -355,7 +355,13 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
         setTypingText("")
         setMessages((prev) => [
           ...prev,
-          { role: "assistant", content: fullText, timestamp: Date.now(), model },
+          {
+            role: "assistant",
+            content: fullText,
+            timestamp: Date.now(),
+            model,
+            memoryAccessed: Array.isArray(memoryMeta) && memoryMeta.length > 0 ? memoryMeta : null,
+          },
         ])
         playResponse(fullText)
       }
@@ -420,6 +426,8 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
           history: cleanHistory,
           global_context: globalContext,
           temperature: 0.3,
+          all_sessions: sessions,
+          current_session_id: activeSessionId,
         }),
       })
 
@@ -432,7 +440,7 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
           { role: "assistant", content: `! ERROR: ${errMsg}`, timestamp: Date.now(), isError: true },
         ])
       } else {
-        startTypingEffect(data.response, data.model)
+        startTypingEffect(data.response, data.model, data.memory_accessed)
       }
     } catch (err) {
       if (err?.name === "AbortError") return

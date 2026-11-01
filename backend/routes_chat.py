@@ -87,6 +87,8 @@ def chat_endpoint():
     history = data.get('history', [])
     global_context = data.get('global_context', '')
     temperature = data.get('temperature', 0.3)
+    all_sessions = data.get('all_sessions', [])
+    current_session_id = data.get('current_session_id')
 
     # ── Intent classification: decide if we need market data ──
     intent = classify_intent(prompt)
@@ -123,9 +125,9 @@ def chat_endpoint():
             if not indicator_data:
                 indicator_data = data.get('indicator_data') or {'symbol': symbol, 'error': str(e)}
 
-    # Primer intento con historial completo
+    # Primer intento con historial completo y herramientas MCP de memoria
     try:
-        response = nvidia_chat(
+        response, memory_accessed = nvidia_chat(
             prompt=prompt,
             model_key=model_key,
             temperature=temperature,
@@ -134,15 +136,22 @@ def chat_endpoint():
             global_context=global_context,
             indicator_data=indicator_data,
             intent=intent,
+            all_sessions=all_sessions,
+            current_session_id=current_session_id,
         )
-        return jsonify({'response': response, 'model': model_key, 'intent': intent})
+        return jsonify({
+            'response': response,
+            'model': model_key,
+            'intent': intent,
+            'memory_accessed': memory_accessed,
+        })
     except NvidiaChatError as e:
         # Si fallo con historial y HAY historial, reintentar SIN historial
         # (el cambio de modelo puede causar incompatibilidad con el contexto previo)
         if history:
             logger.warning(f"[Chat] Reintentando sin historial tras error: {e}")
             try:
-                response = nvidia_chat(
+                response, memory_accessed = nvidia_chat(
                     prompt=prompt,
                     model_key=model_key,
                     temperature=temperature,
@@ -151,12 +160,15 @@ def chat_endpoint():
                     global_context=global_context,
                     indicator_data=indicator_data,
                     intent=intent,
+                    all_sessions=all_sessions,
+                    current_session_id=current_session_id,
                 )
                 return jsonify({
                     'response': response,
                     'model': model_key,
                     'context_reset': True,
                     'intent': intent,
+                    'memory_accessed': memory_accessed,
                 })
             except NvidiaChatError as retry_err:
                 return jsonify({

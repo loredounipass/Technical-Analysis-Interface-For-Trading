@@ -39,7 +39,8 @@ _ANALYSIS_TRIGGERS = re.compile(
     r'how.?is|what.?about|what.?do you (think|see|recommend)|'
     r'como (va|ves|esta|está)|que tal va|dame|give me|hazme|do a|'
     r'predic|forecast|pronóstico|pronostico|outlook|'
-    r'resumen|summary|reporte|report'
+    r'resumen|summary|reporte|report|'
+    r'record|recuerda|acord|acuerd|anterior|pasad|conversaci|sesion|sesión|charla|hablam|dijist|mencionast|memoria|remember|previous'
     r')\b',
     re.IGNORECASE | re.UNICODE
 )
@@ -110,6 +111,121 @@ AVAILABLE_MODELS = {
         "timeout": 180,
     },
 }
+
+
+# ---------------------------------------------------------------------------
+# MCP-style Tool Definitions & History Search Function
+# ---------------------------------------------------------------------------
+CHAT_TOOLS = [
+    {
+        "type": "function",
+        "function": {
+            "name": "search_chat_history",
+            "description": "Busca en el historial de sesiones y conversaciones pasadas del usuario. Úsala siempre que el usuario pregunte por conversaciones anteriores, niveles o recomendaciones pasadas, o cuando necesites recordar detalles de sesiones previas.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "Término, activo o concepto clave a buscar en el historial (ej: 'soporte ETH', 'estrategia', 'invalidation', 'BTC')"
+                    },
+                    "symbol": {
+                        "type": "string",
+                        "description": "Símbolo del activo si la búsqueda es específica de una moneda o acción (ej: 'ETHUSDT', 'SOLUSDT', 'AAPL')"
+                    }
+                },
+                "required": ["query"]
+            }
+        }
+    }
+]
+
+
+def search_chat_history(
+    query: str,
+    symbol: Optional[str] = None,
+    all_sessions: Optional[list] = None,
+    current_session_id: Optional[str] = None
+) -> dict:
+    """Busca en el historial de sesiones pasadas fragmentos relevantes de usuario y asistente."""
+    if not all_sessions:
+        return {
+            "found_records": 0,
+            "message": "No se encontraron sesiones previas guardadas en el historial."
+        }
+
+    query_tokens = [t.lower() for t in re.split(r'[\s,;.?!]+', query) if len(t) >= 2]
+    symbol_clean = symbol.upper().replace("/", "").replace("-", "") if symbol else None
+
+    matches = []
+
+    for session in all_sessions:
+        s_id = str(session.get("id", ""))
+        s_symbol = str(session.get("symbol", "")).upper().replace("/", "")
+        s_messages = session.get("messages", [])
+
+        symbol_matches = bool(symbol_clean and (symbol_clean in s_symbol or s_symbol in symbol_clean))
+
+        for idx, msg in enumerate(s_messages):
+            if s_id == str(current_session_id) and idx >= len(s_messages) - 1:
+                continue
+
+            content = msg.get("content", "")
+            role = msg.get("role", "")
+            if not content or role not in ("user", "assistant"):
+                continue
+
+            # Omitir saludo generico inicial
+            if idx == 0 and role == "assistant" and "¡Hola!" in content:
+                continue
+
+            ts = msg.get("timestamp")
+            date_str = ""
+            if ts:
+                try:
+                    date_str = datetime.datetime.fromtimestamp(ts / 1000.0).strftime("%Y-%m-%d %H:%M")
+                except Exception:
+                    date_str = ""
+
+            content_lower = content.lower()
+            score = 0
+            for token in query_tokens:
+                if token in content_lower:
+                    score += 1
+                if token in s_symbol.lower():
+                    score += 1.5
+
+            if symbol_matches:
+                score += 2
+
+            if score > 0:
+                speaker = "Usuario" if role == "user" else "Woody AI"
+                clean_content = content.strip().replace("\n", " ")
+                if len(clean_content) > 350:
+                    clean_content = clean_content[:350] + "..."
+                snippet = f"[{date_str or 'Sesión previa'}] [{s_symbol or 'General'}] {speaker}: \"{clean_content}\""
+                matches.append({
+                    "session_id": s_id,
+                    "symbol": s_symbol,
+                    "score": score,
+                    "snippet": snippet
+                })
+
+    matches.sort(key=lambda x: x["score"], reverse=True)
+    top = matches[:6]
+
+    if not top:
+        return {
+            "found_records": 0,
+            "query": query,
+            "message": f"Búsqueda finalizada. No se encontraron mensajes relacionados con '{query}' en el historial."
+        }
+
+    return {
+        "found_records": len(top),
+        "query": query,
+        "results": [m["snippet"] for m in top]
+    }
 
 
 class NvidiaChatError(Exception):
@@ -191,6 +307,14 @@ def get_trading_system_prompt(indicator_data=None, global_context=None, model_na
         base += f"The user has other active analysis sessions: {global_context}. "
         base += f"If the user refers to past discussions or other symbols, use this overview to maintain continuity.\n\n"
 
+    base += (
+        "=== MCP MEMORY TOOL CAPABILITY ===\n"
+        "You are equipped with the tool `search_chat_history`. "
+        "Whenever the user asks about what was discussed, analyzed, agreed, or recommended in previous sessions or earlier in the chat "
+        "(e.g., 'qué dijiste ayer', 'recuerdas el soporte de ETH', 'en la sesión previa', 'como acordamos antes'), "
+        "YOU MUST CALL `search_chat_history` to query past messages and retrieve the real context before answering. "
+        "Do NOT guess or say you don't remember without searching first.\n\n"
+    )
     base += personality
     base += (
         "=== ADAPTIVE RESPONSE DEPTH ===\n"
@@ -667,9 +791,11 @@ def nvidia_chat(
     global_context: str | None = None,
     indicator_data: dict | None = None,
     intent: str = "analysis",
-) -> str:
-    """Call the NVIDIA API. Returns the response text on success.
-    Raises NvidiaChatError with a descriptive message on failure."""
+    all_sessions: list | None = None,
+    current_session_id: str | None = None,
+) -> tuple[str, list]:
+    """Call the NVIDIA API with MCP-style tool calling support for memory recall.
+    Returns (response_text, tools_used). Raises NvidiaChatError on failure."""
     api_key = get_api_key()
     if not api_key:
         raise NvidiaChatError("NVIDIA_API_KEY no está configurado en el servidor.", code="NO_API_KEY")
@@ -681,24 +807,28 @@ def nvidia_chat(
     model_name = model_config["name"]
     timeout = float(model_config.get("timeout", REQUEST_TIMEOUT))
 
-    # For casual intent, don't inject indicator data into the prompt
     effective_data = indicator_data if intent in ('analysis', 'ambiguous') else None
     system_prompt = get_trading_system_prompt(effective_data, global_context, model_name, intent=intent)
 
-    # Casual conversations get lower max_tokens (shorter responses)
     effective_max_tokens = 512 if intent == 'casual' else max_tokens
     url = f"{NVIDIA_API_BASE}/chat/completions"
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
     }
-    payload = json.dumps({
+
+    initial_messages = build_messages(prompt, system_prompt, history)
+
+    # Payload con soporte de herramientas estilo MCP
+    payload_dict = {
         "model": model_id,
-        "messages": build_messages(prompt, system_prompt, history),
+        "messages": initial_messages,
         "temperature": temperature,
         "max_tokens": effective_max_tokens,
-    }).encode("utf-8")
-
+        "tools": CHAT_TOOLS,
+        "tool_choice": "auto",
+    }
+    payload = json.dumps(payload_dict).encode("utf-8")
     req = Request(url, data=payload, headers=headers, method="POST")
 
     try:
@@ -708,17 +838,92 @@ def nvidia_chat(
             if not choices:
                 logger.error(f"NVIDIA API returned no choices: {data}")
                 raise NvidiaChatError("El modelo no devolvió respuesta. Intenta de nuevo.", code="NO_CHOICES")
+
             choice0 = choices[0]
-            finish_reason = choice0.get("finish_reason", "unknown")
-            logger.info(f"[NvidiaChat] Completed response from {model_name} (finish_reason: {finish_reason})")
-            content = choice0.get("message", {}).get("content", "")
+            choice_msg = choice0.get("message", {})
+            tool_calls = choice_msg.get("tool_calls", [])
+
+            # Si el modelo invocó herramientas de memoria (MCP Tool Call):
+            if tool_calls:
+                logger.info(f"[NvidiaChat] {model_name} requested {len(tool_calls)} tool call(s)")
+                second_messages = list(initial_messages)
+                second_messages.append(choice_msg)
+                tools_used = []
+
+                for tc in tool_calls:
+                    tc_id = tc.get("id")
+                    fn = tc.get("function", {})
+                    fn_name = fn.get("name")
+                    raw_args = fn.get("arguments", "{}")
+                    try:
+                        args = json.loads(raw_args) if isinstance(raw_args, str) else raw_args
+                    except Exception:
+                        args = {"query": str(raw_args)}
+
+                    if fn_name == "search_chat_history":
+                        query = args.get("query", prompt)
+                        sym = args.get("symbol")
+                        result = search_chat_history(
+                            query=query,
+                            symbol=sym,
+                            all_sessions=all_sessions,
+                            current_session_id=current_session_id,
+                        )
+                        tools_used.append({
+                            "tool": "search_chat_history",
+                            "query": query,
+                            "symbol": sym,
+                            "found": result.get("found_records", 0)
+                        })
+                        second_messages.append({
+                            "role": "tool",
+                            "tool_call_id": tc_id,
+                            "name": fn_name,
+                            "content": json.dumps(result, ensure_ascii=False)
+                        })
+
+                # Segunda llamada a NVIDIA para sintetizar la respuesta con los recuerdos
+                payload2 = json.dumps({
+                    "model": model_id,
+                    "messages": second_messages,
+                    "temperature": temperature,
+                    "max_tokens": effective_max_tokens,
+                }).encode("utf-8")
+                req2 = Request(url, data=payload2, headers=headers, method="POST")
+                with urlopen(req2, timeout=timeout) as resp2:
+                    data2 = json.loads(resp2.read().decode("utf-8"))
+                    final_choice = data2.get("choices", [{}])[0]
+                    final_content = final_choice.get("message", {}).get("content", "")
+                    if final_content and final_content.strip():
+                        return final_content.strip(), tools_used
+
+            content = choice_msg.get("content", "")
             if not content or not content.strip():
                 raise NvidiaChatError("El modelo devolvió una respuesta vacía.", code="EMPTY_RESPONSE")
-            return content.strip()
+            return content.strip(), []
+
     except HTTPError as e:
         body = e.read().decode("utf-8", errors="replace")
         logger.error(f"NVIDIA API HTTP {e.code} for model {model_id}: {body}")
-        # Parse NVIDIA error body for a user-friendly message
+
+        # Si el modelo no soporta el parámetro tools (HTTP 400), reintentar sin tools
+        if e.code == 400 and ("tool" in body.lower() or "schema" in body.lower() or "not supported" in body.lower()):
+            logger.warning(f"[NvidiaChat] Retrying without tools for {model_name}...")
+            payload_no_tools = json.dumps({
+                "model": model_id,
+                "messages": initial_messages,
+                "temperature": temperature,
+                "max_tokens": effective_max_tokens,
+            }).encode("utf-8")
+            req_retry = Request(url, data=payload_no_tools, headers=headers, method="POST")
+            try:
+                with urlopen(req_retry, timeout=timeout) as resp_retry:
+                    data_retry = json.loads(resp_retry.read().decode("utf-8"))
+                    content_retry = data_retry.get("choices", [{}])[0].get("message", {}).get("content", "")
+                    return content_retry.strip(), []
+            except Exception as retry_err:
+                logger.error(f"[NvidiaChat] Retry without tools also failed: {retry_err}")
+
         detail = ""
         try:
             err_json = json.loads(body)

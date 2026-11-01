@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useEffect, useMemo, useState } from "react"
-import { User, CheckCircle2, Circle, Bot, ChevronDown, ChevronUp } from "lucide-react"
+import { User, CheckCircle2, Circle, Bot, ChevronDown, ChevronUp, Brain } from "lucide-react"
 import { renderMarkdown } from "./MarkdownRenderer"
 import DiagnosticCard from "./DiagnosticCard"
 import { INTERVAL_LABELS } from "./useChatSession"
@@ -27,6 +27,7 @@ function ProcessingStatus({ symbol }) {
   const phases = useMemo(
     () => [
       `Analizando datos de mercado de ${symbol}...`,
+      `Consultando memoria e historial de sesiones previas...`,
       `Calculando indicadores técnicos (RSI, MACD, ADX)...`,
       `Evaluando estructura de precio y niveles clave...`,
       `Procesando flujo de órdenes del libro de compra/venta...`,
@@ -209,6 +210,23 @@ export default function ChatMessageList({
         /* Respuesta del Agente: texto plano sin tarjeta */
         return (
           <div key={idx} className="w-full my-2">
+            {/* Indicador de Herramienta MCP de Memoria */}
+            {msg.memoryAccessed && msg.memoryAccessed.length > 0 && (
+              <div className="mb-2.5 flex flex-wrap gap-2">
+                {msg.memoryAccessed.map((m, mIdx) => (
+                  <div
+                    key={mIdx}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#00f5c4]/10 border border-[#00f5c4]/30 text-[#00f5c4] text-[10.5px] font-mono shadow-[0_0_8px_rgba(0,245,196,0.1)]"
+                  >
+                    <Brain className="w-3.5 h-3.5 text-[#00f5c4] animate-pulse" />
+                    <span>
+                      MCP Memory Tool: Accedió al historial ({m.found} resultado{m.found === 1 ? "" : "s"} para "{m.query}")
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+
             <div className="text-[13.5px] sm:text-[14.5px] font-sans leading-[1.68] text-slate-100 break-words tracking-[-0.01em]">
               {renderMarkdown(msg.content, symbol, intervalLabel)}
             </div>
