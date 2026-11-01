@@ -94,7 +94,7 @@ def chat_endpoint():
 
     # ── Intent classification: decide if we need market data ──
     intent = classify_intent(prompt)
-    logger.info(f"[Chat] Intent: {intent} | Prompt: {prompt[:80]}")
+    logger.info(f"[Chat] Intent: {intent} | web_search={web_search_enabled} | model={model_key} | Prompt: {prompt[:80]}")
 
     # Only fetch indicator data for analysis / ambiguous intents
     indicator_data = None

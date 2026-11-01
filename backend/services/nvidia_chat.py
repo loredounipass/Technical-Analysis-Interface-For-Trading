@@ -142,7 +142,7 @@ CHAT_TOOLS = [
         "type": "function",
         "function": {
             "name": "search_chat_history",
-            "description": "Busca en el historial de sesiones y conversaciones pasadas del usuario. Úsala siempre que el usuario pregunte por conversaciones anteriores, niveles o recomendaciones pasadas, o cuando necesites recordar detalles de sesiones previas.",
+            "description": "Busca en el historial de sesiones y conversaciones PASADAS del usuario. Úsala solo cuando el usuario pregunte por conversaciones anteriores, niveles o recomendaciones previas, o para recordar detalles de sesiones pasadas. NO la uses para noticias, eventos actuales ni información externa de internet: para eso existe web_search.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -376,11 +376,11 @@ def get_trading_system_prompt(indicator_data=None, global_context=None, model_na
         base += (
             "=== WEB SEARCH TOOL (ENABLED) ===\n"
             "The user has ENABLED live web search and you are equipped with the tool `web_search`. "
-            "Use it whenever the answer depends on external, current, or post-cutoff information "
-            "(news, macro events, announcements, listings, regulation) that is NOT in the terminal indicators or the chat history. "
+            "If the user asks to search the internet / look it up, or the answer needs news, current events, recent developments, announcements, listings or regulation, YOU MUST call `web_search`. Do NOT answer such requests from memory or `search_chat_history`, and NEVER claim that you lack internet or real-time access while this tool exists. "
+            "Use it whenever the answer depends on external, current, or post-cutoff information that is NOT in the terminal indicators or the chat history. "
             "When you use it, ALWAYS cite with inline markdown links taken VERBATIM from the results, e.g. [Título](https://...), placed next to each claim and including its date. Keep every PRICE/indicator claim exclusive to the live terminal data, and clearly separate verified web facts from your own interpretation. "
             "End the answer with a short 'Fuentes' line listing those markdown links (one per source). Only link URLs that web_search actually returned; never invent, guess, or reuse URLs from memory. "
-            "If the search returns nothing useful, say so explicitly instead of inventing data. Never claim to have searched unless you actually called the tool.\n\n"
+            "If the search returns 0 results, say the search found nothing (and suggest trying different keywords) instead of claiming you have no internet access.\n\n"
         )
     base += personality
     base += (
