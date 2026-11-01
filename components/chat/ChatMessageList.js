@@ -257,6 +257,8 @@ export default function ChatMessageList({
               const SRC_LABELS = { reddit: "Reddit", x: "X / Twitter", twitter: "X / Twitter", news: "Noticias", all: "" }
               const lastSrc = lastWeb ? SRC_LABELS[(lastWeb.source || "all").toLowerCase()] || "" : ""
               const lastWidened = !!(lastWeb && lastWeb.widened)
+              const PROV_LABELS = { serpapi: "SerpApi", duckduckgo: "DuckDuckGo" }
+              const lastProvider = lastWeb && lastWeb.provider ? PROV_LABELS[lastWeb.provider] || "" : ""
               return (
                 <>
                   {mem.length > 0 && (
@@ -282,6 +284,11 @@ export default function ChatMessageList({
                         <span>
                           Fuentes{lastSrc ? ` · ${lastSrc}${lastWidened ? " (sin resultados → web general)" : ""}` : " de la web"}{lastWebQuery ? ` · ${lastWebQuery}` : ""}
                         </span>
+                        {lastProvider && (
+                          <span className="ml-auto shrink-0 text-[9px] font-mono font-normal normal-case tracking-normal text-cyan-500/60">
+                            vía {lastProvider}
+                          </span>
+                        )}
                       </div>
                       <div className="flex flex-col gap-1">
                         {sources.map((s, i) => (

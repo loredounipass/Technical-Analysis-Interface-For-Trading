@@ -101,12 +101,12 @@ WEB_SEARCH_TOOL = {
             "properties": {
                 "query": {
                     "type": "string",
-                    "description": "Consulta concreta y especifica (ej: 'Bitcoin ETF inflows November 2026', 'ultimo anuncio Fed tasas', 'ETH roadmap sentiment')"
+                    "description": "Consulta concreta con el tema EXACTO que pidio el usuario: cualquier coin, token, ticker, proyecto, protocolo, exchange o topico que nombre (SOL, XRP, DOGE, ARB, LINK, un alt especifico, una empresa, una regulacion, etc.). NO la limites a Bitcoin/Ethereum ni sustituyas un major cuando el usuario pidio otra cosa; reutiliza sus propias palabras. Ej: 'Pepe token listing Binance', 'Solana ETF approval news', 'ultimo anuncio Fed tasas', 'Cardano scaling upgrade'"
                 },
                 "source": {
                     "type": "string",
                     "enum": ["all", "news", "reddit", "x"],
-                    "description": "Donde buscar: 'news' = prensa/medios; 'reddit' = r/CryptoCurrency, r/Bitcoin, r/ethereum (sentimiento/metricas/memes); 'x' = posts de X/Twitter (anuncios, hype); 'all' (o omitir) = web general sin restringir. Para announcements o reaccion de la comunidad usa 'reddit' o 'x'."
+                    "description": "Donde buscar: 'news' = prensa/medios; 'reddit' = los subreddits relevantes al tema activo (el de la coin/proyecto preguntado, r/CryptoCurrency, mercados, etc.) para sentimiento/metricas/memes; 'x' = posts de X/Twitter (anuncios, hype); 'all' (o omitir) = web general sin restringir. Para announcements o reaccion de la comunidad usa 'reddit' o 'x'."
                 },
                 "time_range": {
                     "type": "string",

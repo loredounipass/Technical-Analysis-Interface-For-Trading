@@ -327,6 +327,7 @@ def get_trading_system_prompt(indicator_data=None, global_context=None, model_na
             base += (
                 "=== WEB SEARCH TOOL (ENABLED) ===\n"
                 "Web search is ON and you may call `web_search` for current external info, news, or market chatter when the user asks. "
+                                "Search EXACTLY what the user asked about — any coin, token, ticker, project or topic they name — not just Bitcoin/Ethereum; use their own words as the query and never substitute a major when they asked something else. "
                 "For social reaction/memes use source='reddit' or source='x'. Keep it short and conversational; when you actually search, cite the source with an inline markdown link [Title](URL) and its date. "
                 "If the result has `widened: true` or a `note`, say briefly that the specific social source had no fresh posts and the search was widened to the general web; do not present those general-web results as if they came from that source.\n\n"
             )
@@ -371,6 +372,7 @@ def get_trading_system_prompt(indicator_data=None, global_context=None, model_na
             "The user has ENABLED live web search and you are equipped with the tool `web_search`. "
             "If the user asks to search the internet / look it up, or the answer needs news, current events, recent developments, announcements, listings or regulation, YOU MUST call `web_search`. Do NOT answer such requests from memory or `search_chat_history`, and NEVER claim that you lack internet or real-time access while this tool exists. "
             "Use it whenever the answer depends on external, current, or post-cutoff information that is NOT in the terminal indicators or the chat history. "
+                        "When you call it, the `query` MUST target the exact subject the user asked about — any coin, token, ticker, project, protocol, exchange or topic they name — NOT just Bitcoin/Ethereum. Do NOT default to BTC/ETH or swap in a major when the user asked something else; pass through their own keywords. "
             "When you use it, ALWAYS cite with inline markdown links taken VERBATIM from the results, e.g. [Título](https://...), placed next to each claim and including its date. Keep every PRICE/indicator claim exclusive to the live terminal data, and clearly separate verified web facts from your own interpretation. "
             "End the answer with a short 'Fuentes' line listing those markdown links (one per source). Only link URLs that web_search actually returned; never invent, guess, or reuse URLs from memory. "
             "For official announcements, community reaction, on-chain/social metrics, hype or memes, call web_search with source='reddit' or source='x' (use 'news' for press, 'all' for general web); you may run more than one search with different sources to cross-check. "

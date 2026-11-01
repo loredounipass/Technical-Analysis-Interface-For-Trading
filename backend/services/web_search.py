@@ -1,31 +1,40 @@
-"""Búsqueda web para el agente de chat usando DuckDuckGo (sin API key).
+"""Búsqueda web para el agente de chat.
 
-Estrategia por búsqueda (ordenado por costo de requests):
+Proveedor principal: DuckDuckGo (scraping, sin API key, sin cuota). Estrategia
+por busqueda (ordenado por costo de requests):
   1) POST lite/html  -> 1 request, sin handshake.
   2) i.js JSON       -> usa token vqd cacheado (mejor calidad).
-  3) lite+vqd HTML   -> alternativa HTML con la misma sesión.
+  3) lite+vqd HTML   -> alternativa HTML con la misma sesion.
 
-Mejoras de robustez: sesión persistente (cookie jar compartida), cache global
-de vqd (5 min), throttle para no provocar el bot-check, filtro de URLs basura
-(analytics/twitter tracking, redirects de publicidad) y auto-ampliación: si un
-filtro `source` (reddit/x) rinde 0, reintenta sin `site:` y marca `widened`.
+Fallback: SerpApi (Google Search API) SOLO cuando DuckDuckGo no devuelve nada
+(bot-check/timeout) o falla. Se activa si `SERPAPI_API_KEY` esta en backend/.env
+(free tier 250 busquedas/mes; se usa lo minimo posible para no gastar cuota). Un
+GET a https://serpapi.com/search.json?engine=google devuelve `organic_results`.
+SerpApi no respeta `site:`/`as_sitesearch`, asi que para `source` reddit/x se
+filtra por host en cliente + auto-ampliacion.
+
+Robustez DDG: sesion persistente (cookie jar), cache global de vqd (5 min),
+throttle anti-bot-check, filtro de URLs basura, y auto-ampliacion: si un filtro
+`source` (reddit/x) rinde 0, reintenta sin filtro y marca `widened`.
 
 Interfaz estable: web_search(query, max_results, time_range, source) ->
   { query, count, results: [{title, url, snippet}], provider, [error], [widened], [note] }
 
 `source`: 'all' | 'news' | 'reddit' | 'x'. `time_range`: 'day'|'week'|'month'|'year'.
-Nunca lanza excepción al caller: devuelve count=0 con 'error' en su lugar.
+Nunca lanza excepcion al caller: devuelve count=0 con 'error' en su lugar.
 """
 
 import html as _html
 import json
 import logging
+import os
 import re
 import threading
 import time
 from http.cookiejar import CookieJar
+from urllib.error import HTTPError
 from urllib.parse import unquote, urlencode, urlsplit, parse_qs
-from urllib.request import Request, build_opener, HTTPCookieProcessor, HTTPHandler
+from urllib.request import Request, build_opener, HTTPCookieProcessor, HTTPHandler, urlopen
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +45,19 @@ _UA = (
 _TIMEOUT = 8
 _MAX_RESULTS_CAP = 10
 
-logger.info("[WebSearch] provider=duckduckgo")
+# --- Config: SerpApi (fallback) ---------------------------------------------
+_SERPAPI_API_KEY = (os.environ.get("SERPAPI_API_KEY") or "").strip()
+_SERPAPI_ENDPOINT = "https://serpapi.com/search.json"
+_SERPAPI_TIMEOUT = 15
+_HAS_SERPAPI = bool(_SERPAPI_API_KEY)
+
+if _HAS_SERPAPI:
+    logger.info(
+        f"[WebSearch] provider=duckduckgo (fallback=serpapi, "
+        f"key={_SERPAPI_API_KEY[:6]}…{_SERPAPI_API_KEY[-4:]})"
+    )
+else:
+    logger.info("[WebSearch] provider=duckduckgo (SERPAPI_API_KEY no configurado)")
 
 # --- Session persistente + cache global de vqd -------------------------------
 # Un unico opener con cookie jar compartido entre todas las busquedas. Reduce
@@ -87,6 +108,16 @@ _SOURCE_MAP = {
     "all": "",
 }
 
+# --- Params propios de SerpApi -----------------------------------------------
+# tbs=qdr:<letra> filtra por tiempo (d/w/m/y). Reusamos las letras de _DF_MAP.
+# Para source reddit/x: SerpApi no respeta site:, entonces filtramos por host
+# en cliente y, si no queda ninguno, se auto-amplia (widened).
+_SERPAPI_SOURCE_HOSTS = {
+    "reddit": ("reddit.com",),
+    "x": ("x.com", "twitter.com"),
+    "twitter": ("x.com", "twitter.com"),
+}
+
 _LITE_URL = "https://lite.duckduckgo.com/lite/"
 _HTML_URL = "https://html.duckduckgo.com/html/"
 
@@ -101,7 +132,18 @@ _JUNK_PATTERNS = (
     "/pagead/lvz?",
     "doubleclick.net",
     "googlesyndication.com",
+    "google.com/search?",
+    "google.com/goto?url=",
 )
+
+
+def _host_of(url):
+    return (urlsplit(url or "").netloc or "").lower()
+
+
+def _matches_hosts(url, hosts):
+    h = _host_of(url)
+    return any(h == d or h.endswith("." + d) for d in hosts)
 
 
 def _is_junk(url):
@@ -289,17 +331,95 @@ def _ddg_pipeline(query_text, n, df):
 
 
 # ═══════════════════════════════════════════════════════════════════════════
+# SERPAPI (primary) - Google Search API
+# ═══════════════════════════════════════════════════════════════════════════
+def _serpapi_search(query_text, n, df=None, src_key="all"):
+    """Un solo GET al Search API de SerpApi (engine=google). Devuelve (results, err).
+
+    results=None -> fallo de red/auth/cuota (caller cae a DDG).
+    results=[]   -> SerpApi respondio OK pero sin items utiles.
+
+    Para src_key reddit/x: SerpApi ignora `site:`, asi que filtramos los
+    organic_results por host en cliente. Si ninguno coincide, devuelve [] y el
+    caller decide ampliar.
+    """
+    params = {"engine": "google", "q": query_text, "num": str(n),
+              "api_key": _SERPAPI_API_KEY, "hl": "en"}
+    if df:
+        params["tbs"] = "qdr:" + df
+    url = _SERPAPI_ENDPOINT + "?" + urlencode(params)
+    req = Request(url, headers={"User-Agent": _UA, "Accept": "application/json"})
+    try:
+        with urlopen(req, timeout=_SERPAPI_TIMEOUT) as resp:
+            raw = resp.read().decode("utf-8", "replace")
+    except HTTPError as e:
+        try:
+            err_body = json.loads(e.read().decode("utf-8", "replace"))
+            detail = err_body.get("error") or err_body.get("message") or f"HTTP {e.code}"
+        except Exception:
+            detail = f"HTTP {e.code}"
+        logger.warning(f"[WebSearch/SerpApi] {query_text[:40]!r} -> {detail}")
+        return None, str(detail)
+    except Exception as e:
+        logger.warning(f"[WebSearch/SerpApi] network error: {e}")
+        return None, str(e)
+
+    try:
+        data = json.loads(raw)
+    except (json.JSONDecodeError, ValueError):
+        return None, "invalid json"
+
+    hosts = _SERPAPI_SOURCE_HOSTS.get(src_key)
+    out = []
+    for it in (data.get("organic_results") or []):
+        title = _clean(it.get("title", ""))
+        url_r = it.get("link", "") or ""
+        snippet = _clean(it.get("snippet", ""))
+        if not title or not url_r or _is_junk(url_r):
+            continue
+        if hosts and not _matches_hosts(url_r, hosts):
+            continue
+        out.append({"title": title, "url": url_r, "snippet": snippet})
+        if len(out) >= n:
+            break
+    return out, None
+
+
+# ═══════════════════════════════════════════════════════════════════════════
 # Public API
 # ═══════════════════════════════════════════════════════════════════════════
+def _finalize(query, results, provider, src_key, widened, method=None):
+    """Arma el dict de respuesta con el shape estable (+ widened/note)."""
+    out = {"query": query, "count": len(results),
+           "results": results, "provider": provider}
+    prov_label = {"serpapi": "SerpApi"}.get(provider, "DuckDuckGo")
+    if widened:
+        out["widened"] = True
+        out["widened_reason"] = f"sin resultados con filtro '{src_key}'"
+        out["note"] = (
+            f"AVISO: el filtro source='{src_key}' no devolvio resultados y la busqueda "
+            f"se AMPLIO a web general via {prov_label}. Los resultados NO son de '{src_key}'. "
+            f"Informalo al usuario."
+        )
+    logger.info(
+        f"[WebSearch] '{query[:40]}' -> {len(results)} via "
+        + (f"{provider}:{method}" if method else provider)
+        + (" (widened)" if widened else "")
+    )
+    return out
+
+
 def web_search(query, max_results=6, time_range=None, source=None):
-    """Busca en DuckDuckGo (sin API key).
+    """Busca primero en DuckDuckGo; si no da resultados, fallback a SerpApi.
+
+    SerpApi se usa LO MINIMO POSIBLE (cuota de 250/mes): solo se llama cuando
+    DDG devuelve 0 (bot-check/timeout/vacio).
 
     source: 'reddit'|'x'|'news'|'all'. time_range: 'day'|'week'|'month'|'year'.
     Nunca lanza: devuelve count=0 con 'error' en caso de bloqueo/fallo.
 
-    Si `source` rinde 0 resultados utiles (DDG no indexa bien ciertos dominios,
-    sobre todo X/Twitter), reintenta sin el filtro `site:` y marca `widened=True`
-    + `note` para que el modelo y la UI informen honestamente al usuario.
+    Auto-ampliacion: si un `source` (reddit/x) rinde 0, reintenta sin filtro y
+    marca `widened=True` + `note` para que el modelo y la UI informen honestamente.
     """
     query = (query or "").strip()
     if not query:
@@ -314,36 +434,39 @@ def web_search(query, max_results=6, time_range=None, source=None):
     src_key = str(source or "all").lower()
     site = _SOURCE_MAP.get(src_key, "")
     df = _DF_MAP.get(str(time_range or "").lower())
+    has_domain = src_key in _SERPAPI_SOURCE_HOSTS
 
+    # --- Ruta primaria: DuckDuckGo (gratis, sin cuota) ----------------------
     filtered = f"{query} {site}".strip() if site else query
     _wait_slot()
     results, method = _ddg_pipeline(filtered, n, df)
 
-    # Si el filtro site: no dio nada, reintenta sin el.
     widened = False
     if not results and site:
         _wait_slot()
         results, method = _ddg_pipeline(query, n, df)
         if results:
             widened = True
-            logger.info(f"[WebSearch] '{query[:40]}' widened (site filter '{src_key}' dio 0)")
 
     if results:
-        logger.info(
-            f"[WebSearch] '{query[:40]}' -> {len(results)} via ddg:{method}"
-            + (" (widened)" if widened else "")
-        )
-        out = {"query": query, "count": len(results),
-               "results": results, "provider": "duckduckgo"}
-        if widened:
-            out["widened"] = True
-            out["widened_reason"] = f"sin resultados con filtro '{src_key}'"
-            out["note"] = (
-                f"AVISO: el filtro source='{src_key}' no devolvio resultados y la busqueda "
-                f"se AMPLIO a web general via DuckDuckGo. Los resultados NO son de '{src_key}'. "
-                f"Informalo al usuario."
-            )
-        return out
+        return _finalize(query, results, "duckduckgo", src_key, widened, method=method)
+
+    # --- Fallback: SerpApi (solo si DDG no dio nada) ------------------------
+    if _HAS_SERPAPI:
+        logger.info(f"[WebSearch] '{query[:40]}' ddg vacio; probando serpapi (fallback)")
+        sres, serr = _serpapi_search(query, n, df, src_key)
+        if sres is not None:  # SerpApi respondio (no error de red/auth/cuota)
+            s_widened = False
+            if not sres and has_domain:
+                plain, _ = _serpapi_search(query, n, df, "all")
+                if plain:
+                    sres, s_widened = plain, True
+            if sres:
+                return _finalize(query, sres, "serpapi", src_key, s_widened)
+            logger.info(f"[WebSearch] '{query[:40]}' -> 0 results (serpapi)")
+            return {"query": query, "count": 0, "results": [],
+                    "provider": "serpapi", "error": "SerpApi sin resultados"}
+        logger.info(f"[WebSearch] serpapi fallo ({serr})")
 
     logger.info(f"[WebSearch] '{query[:40]}' -> 0 results")
     return {"query": query, "count": 0, "results": [],
