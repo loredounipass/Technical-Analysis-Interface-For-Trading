@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import { Newspaper, ExternalLink, Loader2, Globe, Clock, TrendingUp, Zap, ArrowUpRight, Bitcoin, LineChart, ChevronLeft, ChevronRight } from "lucide-react"
 import Link from "next/link"
+import Header from "@/components/Header"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000/api"
 
@@ -113,6 +114,7 @@ export default function NewsPage() {
 
   return (
     <div className="min-h-screen" style={{ background: "#05070a" }}>
+      <Header />
       {/* Animated grid background */}
       <div className="fixed inset-0 opacity-[0.03] pointer-events-none" style={{
         backgroundImage: `linear-gradient(rgba(16, 185, 129, 0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(16, 185, 129, 0.5) 1px, transparent 1px)`,
@@ -129,7 +131,7 @@ export default function NewsPage() {
       <div className="fixed bottom-0 right-0 w-32 h-32 opacity-20 pointer-events-none z-50"
         style={{ borderBottom: "1px solid #10b981", borderRight: "1px solid #10b981" }} />
 
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-14 pb-8">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-2 pb-8">
         {/* === Header === */}
         <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
           <div className="flex items-center gap-4">
