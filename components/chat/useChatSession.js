@@ -309,8 +309,23 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
     onAnalysisChange?.(loading || isTyping)
   }, [loading, isTyping, onAnalysisChange])
 
+  // Cancela cualquier stream en vuelo y limpia el estado de generación, para que
+  // al crear/cambiar de sesión la respuesta pendiente no se anexee a la nueva
+  // (sendMessage agrega el mensaje final al estado actual al terminar) y no
+  // siga consumiendo cuota. El catch de AbortError no agrega nada si no hubo stall.
+  const cancelInFlight = () => {
+    abortRef.current?.abort()
+    abortRef.current = null
+    setLoading(false)
+    setIsThinking(false)
+    setIsTyping(false)
+    setTypingText("")
+    setStreamingThought("")
+  }
+
   // Crear nueva sesión con el saludo inicial estilizado y datos actualizados
   const createNewSession = () => {
+    cancelInFlight()
     const newId = Date.now().toString()
     const intervalLabel = INTERVAL_LABELS[interval] || interval
 
@@ -336,6 +351,7 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
   }
 
   const switchSession = (id) => {
+    cancelInFlight()
     const session = sessions.find((s) => s.id === id)
     if (session) {
       setActiveSessionId(id)
