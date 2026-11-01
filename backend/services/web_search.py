@@ -55,8 +55,13 @@ _UA_POOL = (
 _UA = _UA_POOL[0]  # valor por defecto / estable (SerpApi lo usa)
 _UA_LOCK = threading.Lock()
 _ACTIVE_UA = _UA  # UA de la busqueda en curso (rotado por _rotate_ua)
-_TIMEOUT = 8
+_TIMEOUT = 6
 _MAX_RESULTS_CAP = 10
+# Presupuesto de tiempo total para el intento DDG (fail-fast). Si DDG esta
+# bloqueado (tipico en IP de datacenter/Render) se abandona al superar este
+# umbral y se cede al fallback SerpApi, en vez de agotar ~25-40s en handshake/
+# desafios. Mantiene el orden DDG -> SerpApi pero sin colgar.
+_DDG_BUDGET_S = 9.0
 
 # --- Config: SerpApi (fallback) ---------------------------------------------
 _SERPAPI_API_KEY = (os.environ.get("SERPAPI_API_KEY") or "").strip()
@@ -292,12 +297,14 @@ def _try_lite_vqd(opener, search_query, vqd, home_url, n, df=None):
     return _parse_ddg_html(page, n)
 
 
-def _try_post_fallback(opener, search_query, n, df=None):
+def _try_post_fallback(opener, search_query, n, df=None, deadline=None):
     form = {"q": search_query, "kl": "wt-wt"}
     if df:
         form["df"] = df
     encoded = urlencode(form).encode("utf-8")
     for url in (_LITE_URL, _HTML_URL):
+        if deadline and time.monotonic() + _TIMEOUT > deadline:
+            break  # no queda tiempo para otro request completo: ceder al fallback
         try:
             req = Request(url, data=encoded, headers={
                 "User-Agent": _ACTIVE_UA,
@@ -347,19 +354,26 @@ def _parse_ddg_html(page, n):
 
 
 # --- Pipeline ----------------------------------------------------------------
-def _ddg_pipeline(query_text, n, df):
-    """POST barato primero, luego vqd + i.js + lite+vqd si hace falta."""
+def _ddg_pipeline(query_text, n, df, deadline=None):
+    """POST barato primero, luego vqd + i.js + lite+vqd si hace falta.
+    `deadline` (time.monotonic()) acota el intento: si se supera, se corta y
+    se regresa vacio para ceder rapido al fallback cuando DDG esta bloqueado."""
     opener = _get_opener()
 
-    results = _try_post_fallback(opener, query_text, n, df)
+    results = _try_post_fallback(opener, query_text, n, df, deadline)
     if results:
         return results, "post"
+
+    if deadline and time.monotonic() + _TIMEOUT > deadline:
+        return [], None  # fail-fast: no cabe otro request dentro del presupuesto
 
     vqd, home_url = _ensure_vqd()
     if vqd:
         results = _try_ijs(opener, query_text, vqd, home_url, n, df)
         if results:
             return results, "i.js"
+        if deadline and time.monotonic() + _TIMEOUT > deadline:
+            return [], None
         results = _try_lite_vqd(opener, query_text, vqd, home_url, n, df)
         if results:
             return results, "lite+vqd"
@@ -449,14 +463,16 @@ def _finalize(query, results, provider, src_key, widened, method=None):
 
 
 def _ddg_search(query, n, site, src_key, df):
-    """Pipeline DDG con widening. Devuelve (results, widened, method)."""
+    """Pipeline DDG con widening y presupuesto de tiempo (fail-fast).
+    Devuelve (results, widened, method)."""
+    deadline = time.monotonic() + _DDG_BUDGET_S
     filtered = f"{query} {site}".strip() if site else query
     _wait_slot()
-    results, method = _ddg_pipeline(filtered, n, df)
+    results, method = _ddg_pipeline(filtered, n, df, deadline)
     widened = False
-    if not results and site:
+    if not results and site and time.monotonic() + _TIMEOUT < deadline:
         _wait_slot()
-        results, method = _ddg_pipeline(query, n, df)
+        results, method = _ddg_pipeline(query, n, df, deadline)
         if results:
             widened = True
     return results, widened, method

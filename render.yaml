@@ -20,7 +20,7 @@ services:
       - key: SERPAPI_API_KEY
         sync: false # web search: private key de https://serpapi.com/manage-api-key
       - key: WEB_SEARCH_PROVIDER
-        value: serpapi # en Render usar SerpApi primero (DDG bloqueado desde datacenter)
+        value: duckduckgo # flujo pedido: DDG primero, SerpApi solo si DDG falla. El fail-fast (_DDG_BUDGET_S) acota el intento DDG a ~6s en Render, asi que no cuelga. Poné 'serpapi' si preferís saltear el intento DDG (ahorra esos ~6s cuando DDG esta siempre bloqueado).
 
   # ============ FRONTEND ============
   - type: web
