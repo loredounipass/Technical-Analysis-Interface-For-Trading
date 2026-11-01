@@ -201,8 +201,6 @@ def search_chat_history(
             if score > 0:
                 speaker = "Usuario" if role == "user" else "Woody AI"
                 clean_content = content.strip().replace("\n", " ")
-                if len(clean_content) > 350:
-                    clean_content = clean_content[:350] + "..."
                 snippet = f"[{date_str or 'Sesión previa'}] [{s_symbol or 'General'}] {speaker}: \"{clean_content}\""
                 matches.append({
                     "session_id": s_id,
@@ -212,7 +210,7 @@ def search_chat_history(
                 })
 
     matches.sort(key=lambda x: x["score"], reverse=True)
-    top = matches[:6]
+    top = matches
 
     if not top:
         return {

@@ -396,19 +396,14 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
     const controller = new AbortController()
     abortRef.current = controller
 
-    // Historial limpio y seguro:
-    // 1. Omitir el mensaje de bienvenida sintético (asistente inicial) para evitar problemas de orden de roles
+    // Historial completo sin límites artificiales:
+    // 1. Omitir el mensaje de bienvenida sintético inicial para evitar problemas de orden de roles
     // 2. Omitir mensajes de error
-    // 3. Limitar a los últimos 6 intercambios
-    // 4. Truncar respuestas muy largas de modelos anteriores para no agotar la ventana de tokens
     const cleanHistory = messages
       .filter((m, idx) => !m.isError && !(idx === 0 && m.role === "assistant"))
-      .slice(-6)
       .map((m) => ({
         role: m.role,
-        content: m.role === "assistant" && m.content.length > 1500
-          ? m.content.slice(0, 1500) + "..."
-          : m.content,
+        content: m.content,
       }))
 
     try {
