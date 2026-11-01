@@ -116,9 +116,12 @@ export default function ChatMessageList({
   loading,
   streamingThought,
   isThinking,
+  models = [],
+  selectedModel,
 }) {
   const intervalLabel = INTERVAL_LABELS[interval] || interval
   const thoughtBoxRef = useRef(null)
+  const currentModelReasons = models.find((m) => m.key === selectedModel)?.reasoning ?? true
 
   // Auto-scroll reactivo en tiempo real mientras el modelo razona
   useEffect(() => {
@@ -285,7 +288,7 @@ export default function ChatMessageList({
       {/* Indicador de Carga / Razonamiento en vivo */}
       {loading && !isTyping && (
         <AgentPanel
-          statusLabel={streamingThought ? "PENSAMIENTO EN VIVO" : "ANÁLISIS EN CURSO"}
+          statusLabel={streamingThought ? "PENSAMIENTO EN VIVO" : currentModelReasons ? "RAZONANDO" : "ANALIZANDO"}
           statusPulse
           steps={LOADING_STEPS}
         >
@@ -308,11 +311,7 @@ export default function ChatMessageList({
                   <span className="inline-block w-1.5 h-3.5 ml-1 bg-[#00f5c4] animate-pulse align-middle" />
                 </div>
               ) : (
-                <div className="flex items-center gap-2 min-w-0 text-xs sm:text-[13px] font-mono tracking-wide text-slate-300 pt-2">
-                  <span className="text-[#00f5c4] font-bold select-none animate-pulse">›</span>
-                  <span>Iniciando conexión con {symbol}...</span>
-                  <span className="inline-block w-1.5 h-3.5 ml-1 bg-[#00f5c4] animate-pulse align-middle" />
-                </div>
+                <ProcessingStatus symbol={symbol} />
               )}
             </div>
           </div>
