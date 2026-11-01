@@ -28,6 +28,7 @@ import html as _html
 import json
 import logging
 import os
+import random
 import re
 import threading
 import time
@@ -38,10 +39,22 @@ from urllib.request import Request, build_opener, HTTPCookieProcessor, HTTPHandl
 
 logger = logging.getLogger(__name__)
 
-_UA = (
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-    "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+# Pool de User-Agents realistas (navegadores comunes actuales). Se rota uno por
+# busqueda para no presentar siempre el mismo fingerprint de bot.
+_UA_POOL = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:127.0) Gecko/20100101 Firefox/127.0",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:126.0) Gecko/20100101 Firefox/126.0",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36 Edg/125.0.0.0",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36 Edg/126.0.0.0",
 )
+_UA = _UA_POOL[0]  # valor por defecto / estable (SerpApi lo usa)
+_UA_LOCK = threading.Lock()
+_ACTIVE_UA = _UA  # UA de la busqueda en curso (rotado por _rotate_ua)
 _TIMEOUT = 8
 _MAX_RESULTS_CAP = 10
 
@@ -79,14 +92,18 @@ _VQD_STATE = {"token": None, "home_url": None, "ts": 0.0}
 _VQD_TTL = 300.0  # 5 minutos
 
 # --- Throttle global: espaciar requests para no provocar bot-check -----------
+# Con jitter aleatorio (uniform 1.2-2.5s): un intervalo fijo es patron de bot;
+# uno variable parece comportamiento humano.
 _THROTTLE_LOCK = threading.Lock()
 _last_call = [0.0]
 _MIN_INTERVAL = 1.2
+_MAX_INTERVAL = 2.5
 
 
 def _wait_slot():
     with _THROTTLE_LOCK:
-        wait = _MIN_INTERVAL - (time.monotonic() - _last_call[0])
+        interval = random.uniform(_MIN_INTERVAL, _MAX_INTERVAL)
+        wait = interval - (time.monotonic() - _last_call[0])
         if wait > 0:
             time.sleep(wait)
         _last_call[0] = time.monotonic()
@@ -168,7 +185,7 @@ def _resolve(href):
 
 def _get(opener, url, referer="https://duckduckgo.com/"):
     req = Request(url, headers={
-        "User-Agent": _UA,
+        "User-Agent": _ACTIVE_UA,
         "Accept": "text/html,application/xhtml+xml,application/json;q=0.9,*/*;q=0.8",
         "Accept-Language": "en-US,en;q=0.9",
         "Referer": referer,
@@ -212,6 +229,19 @@ def _invalidate_vqd():
         _VQD_STATE["token"] = None
         _VQD_STATE["home_url"] = None
         _VQD_STATE["ts"] = 0.0
+
+
+def _rotate_ua():
+    """Elige un UA nuevo para la busqueda y resetea la sesion (cookie jar + vqd)
+    para que el fingerprint UA/cookie sea coherente (una identidad nueva por
+    busqueda, como un perfil de navegador fresco) y parezca natural."""
+    global _OPENER, _ACTIVE_UA
+    with _UA_LOCK:
+        _ACTIVE_UA = random.choice(_UA_POOL)
+    with _OPENER_LOCK:
+        _OPENER = None  # proxima busqueda usa un cookie jar nuevo
+    _invalidate_vqd()
+    return _ACTIVE_UA
 
 
 # --- Methods ------------------------------------------------------------------
@@ -261,7 +291,7 @@ def _try_post_fallback(opener, search_query, n, df=None):
     for url in (_LITE_URL, _HTML_URL):
         try:
             req = Request(url, data=encoded, headers={
-                "User-Agent": _UA,
+                "User-Agent": _ACTIVE_UA,
                 "Content-Type": "application/x-www-form-urlencoded",
                 "Accept": "text/html",
                 "Referer": "https://duckduckgo.com/",
@@ -435,6 +465,9 @@ def web_search(query, max_results=6, time_range=None, source=None):
     site = _SOURCE_MAP.get(src_key, "")
     df = _DF_MAP.get(str(time_range or "").lower())
     has_domain = src_key in _SERPAPI_SOURCE_HOSTS
+
+    # Identidad fresca por busqueda (UA rotado + session nueva) para el scrapeo DDG.
+    _rotate_ua()
 
     # --- Ruta primaria: DuckDuckGo (gratis, sin cuota) ----------------------
     filtered = f"{query} {site}".strip() if site else query
