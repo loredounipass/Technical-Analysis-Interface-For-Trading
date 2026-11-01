@@ -38,6 +38,8 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [typingText, setTypingText] = useState("")
   const [isTyping, setIsTyping] = useState(false)
+  const [streamingThought, setStreamingThought] = useState("")
+  const [isThinking, setIsThinking] = useState(false)
 
   const typingRef = useRef(null)
   const abortRef = useRef(null)
@@ -407,6 +409,9 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
         content: m.content,
       }))
 
+    setStreamingThought("")
+    setIsThinking(true)
+
     try {
       const res = await fetch(`${API_BASE_URL}/chat`, {
         method: "POST",
@@ -424,20 +429,91 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
           temperature: 0.3,
           all_sessions: sessions,
           current_session_id: activeSessionId,
+          stream: true,
         }),
       })
 
-      const data = await res.json()
-
       if (!res.ok) {
-        const errMsg = data.error || `Error ${res.status}`
+        const errJson = await res.json().catch(() => ({}))
+        const errMsg = errJson.error || `Error ${res.status}`
         setMessages((prev) => [
           ...prev,
           { role: "assistant", content: `! ERROR: ${errMsg}`, timestamp: Date.now(), isError: true },
         ])
-      } else {
-        startTypingEffect(data.response, data.model, data.memory_accessed)
+        setLoading(false)
+        setIsThinking(false)
+        return
       }
+
+      // Procesar flujo Server-Sent Events (SSE) en tiempo real
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder("utf-8")
+      let buffer = ""
+      let accumulatedThought = ""
+      let accumulatedContent = ""
+      let memoryMeta = []
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+        const events = buffer.split("\n\n")
+        buffer = events.pop() || ""
+
+        for (const evt of events) {
+          const lines = evt.split("\n")
+          for (const line of lines) {
+            const trimmedLine = line.trim()
+            if (!trimmedLine.startsWith("data: ")) continue
+            const jsonStr = trimmedLine.slice(6).trim()
+            if (!jsonStr || jsonStr === "[DONE]") continue
+            try {
+              const parsed = JSON.parse(jsonStr)
+              if (parsed.type === "thought" && parsed.chunk) {
+                accumulatedThought += parsed.chunk
+                setStreamingThought(accumulatedThought)
+                if (!isAutoScrollPausedRef.current) scrollChatToBottom("auto")
+              } else if (parsed.type === "content" && parsed.chunk) {
+                if (isThinking) setIsThinking(false)
+                setIsTyping(true)
+                accumulatedContent += parsed.chunk
+                setTypingText(accumulatedContent)
+                if (!isAutoScrollPausedRef.current) scrollChatToBottom("auto")
+              } else if (parsed.type === "tool") {
+                memoryMeta.push(parsed)
+              } else if (parsed.type === "done") {
+                if (parsed.memory_accessed) {
+                  memoryMeta = parsed.memory_accessed
+                }
+              } else if (parsed.type === "error") {
+                throw new Error(parsed.error || "Error en streaming")
+              }
+            } catch (e) {
+              if (e.message && e.message.includes("Error en streaming")) throw e
+            }
+          }
+        }
+      }
+
+      // Finalizar mensaje con el pensamiento y respuesta completas
+      if (accumulatedContent) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content: accumulatedContent,
+            thought: accumulatedThought || null,
+            timestamp: Date.now(),
+            model: selectedModel,
+            memoryAccessed: Array.isArray(memoryMeta) && memoryMeta.length > 0 ? memoryMeta : null,
+          },
+        ])
+        playResponse(accumulatedContent)
+      }
+      setTypingText("")
+      setIsTyping(false)
+      setStreamingThought("")
+      setIsThinking(false)
     } catch (err) {
       if (err?.name === "AbortError") return
       setMessages((prev) => [
@@ -452,6 +528,7 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
     } finally {
       if (abortRef.current === controller) abortRef.current = null
       setLoading(false)
+      setIsThinking(false)
     }
   }
 
@@ -505,6 +582,8 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
     setIsSidebarOpen,
     typingText,
     isTyping,
+    streamingThought,
+    isThinking,
     marketTelemetry,
     inputRef,
     chatContainerRef,

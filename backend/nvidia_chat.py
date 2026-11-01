@@ -945,3 +945,175 @@ def nvidia_chat(
     except Exception as e:
         logger.exception(f"Unexpected NVIDIA API error for {model_id}: {e}")
         raise NvidiaChatError(f"Error inesperado: {str(e)}", code="UNEXPECTED")
+
+
+def nvidia_chat_stream(
+    prompt: str,
+    model_key: str = "nvidia-nemotron",
+    temperature: float = 0.3,
+    max_tokens: int = 4096,
+    history: list | None = None,
+    global_context: str | None = None,
+    indicator_data: dict | None = None,
+    intent: str = "analysis",
+    all_sessions: list | None = None,
+    current_session_id: str | None = None,
+):
+    """Generates real-time SSE events for model reasoning (thoughts) and response content."""
+    api_key = get_api_key()
+    if not api_key:
+        yield {"type": "error", "error": "NVIDIA_API_KEY no está configurado en el servidor.", "error_code": "NO_API_KEY"}
+        return
+
+    model_config = AVAILABLE_MODELS.get(model_key)
+    if not model_config:
+        yield {"type": "error", "error": f"Modelo desconocido: {model_key}", "error_code": "UNKNOWN_MODEL"}
+        return
+    model_id = model_config["id"]
+    model_name = model_config["name"]
+    timeout = float(model_config.get("timeout", REQUEST_TIMEOUT))
+
+    effective_data = indicator_data if intent in ('analysis', 'ambiguous') else None
+    system_prompt = get_trading_system_prompt(effective_data, global_context, model_name, intent=intent)
+    effective_max_tokens = 512 if intent == 'casual' else max_tokens
+    url = f"{NVIDIA_API_BASE}/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+        "Accept": "text/event-stream",
+    }
+
+    initial_messages = build_messages(prompt, system_prompt, history)
+
+    payload_dict = {
+        "model": model_id,
+        "messages": initial_messages,
+        "temperature": temperature,
+        "max_tokens": effective_max_tokens,
+        "tools": CHAT_TOOLS,
+        "tool_choice": "auto",
+        "stream": True,
+    }
+
+    req = Request(url, data=json.dumps(payload_dict).encode("utf-8"), headers=headers, method="POST")
+
+    tool_calls_acc = []
+    tools_used = []
+
+    try:
+        with urlopen(req, timeout=timeout) as resp:
+            for raw_line in resp:
+                line = raw_line.decode("utf-8").strip()
+                if not line or line == "data: [DONE]":
+                    continue
+                if line.startswith("data: "):
+                    try:
+                        chunk_json = json.loads(line[6:])
+                        choices = chunk_json.get("choices", [])
+                        if not choices:
+                            continue
+                        delta = choices[0].get("delta", {})
+
+                        # Stream real-time reasoning / thoughts
+                        if "reasoning_content" in delta and delta["reasoning_content"]:
+                            yield {"type": "thought", "chunk": delta["reasoning_content"]}
+
+                        # Stream real-time response content
+                        if "content" in delta and delta["content"]:
+                            yield {"type": "content", "chunk": delta["content"]}
+
+                        # Accumulate tool calls if model invokes memory
+                        if "tool_calls" in delta and delta["tool_calls"]:
+                            for tc in delta["tool_calls"]:
+                                idx = tc.get("index", 0)
+                                while len(tool_calls_acc) <= idx:
+                                    tool_calls_acc.append({"id": "", "function": {"name": "", "arguments": ""}})
+                                if tc.get("id"):
+                                    tool_calls_acc[idx]["id"] = tc["id"]
+                                fn = tc.get("function", {})
+                                if fn.get("name"):
+                                    tool_calls_acc[idx]["function"]["name"] = fn["name"]
+                                if fn.get("arguments"):
+                                    tool_calls_acc[idx]["function"]["arguments"] += fn["arguments"]
+                    except Exception:
+                        pass
+
+        # Si el modelo invocó herramientas de memoria (MCP search_chat_history):
+        if tool_calls_acc:
+            second_messages = list(initial_messages)
+            assistant_tool_msg = {"role": "assistant", "tool_calls": []}
+            for tc in tool_calls_acc:
+                assistant_tool_msg["tool_calls"].append({
+                    "id": tc.get("id") or "call_0",
+                    "type": "function",
+                    "function": tc.get("function", {})
+                })
+            second_messages.append(assistant_tool_msg)
+
+            for tc in tool_calls_acc:
+                fn = tc.get("function", {})
+                fn_name = fn.get("name")
+                raw_args = fn.get("arguments", "{}")
+                try:
+                    args = json.loads(raw_args) if isinstance(raw_args, str) else raw_args
+                except Exception:
+                    args = {"query": str(raw_args)}
+
+                if fn_name == "search_chat_history":
+                    query = args.get("query", prompt)
+                    sym = args.get("symbol")
+                    yield {"type": "thought", "chunk": f"\n[Accediendo a memoria MCP: '{query}']\n"}
+                    result = search_chat_history(
+                        query=query,
+                        symbol=sym,
+                        all_sessions=all_sessions,
+                        current_session_id=current_session_id,
+                    )
+                    tools_used.append({
+                        "tool": "search_chat_history",
+                        "query": query,
+                        "symbol": sym,
+                        "found": result.get("found_records", 0)
+                    })
+                    yield {"type": "tool", "query": query, "found": result.get("found_records", 0)}
+                    second_messages.append({
+                        "role": "tool",
+                        "tool_call_id": tc.get("id") or "call_0",
+                        "name": fn_name,
+                        "content": json.dumps(result, ensure_ascii=False)
+                    })
+
+            # Segunda llamada en streaming con los recuerdos recuperados
+            payload2 = json.dumps({
+                "model": model_id,
+                "messages": second_messages,
+                "temperature": temperature,
+                "max_tokens": effective_max_tokens,
+                "stream": True,
+            }).encode("utf-8")
+            req2 = Request(url, data=payload2, headers=headers, method="POST")
+
+            with urlopen(req2, timeout=timeout) as resp2:
+                for raw_line in resp2:
+                    line = raw_line.decode("utf-8").strip()
+                    if not line or line == "data: [DONE]":
+                        continue
+                    if line.startswith("data: "):
+                        try:
+                            chunk_json = json.loads(line[6:])
+                            choices = chunk_json.get("choices", [])
+                            if not choices:
+                                continue
+                            delta = choices[0].get("delta", {})
+                            if "reasoning_content" in delta and delta["reasoning_content"]:
+                                yield {"type": "thought", "chunk": delta["reasoning_content"]}
+                            if "content" in delta and delta["content"]:
+                                yield {"type": "content", "chunk": delta["content"]}
+                        except Exception:
+                            pass
+
+        yield {"type": "done", "model": model_key, "memory_accessed": tools_used}
+
+    except Exception as e:
+        logger.error(f"[NvidiaChatStream] Error: {e}")
+        yield {"type": "error", "error": str(e), "error_code": "STREAM_ERROR"}

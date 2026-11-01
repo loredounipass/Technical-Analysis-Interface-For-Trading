@@ -114,6 +114,8 @@ export default function ChatMessageList({
   isTyping,
   typingText,
   loading,
+  streamingThought,
+  isThinking,
 }) {
   const intervalLabel = INTERVAL_LABELS[interval] || interval
 
@@ -229,6 +231,20 @@ export default function ChatMessageList({
               </div>
             )}
 
+            {/* Pensamiento / Razonamiento interno desplegable */}
+            {msg.thought && (
+              <details className="mb-2.5 group">
+                <summary className="cursor-pointer select-none text-[11px] font-mono text-slate-400 hover:text-[#00f5c4] flex items-center gap-2 py-1 px-2.5 rounded-lg bg-[#071218]/60 border border-slate-800/60 hover:border-emerald-500/30 transition-all w-fit">
+                  <span className="text-[#00f5c4] text-[9px] group-open:rotate-90 transition-transform">▶</span>
+                  <span className="font-semibold tracking-wide">Razonamiento del modelo</span>
+                  <span className="text-[10px] text-slate-500">({msg.thought.length} chars)</span>
+                </summary>
+                <div className="mt-2 p-3.5 rounded-xl bg-[#040a0f]/80 border border-slate-800/80 text-slate-300 font-mono text-[11px] leading-relaxed max-h-56 overflow-y-auto cyber-scrollbar whitespace-pre-wrap break-words">
+                  {msg.thought}
+                </div>
+              </details>
+            )}
+
             <div className="text-[13.5px] sm:text-[14.5px] font-sans leading-[1.68] text-slate-100 break-words tracking-[-0.01em]">
               {renderMarkdown(msg.content, symbol, intervalLabel)}
             </div>
@@ -253,18 +269,36 @@ export default function ChatMessageList({
         </div>
       )}
 
-      {/* Indicador de Carga / Esperando respuesta */}
+      {/* Indicador de Carga / Razonamiento en vivo */}
       {loading && !isTyping && (
-        <AgentPanel statusLabel="ANÁLISIS EN CURSO" statusPulse steps={LOADING_STEPS}>
-          <div className="flex items-center gap-4">
-            <div className="skynet-ring">
+        <AgentPanel
+          statusLabel={streamingThought ? "PENSAMIENTO EN VIVO" : "ANÁLISIS EN CURSO"}
+          statusPulse
+          steps={LOADING_STEPS}
+        >
+          <div className="flex items-start gap-4">
+            <div className="skynet-ring mt-0.5">
               <div className="ring ring-1" />
               <div className="ring ring-2" />
               <div className="ring ring-3" />
               <div className="core" />
               <div className="scan-line" />
             </div>
-            <ProcessingStatus symbol={symbol} />
+            <div className="flex-1 min-w-0">
+              {streamingThought ? (
+                <div className="text-xs sm:text-[13px] font-mono leading-relaxed text-slate-200 max-h-40 overflow-y-auto cyber-scrollbar pr-2 whitespace-pre-wrap break-words">
+                  <span className="text-[#00f5c4] font-bold mr-2 select-none animate-pulse">›</span>
+                  <span>{streamingThought}</span>
+                  <span className="inline-block w-1.5 h-3.5 ml-1 bg-[#00f5c4] animate-pulse align-middle" />
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 min-w-0 text-xs sm:text-[13px] font-mono tracking-wide text-slate-300 pt-2">
+                  <span className="text-[#00f5c4] font-bold select-none animate-pulse">›</span>
+                  <span>Iniciando conexión con {symbol}...</span>
+                  <span className="inline-block w-1.5 h-3.5 ml-1 bg-[#00f5c4] animate-pulse align-middle" />
+                </div>
+              )}
+            </div>
           </div>
         </AgentPanel>
       )}

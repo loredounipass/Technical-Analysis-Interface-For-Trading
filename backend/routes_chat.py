@@ -5,8 +5,9 @@ Endpoint del agente de trading AI con contexto multi-temporalidad.
 
 import logging
 
-from flask import Blueprint, jsonify, request
-from nvidia_chat import nvidia_chat, NvidiaChatError, AVAILABLE_MODELS, classify_intent
+import json
+from flask import Blueprint, jsonify, request, Response, stream_with_context
+from nvidia_chat import nvidia_chat, nvidia_chat_stream, NvidiaChatError, AVAILABLE_MODELS, classify_intent
 from cache import rate_limited
 
 logger = logging.getLogger(__name__)
@@ -124,6 +125,36 @@ def chat_endpoint():
             logger.warning(f"[Chat] Error obteniendo indicator_data: {e}")
             if not indicator_data:
                 indicator_data = data.get('indicator_data') or {'symbol': symbol, 'error': str(e)}
+
+    # Si el cliente solicita streaming (SSE en tiempo real con pensamientos)
+    if data.get('stream', False):
+        def generate_sse():
+            try:
+                for event in nvidia_chat_stream(
+                    prompt=prompt,
+                    model_key=model_key,
+                    temperature=temperature,
+                    max_tokens=4096,
+                    history=history,
+                    global_context=global_context,
+                    indicator_data=indicator_data,
+                    intent=intent,
+                    all_sessions=all_sessions,
+                    current_session_id=current_session_id,
+                ):
+                    yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+            except Exception as e:
+                yield f"data: {json.dumps({'type': 'error', 'error': str(e)})}\n\n"
+
+        return Response(
+            stream_with_context(generate_sse()),
+            mimetype='text/event-stream',
+            headers={
+                'Cache-Control': 'no-cache',
+                'X-Accel-Buffering': 'no',
+                'Connection': 'keep-alive',
+            }
+        )
 
     # Primer intento con historial completo y herramientas MCP de memoria
     try:

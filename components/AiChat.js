@@ -107,6 +107,8 @@ export default function AiChat({ symbol, datos, interval = "15m", market = "cryp
           isTyping={chat.isTyping}
           typingText={chat.typingText}
           loading={chat.loading}
+          streamingThought={chat.streamingThought}
+          isThinking={chat.isThinking}
         />
 
         {/* 4. Barra de Acciones Rápidas */}
