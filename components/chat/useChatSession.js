@@ -355,41 +355,6 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
     }
   }
 
-  const startTypingEffect = (fullText, model, memoryMeta = null) => {
-    activeModelRef.current = model
-    setIsTyping(true)
-    setTypingText("")
-    const words = fullText.split(/( )/)
-    let idx = 0
-    // Velocidad adaptativa para revelar el informe completo con fluidez sin cortes
-    const stepSize = words.length > 500 ? 8 : words.length > 200 ? 4 : 2
-    const speed = 12
-
-    typingRef.current = setInterval(() => {
-      const chunk = words.slice(0, idx + stepSize).join("")
-      idx += stepSize
-      setTypingText(chunk)
-
-      if (idx >= words.length) {
-        clearInterval(typingRef.current)
-        typingRef.current = null
-        setIsTyping(false)
-        setTypingText("")
-        setMessages((prev) => [
-          ...prev,
-          {
-            role: "assistant",
-            content: fullText,
-            timestamp: Date.now(),
-            model,
-            memoryAccessed: Array.isArray(memoryMeta) && memoryMeta.length > 0 ? memoryMeta : null,
-          },
-        ])
-        playResponse(fullText)
-      }
-    }, speed)
-  }
-
   const sendMessage = async (customPrompt, meta = null) => {
     const textToSend = typeof customPrompt === "string" ? customPrompt : input
     const trimmed = textToSend.trim()
@@ -404,6 +369,9 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
     setMessages((prev) => [...prev, userMsg])
     setInput("")
     setLoading(true)
+    // Marca el modelo de la respuesta en curso: si el usuario interrumpe el
+    // stream (stopGeneration), el mensaje parcial queda etiquetado correctamente.
+    activeModelRef.current = selectedModel
     isAutoScrollPausedRef.current = false
     setTimeout(() => scrollChatToBottom(), 50)
 

@@ -390,7 +390,7 @@ def nvidia_chat_stream(
                     if not more:
                         break  # sin progreso: evitar bucle infinito
                 if finish_reason == "length":
-                    yield {"type": "thought", "chunk": "\n[\u26a0\ufe0f La respuesta se cortó por el límite de tokens del modelo]\n"}
+                    yield {"type": "content", "chunk": "\n\n> \u26a0\ufe0f La respuesta se cort\u00f3 por el l\u00edmite de tokens del modelo."}
                 break
 
             assistant_tool_msg = {"role": "assistant", "content": "", "tool_calls": []}
