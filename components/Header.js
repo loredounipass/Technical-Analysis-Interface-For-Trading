@@ -39,14 +39,6 @@ export default function Header({
             </span>
           </div>
 
-          {/* SYS.ON Data Feed Active Badge */}
-          <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#00f5c4]/5 border border-[#00f5c4]/30 text-[#00f5c4] shadow-[0_0_10px_rgba(0,245,196,0.1)]">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#00f5c4] animate-ping" />
-            <span className="text-[10px] font-bold tracking-wider whitespace-nowrap text-white">
-              SYS.ON • <span className="text-[#00f5c4]">DATA FEED ACTIVE</span>
-            </span>
-          </div>
-
           {/* Coin / Pair badge con ETH/USDT y SPOT claramente separados */}
           <button
             onClick={onCambiarMoneda}
@@ -86,43 +78,43 @@ export default function Header({
 
           {/* Timeframe pill selector */}
           {onTimeframeChange && (
-              <div className="flex items-center gap-1 p-1 rounded-full bg-[#09111b] border border-[#16283d]">
-                {timeframes.map((tf) => {
-                  const isActive = timeframe.toLowerCase() === tf.toLowerCase()
-                  return (
-                    <button
-                      key={tf}
-                      onClick={() => onTimeframeChange(tf)}
+            <div className="flex items-center gap-1 p-1 rounded-full bg-[#09111b] border border-[#16283d]">
+              {timeframes.map((tf) => {
+                const isActive = timeframe.toLowerCase() === tf.toLowerCase()
+                return (
+                  <button
+                    key={tf}
+                    onClick={() => onTimeframeChange(tf)}
                     className={`px-3.5 py-1.5 rounded-full text-sm font-semibold tracking-wide transition-all uppercase ${isActive
-                        ? "bg-[#00f5c4]/15 border border-[#00f5c4] text-[#00f5c4] shadow-[0_0_12px_rgba(0,245,196,0.35)]"
-                        : "text-slate-300 hover:text-white border border-transparent"
-                        }`}
-                    >
-                      {tf}
-                    </button>
-                  )
-                })}
-              </div>
-          )}
+                      ? "bg-[#00f5c4]/15 border border-[#00f5c4] text-[#00f5c4] shadow-[0_0_12px_rgba(0,245,196,0.35)]"
+                      : "text-slate-300 hover:text-white border border-transparent"
+                      }`}
+                  >
+                    {tf}
+                  </button>
+                )
+              })}
             </div>
+          )}
+        </div>
 
         {/* Right: Latency Connection + UTC Clock */}
-          <div className="flex items-center gap-3 text-[11px]">
-            <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#09111b] border border-[#16283d]">
-              <span
-                className={`w-1.5 h-1.5 rounded-full ${isConnected ? "bg-[#00f5c4] shadow-[0_0_8px_#00f5c4]" : "bg-[#ff3b69]"
-                  }`}
-              />
-              <span className={isConnected ? "text-slate-200" : "text-[#ff3b69]"}>
-                {isConnected ? `CONN. STABLE (${latency})` : "CONN. LOST"}
-              </span>
-            </div>
+        <div className="flex items-center gap-3 text-[11px]">
+          <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#09111b] border border-[#16283d]">
+            <span
+              className={`w-1.5 h-1.5 rounded-full ${isConnected ? "bg-[#00f5c4] shadow-[0_0_8px_#00f5c4]" : "bg-[#ff3b69]"
+                }`}
+            />
+            <span className={isConnected ? "text-slate-200" : "text-[#ff3b69]"}>
+              {isConnected ? `CONN. STABLE (${latency})` : "CONN. LOST"}
+            </span>
+          </div>
 
-            <div className="text-slate-300 font-semibold tracking-wider">
-              CT <span className="text-white font-bold">{time || "18:14:02"}</span>
-            </div>
+          <div className="text-slate-300 font-semibold tracking-wider">
+            CT <span className="text-white font-bold">{time || "18:14:02"}</span>
           </div>
         </div>
+      </div>
     </header>
   )
 }
