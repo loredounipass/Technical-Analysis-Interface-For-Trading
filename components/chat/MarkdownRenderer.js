@@ -2,6 +2,19 @@
 
 import React from "react"
 
+// Paleta de acentos para diferenciar títulos y etiquetas por color. Se rota
+// según el orden de aparición, de modo que cada sección/encabezado recibe un
+// tono distinto y el informe se escanea de un vistazo.
+const HEADING_COLORS = [
+  "#00f5c4", // cyan terminal
+  "#7dd3fc", // sky
+  "#c4b5fd", // violet
+  "#fca5a5", // rose
+  "#fdba74", // amber
+  "#86efac", // green
+  "#f0abfc", // fuchsia
+]
+
 /**
  * Renderizador de Markdown adaptado a la estética Anthropic / Synapse Terminal.
  * Procesa encabezados, tablas, bloques de código, listas y citas con tipografía
@@ -17,6 +30,8 @@ export function renderMarkdown(text, currentSymbol, currentInterval) {
   let inCodeBlock = false
   let codeBlockLines = []
   let codeBlockLang = ""
+  let headingIdx = 0
+  let labelIdx = 0
 
   const flushList = () => {
     if (listItems.length > 0) {
@@ -98,7 +113,14 @@ export function renderMarkdown(text, currentSymbol, currentInterval) {
         partsBold.forEach((bPart) => {
           if (bPart.startsWith("**") && bPart.endsWith("**") && bPart.length >= 4) {
             const rawBold = bPart.slice(2, -2)
-            if (rawBold === currentSymbol || rawBold.includes("USDT") || rawBold.includes("/")) {
+            if (rawBold.endsWith(":")) {
+              const accent = HEADING_COLORS[labelIdx++ % HEADING_COLORS.length]
+              result.push(
+                <strong key={`${keyPrefix}-label-${keyIdx++}`} style={{ color: accent }} className="font-semibold tracking-wide">
+                  {rawBold}
+                </strong>
+              )
+            } else if (rawBold === currentSymbol || rawBold.includes("USDT") || rawBold.includes("/")) {
               result.push(
                 <strong key={`${keyPrefix}-b-${keyIdx++}`} className="text-white font-semibold tracking-wide">
                   {rawBold}
@@ -195,21 +217,22 @@ export function renderMarkdown(text, currentSymbol, currentInterval) {
     if (trimmed.startsWith("### ")) {
       flushList()
       elements.push(
-        <h4 key={i} className="font-semibold text-[#00f5c4] text-[14px] mt-4 mb-2 flex items-center gap-2 font-sans tracking-tight">
+        <h4 key={i} style={{ color: HEADING_COLORS[headingIdx++ % HEADING_COLORS.length] }} className="font-semibold text-[14px] mt-4 mb-2 flex items-center gap-2 font-sans tracking-tight">
+          <span className="inline-block w-1 h-3.5 rounded-sm bg-current opacity-70" />
           {formatInline(trimmed.slice(4), i)}
         </h4>
       )
     } else if (trimmed.startsWith("## ")) {
       flushList()
       elements.push(
-        <h3 key={i} className="font-bold text-white text-[15px] mt-5 mb-2.5 border-b border-[#16283d] pb-1.5 tracking-tight font-sans">
+        <h3 key={i} style={{ color: HEADING_COLORS[headingIdx++ % HEADING_COLORS.length] }} className="font-bold text-[15px] mt-5 mb-2.5 border-b border-[#16283d] pb-1.5 tracking-tight font-sans">
           {formatInline(trimmed.slice(3), i)}
         </h3>
       )
     } else if (trimmed.startsWith("# ")) {
       flushList()
       elements.push(
-        <h2 key={i} className="font-bold text-white text-[17px] mt-6 mb-3 tracking-tight font-sans">
+        <h2 key={i} style={{ color: HEADING_COLORS[headingIdx++ % HEADING_COLORS.length] }} className="font-bold text-[17px] mt-6 mb-3 tracking-tight font-sans">
           {formatInline(trimmed.slice(2), i)}
         </h2>
       )
