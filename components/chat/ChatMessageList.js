@@ -254,11 +254,13 @@ export default function ChatMessageList({
       {/* Indicador de Carga / Esperando respuesta */}
       {loading && !isTyping && (
         <AgentPanel statusLabel="ANÁLISIS EN CURSO" statusPulse steps={LOADING_STEPS}>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-bounce" style={{ animationDelay: "0ms" }} />
-              <span className="w-2 h-2 rounded-full bg-cyan-400 animate-bounce" style={{ animationDelay: "150ms" }} />
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-bounce" style={{ animationDelay: "300ms" }} />
+          <div className="flex items-center gap-4">
+            <div className="skynet-ring">
+              <div className="ring ring-1" />
+              <div className="ring ring-2" />
+              <div className="ring ring-3" />
+              <div className="core" />
+              <div className="scan-line" />
             </div>
             <ProcessingStatus symbol={symbol} />
           </div>
