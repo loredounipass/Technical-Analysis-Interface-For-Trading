@@ -418,6 +418,26 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
     const controller = new AbortController()
     abortRef.current = controller
 
+    // Watchdog de estancamiento: si el stream SSE deja de emitir bytes durante
+    // STALL_MS (backend colgado o busqueda muy lenta), abortamos y avisamos en
+    // lugar de dejar el spinner girando indefinidamente.
+    let stalled = false
+    let stallTimer = null
+    const STALL_MS = 90000
+    const resetStall = () => {
+      if (stallTimer) clearTimeout(stallTimer)
+      stallTimer = setTimeout(() => {
+        stalled = true
+        controller.abort()
+      }, STALL_MS)
+    }
+    const clearStall = () => {
+      if (stallTimer) {
+        clearTimeout(stallTimer)
+        stallTimer = null
+      }
+    }
+
     // Historial completo sin límites artificiales:
     // 1. Omitir el mensaje de bienvenida sintético inicial para evitar problemas de orden de roles
     // 2. Omitir mensajes de error
@@ -490,9 +510,11 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
         })
       }
 
+      resetStall()
       while (true) {
         const { done, value } = await reader.read()
         if (done) break
+        resetStall()
         buffer += decoder.decode(value, { stream: true })
         const events = buffer.split("\n\n")
         buffer = events.pop() || ""
@@ -534,6 +556,7 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
       streamEnded = true
 
       // Finalizar mensaje con el pensamiento y respuesta completas
+      const hasMeta = Array.isArray(memoryMeta) && memoryMeta.length > 0
       if (accumulatedContent) {
         setMessages((prev) => [
           ...prev,
@@ -543,17 +566,49 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
             thought: accumulatedThought || null,
             timestamp: Date.now(),
             model: selectedModel,
-            memoryAccessed: Array.isArray(memoryMeta) && memoryMeta.length > 0 ? memoryMeta : null,
+            memoryAccessed: hasMeta ? memoryMeta : null,
           },
         ])
         playResponse(accumulatedContent)
+      } else if (hasMeta || accumulatedThought) {
+        // El stream termino sin una respuesta final (p. ej. se agotaron las
+        // rondas de herramientas o la busqueda no devolvio nada). Mostramos un
+        // aviso amigable en vez de dejar la conversacion sin respuesta.
+        const webUsed = memoryMeta.some((m) => m.tool === "web_search")
+        const fallback = webUsed
+          ? "Busqué información actualizada pero no obtuve resultados concluyentes en este momento. Probá reformular la pregunta o intentá de nuevo en unos segundos."
+          : "No pude generar una respuesta en esta ocasión. Intentá nuevamente."
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content: fallback,
+            thought: accumulatedThought || null,
+            timestamp: Date.now(),
+            model: selectedModel,
+            memoryAccessed: hasMeta ? memoryMeta : null,
+          },
+        ])
       }
       setTypingText("")
       setIsTyping(false)
       setStreamingThought("")
       setIsThinking(false)
     } catch (err) {
-      if (err?.name === "AbortError") return
+      if (err?.name === "AbortError") {
+        if (stalled) {
+          setMessages((prev) => [
+            ...prev,
+            {
+              role: "assistant",
+              content: "La búsqueda tardó demasiado y se interrumpió. Intentá de nuevo en unos segundos.",
+              timestamp: Date.now(),
+              isError: true,
+            },
+          ])
+        }
+        return
+      }
       setMessages((prev) => [
         ...prev,
         {
@@ -564,6 +619,7 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
         },
       ])
     } finally {
+      clearStall()
       if (abortRef.current === controller) abortRef.current = null
       setLoading(false)
       setIsThinking(false)
