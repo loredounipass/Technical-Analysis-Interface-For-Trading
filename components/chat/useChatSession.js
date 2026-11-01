@@ -10,6 +10,7 @@ export const INTERVAL_LABELS = {
   "5m": "5 minutos",
   "15m": "15 minutos",
   "1h": "1 hora",
+  "6h": "6 horas",
   "4h": "4 horas",
   "1d": "1 día",
 }

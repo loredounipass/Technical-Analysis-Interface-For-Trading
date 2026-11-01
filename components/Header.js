@@ -59,7 +59,7 @@ export default function Header({
     }
   }
 
-  const timeframes = ["1m", "5m", "15m", "1h", "4h", "1d"]
+  const timeframes = ["1m", "5m", "15m", "1h", "6h", "1d"]
 
   // Par formateado con slash: ETHUSDT -> ETH/USDT (stocks quedan igual)
   const rawSymbol = activeAsset?.symbol || "ETHUSDT"

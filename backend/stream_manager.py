@@ -13,7 +13,7 @@ from data_fetchers import (
 from cache import store_payload, CRYPTO_SYMBOLS, STOCK_SYMBOLS
 from payload_builder import build_payload
 
-STREAM_TIMEFRAMES = ['1m', '5m', '15m', '1h', '4h', '1d']
+STREAM_TIMEFRAMES = ['1m', '5m', '15m', '1h', '6h', '1d']
 
 
 def init_market_streams(socketio):

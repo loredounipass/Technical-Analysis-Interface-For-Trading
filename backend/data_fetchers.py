@@ -96,7 +96,7 @@ COINBASE_BASE = 'https://api.exchange.coinbase.com'
 COINBASE_ADV_BASE = 'https://api.coinbase.com/api/v3/brokerage/market'
 COINBASE_HEADERS = {'User-Agent': 'woody-quant/1.0', 'Accept': 'application/json'}
 # Granularidad en segundos que acepta /products/{id}/candles
-COINBASE_GRANULARITY = {'1m': 60, '5m': 300, '15m': 900, '1h': 3600, '4h': 21600, '1d': 86400}
+COINBASE_GRANULARITY = {'1m': 60, '5m': 300, '15m': 900, '1h': 3600, '6h': 21600, '4h': 21600, '1d': 86400}
 COINBASE_PAGE = 300  # max velas por peticion de /candles
 
 
@@ -332,6 +332,7 @@ def fetch_yahoo_chart(symbol, interval_str='15m'):
         '5m': ('5m', '1mo'),
         '15m': ('15m', '1mo'),
         '1h': ('1h', '6mo'),
+        '6h': ('1h', '1y'),
         '4h': ('1h', '1y'),
         '1d': ('1d', '5y'),
     }
@@ -363,11 +364,12 @@ def fetch_yahoo_chart(symbol, interval_str='15m'):
         volume = float(volumes[i]) if volumes[i] is not None else 0.0
         bars.append([ts, open_, high, low, close, volume, close, volume])
 
-    if interval_str == '4h' and len(bars) > 1:
+    if interval_str in ('6h', '4h') and len(bars) > 1:
+        chunk_size = 6 if interval_str == '6h' else 4
         grouped = []
-        # Agrupar de a 4, incluyendo el remainder parcial al final
-        for i in range(0, len(bars), 4):
-            chunk = bars[i:i + 4]
+        # Agrupar de a 6 (o 4 para fallback), incluyendo el remainder parcial al final
+        for i in range(0, len(bars), chunk_size):
+            chunk = bars[i:i + chunk_size]
             grouped.append([
                 chunk[0][0],
                 chunk[0][1],

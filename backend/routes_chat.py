@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 chat_bp = Blueprint('chat', __name__)
 
 # Timeframes disponibles para el contexto multi-temporalidad del agente
-MTF_TIMEFRAMES = ('1m', '5m', '15m', '1h', '4h', '1d')
+MTF_TIMEFRAMES = ('1m', '5m', '15m', '1h', '6h', '1d')
 
 # Se inyecta desde app.py al registrar el blueprint
 _get_cached_fn = None

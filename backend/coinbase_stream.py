@@ -27,7 +27,7 @@ PING_KEEPALIVE = 20
 # WebSocket público de Coinbase Exchange (market data en vivo, sin auth).
 STREAM_URL = 'wss://ws-feed.exchange.coinbase.com'
 
-INTERVAL_SECONDS = {'1m': 60, '5m': 300, '15m': 900, '1h': 3600, '4h': 21600, '1d': 86400}
+INTERVAL_SECONDS = {'1m': 60, '5m': 300, '15m': 900, '1h': 3600, '6h': 21600, '4h': 21600, '1d': 86400}
 
 
 def _parse_trade_ts(ts_str):
