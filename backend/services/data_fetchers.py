@@ -313,6 +313,14 @@ def fetch_order_book_depth(symbol):
         except Exception as e:
             logger.warning(f"[TradingData] Binance depth fallo para {symbol}: {e}")
             return None
+    # Orden explicito y defensivo: el contrato de Coinbase Advanced Trade
+    # product_book NO garantiza el orden de bids/asks, y aguas abajo
+    # (payload_builder best_bid/best_ask + LiquidityBubbleMap groupLevels)
+    # se asume bids DESC / asks ASC. Ordenar aqui elimina el bug latente de
+    # tomar bids[0]/asks[0] como mejor nivel cuando el origen viene barajado.
+    bids = sorted(data.get('bids') or [], key=lambda lv: float(lv[0]), reverse=True)
+    asks = sorted(data.get('asks') or [], key=lambda lv: float(lv[0]))
+    data = {'bids': bids, 'asks': asks}
     with _depth_lock:
         _depth_cache[symbol] = (time.time(), data)
     return data
