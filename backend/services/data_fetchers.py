@@ -407,9 +407,31 @@ def interval_seconds(interval_str):
     return value * mult
 
 
+# DEVUELVE EL PRECIO EN VIVO de Yahoo (meta.regularMarketPrice), equivalente al
+# ticker de Coinbase en crypto: es el quote mas fresco que expone Yahoo sin WS.
+# Usa el chart 1d de un solo dia para que la respuesta sea minima.
+def fetch_yahoo_meta_price(symbol):
+    url = 'https://query1.finance.yahoo.com/v8/finance/chart/' + symbol
+    params = {'interval': '1d', 'range': '1d'}
+    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36'}
+    resp = requests.get(url, params=params, headers=headers, timeout=8)
+    resp.raise_for_status()
+    meta = resp.json()['chart']['result'][0]['meta']
+    price = meta.get('regularMarketPrice')
+    return float(price) if price is not None else None
+
+
 # OBTIENE EL ULTIMO PRECIO DISPONIBLE COMO FALLBACK SI FALLAN LAS KLINES
 def fetch_last_price(symbol, market):
     if market == 'stock':
+        # Primero el quote en vivo (regularMarketPrice); si falla, el cierre
+        # de la ultima vela diaria.
+        try:
+            live = fetch_yahoo_meta_price(symbol)
+            if live and live > 0:
+                return live
+        except Exception as e:
+            logger.warning(f"[TradingData] Yahoo meta price fallo para {symbol}: {e}")
         bars = fetch_yahoo_chart(symbol, '1d')
         if bars:
             return float(bars[-1][4])

@@ -14,7 +14,8 @@ from services.indicators import (
     compute_bollinger_series, compute_stoch_series, compute_stoch_rsi_series,
     compute_cci_series, compute_mfi_series, compute_adx_series, compute_pivots,
     compute_order_blocks, compute_fair_value_gaps, compute_liquidity_swings,
-    compute_order_flow, compute_signal_summary, last_non_none, price_decimals,
+    compute_order_flow, compute_order_flow_proxy, compute_signal_summary,
+    last_non_none, price_decimals,
 )
 from services.data_fetchers import (
     fetch_last_price, fetch_klines_and_volume, interval_seconds,
@@ -202,6 +203,14 @@ def build_payload(symbol, interval_str, market, klines, vol_24h=None):
             order_flow = compute_order_flow(get_order_flow_trades(symbol))
         except Exception as e:
             logger.warning(f"[TradingData] order flow fallo para {symbol}: {e}")
+    elif klines and closes:
+        # Stocks/indices: Yahoo no expone tape; proxy direccional por vela
+        try:
+            order_flow = compute_order_flow_proxy(
+                opens, highs, lows, closes, quote_volumes, timestamps
+            )
+        except Exception as e:
+            logger.warning(f"[TradingData] order flow proxy fallo para {symbol}: {e}")
 
     # Los indicadores se calculan con toda la historia (convergencia exacta);
     # el historial que se envia al frontend se recorta a 500 velas para navegacion profunda
@@ -289,10 +298,13 @@ def build_payload(symbol, interval_str, market, klines, vol_24h=None):
             bids_profile = []
             for i in range(1, 31):
                 level_p = round(precio - i * bid_step, dec)
-                # Volumen acumulado en velas que cotizaron en este nivel
+                # Volumen acumulado en velas que cotizaron en este nivel.
+                # Sin volumen REAL el nivel se omite: antes se interpolaba
+                # avg_vol*(0.3..1.0) y el bubble map mostraba liquidez
+                # inventada en precios que nunca se tocaron.
                 lvl_vol = sum(w_vols[j] for j in range(len(w_closes)) if w_lows[j] <= level_p <= max(w_opens[j], w_closes[j]))
                 if lvl_vol <= 0:
-                    lvl_vol = avg_vol * (0.3 + 0.7 * (1.0 - i / 35.0))
+                    continue
                 qty = lvl_vol / max(level_p, 0.0001) if market == 'crypto' else lvl_vol
                 bids_profile.append([level_p, round(qty, 4 if market == 'crypto' else 2)])
 
@@ -301,7 +313,7 @@ def build_payload(symbol, interval_str, market, klines, vol_24h=None):
                 level_p = round(precio + i * ask_step, dec)
                 lvl_vol = sum(w_vols[j] for j in range(len(w_closes)) if min(w_opens[j], w_closes[j]) <= level_p <= w_highs[j])
                 if lvl_vol <= 0:
-                    lvl_vol = avg_vol * (0.3 + 0.7 * (1.0 - i / 35.0))
+                    continue
                 qty = lvl_vol / max(level_p, 0.0001) if market == 'crypto' else lvl_vol
                 asks_profile.append([level_p, round(qty, 4 if market == 'crypto' else 2)])
 
@@ -398,10 +410,11 @@ def fetch_trading_data(symbol, interval_str='15m', market='crypto'):
     """ENTRY POINT REST/SOCKET: KLINES + VOLUMEN + INDICADORES COMPLETOS."""
     klines, vol_24h = fetch_klines_and_volume(symbol, interval_str, market)
     payload = build_payload(symbol, interval_str, market, klines, vol_24h)
-    # Precio principal: ticker EN VIVO de Coinbase. El cierre de la ultima vela
-    # REST puede llevar unos segundos de retraso (paginacion de klines), asi que
-    # para el precio mostrado usamos siempre el ticker mas fresco.
-    if market == 'crypto' and klines:
+    # Precio principal: ticker EN VIVO. Crypto: Coinbase (el cierre de la ultima
+    # vela REST puede llevar unos segundos de retraso por la paginacion).
+    # Stocks/indices/oro: Yahoo regularMarketPrice (el cierre de la vela viva del
+    # chart puede atrasarse unos minutos respecto al quote actual).
+    if klines:
         try:
             live_price = fetch_last_price(symbol, market)
             if live_price and live_price > 0:

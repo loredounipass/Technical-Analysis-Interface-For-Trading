@@ -67,10 +67,15 @@ const OrderFlowSwingsPanel = ({ datos = {}, dec = 2 }) => {
         <div className="h-[340px] overflow-y-auto overscroll-contain space-y-2 pr-1 font-mono scrollbar-hidden">
           {!orderFlow ? (
             <div className="h-full flex items-center justify-center text-slate-400 text-xs text-center">
-              Waiting for executed trade data (crypto only)...
+              Waiting for order flow data...
             </div>
           ) : (
             <>
+              {orderFlow.source === "candle_volume_direction_proxy" && (
+                <div className="px-2 py-1.5 rounded-md bg-cyan-500/5 border border-cyan-500/20 text-[9px] text-cyan-300">
+                  PROXY: directional volume from candle bodies (no tick tape available for stocks)
+                </div>
+              )}
               {/* Delta Bar */}
               <div className="bg-[#09111b] p-2.5 rounded-md border border-[#16283d]">
                 <div className="flex items-center justify-between mb-2">
@@ -127,10 +132,12 @@ const OrderFlowSwingsPanel = ({ datos = {}, dec = 2 }) => {
                 </div>
               </div>
 
-              {/* Recent Trade Tape */}
+              {/* Recent Trade Tape / Candle Events */}
               {orderFlow.recentTrades && orderFlow.recentTrades.length > 0 && (
                 <div className="space-y-0.5">
-                  <div className="text-[9px] text-slate-400 uppercase tracking-wider px-1">Live Trade Tape</div>
+                  <div className="text-[9px] text-slate-400 uppercase tracking-wider px-1">
+                    {orderFlow.source === "candle_volume_direction_proxy" ? "Volume Events (Candles)" : "Live Trade Tape"}
+                  </div>
                   {orderFlow.recentTrades.slice(0, 8).map((trade, idx) => {
                     const isBuy = trade.side === "buy"
                     return (

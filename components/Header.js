@@ -109,12 +109,12 @@ export default function Header({
   
         {/* Asset badge + navigation actions + timeframe selector. Centered in the
             navbar on large screens; its own full-width row on mobile. */}
-        <div className="order-3 w-full flex flex-wrap items-center gap-2 sm:gap-3 lg:order-2 lg:w-auto lg:flex-1 lg:justify-center">
+        <div className="order-3 w-full flex flex-wrap md:flex-nowrap items-center gap-2 sm:gap-3 md:overflow-x-auto md:[&::-webkit-scrollbar]:hidden md:[-ms-overflow-style:none] md:[scrollbar-width:none] lg:order-2 lg:w-auto lg:flex-1 lg:justify-center">
           {/* Coin / Pair badge con ETH/USDT y SPOT claramente separados */}
           <button
             onClick={handleCambiarMoneda}
             title="Click para cambiar activo"
-            className="group flex items-center gap-2.5 px-3 py-1.5 rounded-full bg-[#09111b] border border-[#16283d] hover:border-[#00f5c4]/40 transition-all shadow-sm"
+            className="group flex flex-shrink-0 items-center gap-2.5 px-3 py-1.5 rounded-full bg-[#09111b] border border-[#16283d] hover:border-[#00f5c4]/40 transition-all shadow-sm"
           >
             <div className="w-5 h-5 rounded-md bg-[#00f5c4]/10 border border-[#00f5c4]/30 flex items-center justify-center shadow-[0_0_8px_rgba(0,245,196,0.2)]">
               <Diamond className="w-3 h-3 text-[#00f5c4] fill-[#00f5c4]/40" />
@@ -126,7 +126,7 @@ export default function Header({
           </button>
   
           {/* Navigation actions: icon-only on mobile, icon + label from sm up */}
-          <div className="flex items-center gap-1.5 sm:gap-2">
+          <div className="flex flex-shrink-0 items-center gap-1.5 sm:gap-2">
             {/* Install app button (solo aparece si el navegador ofrece instalar la PWA) */}
             <InstallButton />
   
@@ -169,7 +169,7 @@ export default function Header({
   
           {/* Timeframe pill selector: sits right after the action buttons */}
           {onTimeframeChange && (
-            <div className="flex items-center gap-1 px-1 rounded-full bg-[#09111b] border border-[#16283d]">
+            <div className="flex flex-shrink-0 items-center gap-1 px-1 rounded-full bg-[#09111b] border border-[#16283d]">
               {timeframes.map((tf) => {
                 const isActive = timeframe.toLowerCase() === tf.toLowerCase()
                 return (
