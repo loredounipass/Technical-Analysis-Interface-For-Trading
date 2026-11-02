@@ -170,14 +170,14 @@ export default function Header({
   
           {/* Timeframe pill selector: sits right after the action buttons */}
           {onTimeframeChange && (
-            <div className="flex items-center gap-1 p-1 rounded-full bg-[#09111b] border border-[#16283d]">
+            <div className="flex items-center gap-1 px-1 rounded-full bg-[#09111b] border border-[#16283d]">
               {timeframes.map((tf) => {
                 const isActive = timeframe.toLowerCase() === tf.toLowerCase()
                 return (
                   <button
                     key={tf}
                     onClick={() => onTimeframeChange(tf)}
-                    className={`px-2.5 sm:px-3.5 py-1.5 rounded-full text-sm font-semibold tracking-wide transition-all uppercase text-center ${isActive
+                    className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-sm font-semibold tracking-wide transition-all uppercase text-center ${isActive
                       ? "bg-[#00f5c4]/15 border border-[#00f5c4] text-[#00f5c4] shadow-[0_0_12px_rgba(0,245,196,0.35)]"
                       : "text-slate-300 hover:text-white border border-transparent"
                       }`}
