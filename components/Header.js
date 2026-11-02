@@ -163,20 +163,22 @@ export default function Header({
               title="Change Trading Pair"
             >
               <ArrowLeftRight className="w-4 h-4 text-[#00f5c4]" />
-              <span className="hidden sm:inline font-semibold whitespace-nowrap">Change Coin</span>
+              <span className="hidden sm:inline font-semibold whitespace-nowrap">Change Pair</span>
             </button>
           </div>
   
-          {/* Timeframe pill selector: sits right after the action buttons */}
+          {/* Timeframe pill selector: compacto y con scroll horizontal propio,
+              asi ocupa menos ancho y las opciones fuera de vista se deslizando
+              siguen accesibles (drag en movil, shift+rueda / trackpad en desktop). */}
           {onTimeframeChange && (
-            <div className="flex flex-shrink-0 items-center gap-1 px-1 rounded-full bg-[#09111b] border border-[#16283d]">
+            <div className="flex min-w-0 max-w-full items-center gap-0.5 px-1 rounded-full bg-[#09111b] border border-[#16283d] overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
               {timeframes.map((tf) => {
                 const isActive = timeframe.toLowerCase() === tf.toLowerCase()
                 return (
                   <button
                     key={tf}
                     onClick={() => onTimeframeChange(tf)}
-                    className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-sm font-semibold tracking-wide transition-all uppercase text-center ${isActive
+                    className={`flex-shrink-0 whitespace-nowrap px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[11px] sm:text-xs font-semibold tracking-wide transition-all uppercase text-center ${isActive
                       ? "bg-[#00f5c4]/15 border border-[#00f5c4] text-[#00f5c4] shadow-[0_0_12px_rgba(0,245,196,0.35)]"
                       : "text-slate-300 hover:text-white border border-transparent"
                       }`}
