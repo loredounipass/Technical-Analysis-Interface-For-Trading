@@ -168,9 +168,9 @@ export default function Header({
             </button>
           </div>
   
-          {/* Timeframe pill selector: left-aligned on mobile, right on desktop */}
+          {/* Timeframe pill selector: sits right after the action buttons */}
           {onTimeframeChange && (
-            <div className="flex items-center gap-1 p-1 rounded-full bg-[#09111b] border border-[#16283d] sm:ml-auto">
+            <div className="flex items-center gap-1 p-1 rounded-full bg-[#09111b] border border-[#16283d]">
               {timeframes.map((tf) => {
                 const isActive = timeframe.toLowerCase() === tf.toLowerCase()
                 return (
