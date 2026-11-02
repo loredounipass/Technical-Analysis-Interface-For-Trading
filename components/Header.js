@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { ArrowLeftRight, Newspaper, Activity, Diamond, LayoutDashboard } from "lucide-react"
 import { useRouter, usePathname } from "next/navigation"
+import InstallButton from "./InstallButton"
 
 export default function Header({
   moneda,
@@ -105,6 +106,9 @@ export default function Header({
 
         {/* Center: Actions & Timeframes */}
         <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+          {/* Install app button (solo aparece si el navegador ofrece instalar la PWA) */}
+          <InstallButton />
+
           {/* Dashboard button (shown when on news page) */}
           {isNewsPage && (
             <button

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
+import PWARegister from '@/components/PWARegister'
 
 export const metadata: Metadata = {
   title: 'SYNAPSE TERMINAL',
@@ -33,6 +34,7 @@ export default function RootLayout({
     <html lang="en">
       <body className="font-sans antialiased text-slate-200 bg-[#070c14]">
         {children}
+        <PWARegister />
       </body>
     </html>
   )
