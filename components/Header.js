@@ -72,13 +72,12 @@ export default function Header({
 
   return (
     <header className="w-full bg-[#070c14]/95 border-b border-[#142335] sticky top-0 z-50 backdrop-blur-md px-3 sm:px-6 py-2.5 mb-5 shadow-lg shadow-black/40">
-      <div className="max-w-[1600px] mx-auto flex flex-col gap-2.5 text-xs font-mono">
-        {/* Row 1: Brand (left) + live status (right). Always a single clean line. */}
-        <div className="flex items-center justify-between gap-3">
-          {/* Brand */}
+      <div className="max-w-[1600px] mx-auto flex flex-wrap items-center gap-x-3 gap-y-2.5 text-xs font-mono">
+        {/* Brand (left). On large screens it shares a single row with the
+            controls and status; on mobile it sits above them. */}
           <div
             onClick={() => router.push("/dashboard")}
-            className="flex items-center gap-2.5 cursor-pointer group min-w-0"
+            className="order-1 flex items-center gap-2.5 cursor-pointer group min-w-0"
           >
             <div className="w-8 h-8 rounded-lg bg-[#00f5c4]/10 border border-[#00f5c4]/40 flex items-center justify-center text-[#00f5c4] shadow-[0_0_12px_rgba(0,245,196,0.3)] group-hover:scale-105 transition-transform flex-shrink-0">
               <Activity className="w-4.5 h-4.5 animate-pulse" />
@@ -90,7 +89,7 @@ export default function Header({
   
           {/* Connection status + UTC clock. The text label collapses to just a
               colored dot on mobile so the top row never wraps. */}
-          <div className="flex items-center gap-2 sm:gap-3 text-[11px] flex-shrink-0">
+          <div className="order-2 ml-auto flex items-center gap-2 sm:gap-3 text-[11px] flex-shrink-0 lg:order-3 lg:ml-0">
             <div
               className="flex items-center gap-1.5 px-2 sm:px-2.5 py-0.5 rounded-full bg-[#09111b] border border-[#16283d]"
               title={isConnected ? "Connection stable" : "Connection lost"}
@@ -107,10 +106,10 @@ export default function Header({
               UTC <span className="text-white font-bold">{currentTime || "00:00:00"}</span>
             </div>
           </div>
-        </div>
   
-        {/* Row 2: Asset badge + navigation actions + timeframe selector */}
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+        {/* Asset badge + navigation actions + timeframe selector. Centered in the
+            navbar on large screens; its own full-width row on mobile. */}
+        <div className="order-3 w-full flex flex-wrap items-center gap-2 sm:gap-3 lg:order-2 lg:w-auto lg:flex-1 lg:justify-center">
           {/* Coin / Pair badge con ETH/USDT y SPOT claramente separados */}
           <button
             onClick={handleCambiarMoneda}
