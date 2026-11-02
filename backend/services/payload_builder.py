@@ -375,6 +375,11 @@ def build_payload(symbol, interval_str, market, klines, vol_24h=None):
         'rsi': last_non_none(rsi_series),
         'rsiStoch': last_non_none(stoch_rsi_k),
         'volumen': vol_24h if vol_24h is not None else (quote_volumes[-1] if quote_volumes else None),
+        # Volumen de la ULTIMA VELA del timeframe activo (USDT). A diferencia del
+        # 'volumen' (ticker 24h fijo), este SÍ se adapta al timeframe: en 15m es
+        # lo negociado en ese bloque de 15m, en 1D el dia completo. Es el
+        # equivalente al indicador VOL por vela de Binance.
+        'volCandle': quote_volumes[-1] if quote_volumes else None,
         'bbUpper': last_non_none(bb_upper),
         'bbMiddle': last_non_none(bb_middle),
         'bbLower': last_non_none(bb_lower),
