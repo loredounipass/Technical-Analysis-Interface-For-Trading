@@ -11,11 +11,14 @@
  */
 export const ENDPOINTS = {
   // GET /api/trading/<symbol>?interval=&market=
+  // El symbol va en la ruta: se codifica para soportar indices (^NDX) y
+  // futuros de materias primas (GC=F), cuyos caracteres ^ y = no son seguros
+  // en un path. Werkzeug decodifica %5E/%3D de vuelta al symbol original.
   trading: (symbol, interval, market) =>
-    `/trading/${symbol}?interval=${interval}&market=${market}`,
+    `/trading/${encodeURIComponent(symbol)}?interval=${interval}&market=${market}`,
 
   // GET /api/news/<symbol>?market=
-  news: (symbol, market) => `/news/${symbol}?market=${market}`,
+  news: (symbol, market) => `/news/${encodeURIComponent(symbol)}?market=${market}`,
 
   // GET /api/models  -> listado de modelos de IA disponibles
   models: () => `/models`,

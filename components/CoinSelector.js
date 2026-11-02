@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { BarChart3, Activity, Zap, Shield, Globe, ChevronRight, Radio, Bitcoin, LineChart } from "lucide-react"
 import CoinLogo from "@/components/CoinLogo"
 
-export default function CoinSelector({ monedas, acciones, onSelect }) {
+export default function CoinSelector({ monedas, acciones, indices, onSelect }) {
   const [hoveredKey, setHoveredKey] = useState(null)
   const [mounted, setMounted] = useState(false)
   const [time, setTime] = useState("")
@@ -21,7 +21,8 @@ export default function CoinSelector({ monedas, acciones, onSelect }) {
     return () => clearInterval(interval)
   }, [])
 
-  const activeList = market === "stock" ? acciones : monedas
+  const activeList =
+    market === "stock" ? acciones : market === "index" ? indices || {} : monedas
 
   const getDynamicCoinColor = (symbol) => {
     const knownColors = {
@@ -44,6 +45,8 @@ export default function CoinSelector({ monedas, acciones, onSelect }) {
       "AMD": { from: "#ff4d4d", to: "#991b1b", glow: "rgba(255, 77, 77, 0.25)" },
       "INTC": { from: "#0284c7", to: "#075985", glow: "rgba(2, 132, 199, 0.25)" },
       "LMT": { from: "#0ea5e9", to: "#0369a1", glow: "rgba(14, 165, 233, 0.25)" },
+      "^NDX": { from: "#6366f1", to: "#312e81", glow: "rgba(99, 102, 241, 0.25)" },
+      "GC=F": { from: "#f5c542", to: "#a16207", glow: "rgba(245, 197, 66, 0.25)" },
     }
     
     if (knownColors[symbol]) return knownColors[symbol]
@@ -153,6 +156,7 @@ export default function CoinSelector({ monedas, acciones, onSelect }) {
             {[
               { key: "crypto", label: "CRYPTO SPOT", Icon: Bitcoin },
               { key: "stock", label: "US EQUITIES", Icon: LineChart },
+              { key: "index", label: "ÍNDICES / ORO", Icon: BarChart3 },
             ].map(({ key, label, Icon }) => (
               <button
                 key={key}

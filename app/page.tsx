@@ -38,6 +38,13 @@ const ACCIONES: Record<string, Moneda> = {
   18: { nombre: "Lockheed Martin", symbol: "LMT", icon: "✈️", badge: "NYSE", market: "stock" },
 }
 
+// Indices y materias primas: se sirven por Yahoo Finance, por eso usan
+// market="stock" (es lo que enruta al gateway de Yahoo en el backend).
+const INDICES: Record<string, Moneda> = {
+  19: { nombre: "Nasdaq 100", symbol: "^NDX", icon: "📊", badge: "NASDAQ", market: "stock" },
+  20: { nombre: "Oro (Futuro)", symbol: "GC=F", icon: "🥇", badge: "COMEX", market: "stock" },
+}
+
 const STORAGE_KEY = "woody-terminal-asset"
 
 export default function CryptoTradingApp() {
@@ -62,7 +69,7 @@ export default function CryptoTradingApp() {
   }, [router])
 
   const seleccionarMoneda = (key: string) => {
-    const moneda = MONEDAS[key] || ACCIONES[key]
+    const moneda = MONEDAS[key] || ACCIONES[key] || INDICES[key]
     if (moneda) {
       try {
         window.localStorage.setItem(STORAGE_KEY, JSON.stringify(moneda))
@@ -76,5 +83,5 @@ export default function CryptoTradingApp() {
   // Evitar flash del selector mientras se verifica localStorage
   if (!hydrated) return null
 
-  return <CoinSelector monedas={MONEDAS} acciones={ACCIONES} onSelect={seleccionarMoneda} />
+  return <CoinSelector monedas={MONEDAS} acciones={ACCIONES} indices={INDICES} onSelect={seleccionarMoneda} />
 }
