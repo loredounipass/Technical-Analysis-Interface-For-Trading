@@ -5,6 +5,16 @@ import { Shield, Target } from "lucide-react"
 import IndicatorCard from "@/components/indicators/IndicatorCard"
 import { formatLevel, levelDistance } from "@/components/indicators/indicatorFormatters"
 
+// Distancia % de un nivel respecto al precio actual: levelDistance(nivel, precio)
+// = (nivel - precio)/precio. El signo lo aporta el propio numero (negativo si el
+// nivel esta por debajo del precio, positivo si esta por encima), evitando el
+// doble signo al cruzar un nivel (antes: "--0.29%" / "+-1.20%").
+const signedPct = (v) => {
+  const n = Number(v)
+  if (!Number.isFinite(n)) return v
+  return n > 0 ? `+${v}` : v
+}
+
 // Fila de niveles pivote: soportes (S1-S3) y resistencias (R1-R3) con su
 // fuerza estimada y distancia porcentual al precio actual.
 const SupportResistancePanel = ({ datos = {}, dec = 2 }) => {
@@ -17,9 +27,9 @@ const SupportResistancePanel = ({ datos = {}, dec = 2 }) => {
       >
         <div className="space-y-1.5 font-mono">
           {[
-            { level: "S1", value: datos.s1, strength: "STR", distance: levelDistance(datos.precio, datos.s1) },
-            { level: "S2", value: datos.s2, strength: "MED", distance: levelDistance(datos.precio, datos.s2) },
-            { level: "S3", value: datos.s3, strength: "WK", distance: levelDistance(datos.precio, datos.s3) },
+            { level: "S1", value: datos.s1, strength: "STR", distance: levelDistance(datos.s1, datos.precio) },
+            { level: "S2", value: datos.s2, strength: "MED", distance: levelDistance(datos.s2, datos.precio) },
+            { level: "S3", value: datos.s3, strength: "WK", distance: levelDistance(datos.s3, datos.precio) },
           ].map((support) => (
             <div
               key={support.level}
@@ -34,7 +44,7 @@ const SupportResistancePanel = ({ datos = {}, dec = 2 }) => {
                   {formatLevel(support.value, dec)}
                 </span>
                 <span className="text-[10px] text-[#ff3b69] tabular-nums">
-                  -{support.distance}%
+                  {signedPct(support.distance)}%
                 </span>
               </div>
             </div>
@@ -66,7 +76,7 @@ const SupportResistancePanel = ({ datos = {}, dec = 2 }) => {
                   {formatLevel(resistance.value, dec)}
                 </span>
                 <span className="text-[10px] text-[#00f5c4] tabular-nums">
-                  +{resistance.distance}%
+                  {signedPct(resistance.distance)}%
                 </span>
               </div>
             </div>
