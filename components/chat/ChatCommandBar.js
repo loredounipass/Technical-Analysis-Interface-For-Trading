@@ -1,8 +1,12 @@
 "use client"
 
-import React from "react"
+import React, { useEffect } from "react"
 import { ArrowRight, Square } from "lucide-react"
 import { MicIcon } from "../VoiceTTS"
+
+// Altura máxima del campo en multilinea (~4 líneas de 1.4 de interlineado).
+// Mas alla de ese limite el texto rueda dentro del propio campo.
+const MAX_INPUT_HEIGHT = 84
 
 /**
  * Barra de comandos inferior:
@@ -24,6 +28,16 @@ export default function ChatCommandBar({
   interval,
   selectedModel,
 }) {
+  // El campo crece hacia arriba a medida que se escribe (la barra está anclada
+  // al final del chat, así que gana altura hacia arriba y la lista de mensajes
+  // se reduce) y vuelve a su altura mínima al enviar o borrar el comando.
+  useEffect(() => {
+    const el = inputRef.current
+    if (!el) return
+    el.style.height = "auto"
+    el.style.height = `${Math.min(el.scrollHeight, MAX_INPUT_HEIGHT)}px`
+  }, [input, inputRef])
+
   return (
     <div className="px-5 py-3 sm:px-6 bg-[#050c10]/45 backdrop-blur-md border-t border-emerald-500/15 z-10">
       <div className="relative bg-[#040a0e]/60 border border-emerald-500/30 focus-within:border-emerald-400/80 rounded-xl px-4 py-2.5 flex items-center gap-3 shadow-[0_0_20px_rgba(0,255,178,0.06)] transition-all">
@@ -39,7 +53,7 @@ export default function ChatCommandBar({
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={onKeyDown}
           placeholder="type a command, indicator setup, or question..."
-          className="flex-1 bg-transparent text-emerald-100 placeholder-slate-500 font-mono text-xs sm:text-sm outline-none resize-none py-1 min-h-[22px] max-h-[75px] cyber-scrollbar"
+          className="flex-1 bg-transparent text-emerald-100 placeholder-slate-500 font-mono text-xs sm:text-sm outline-none resize-none py-1 min-h-[22px] max-h-[84px] overflow-y-auto overscroll-contain cyber-scrollbar"
           style={{ lineHeight: "1.4" }}
         />
 
