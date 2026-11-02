@@ -5,9 +5,10 @@ import { MessageSquare } from "lucide-react"
 import WoodyAgentIcon from "./WoodyAgentIcon"
 
 /**
- * Floating Woody Agent launcher matching the screenshot design.
+ * Floating Woody Agent launcher: compact pill with the robot-trader icon,
+ * the agent name and a chat glyph. No version / pair / status noise.
  */
-export default function ChatLauncherButton({ onOpen, symbol = "ETHUSDT", interval = "15m" }) {
+export default function ChatLauncherButton({ onOpen }) {
   return (
     <button
       id="ai-chat-toggle"
@@ -19,26 +20,10 @@ export default function ChatLauncherButton({ onOpen, symbol = "ETHUSDT", interva
         <WoodyAgentIcon className="w-5 h-5 text-[#00f5c4]" />
       </div>
 
-      {/* Details */}
-      <div className="flex flex-col text-left font-mono">
-        {/* Top: WOODY AGENT + v3.0 */}
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-bold text-white tracking-wider">
-            WOODY AGENT
-          </span>
-          <span className="text-[9px] px-1.5 py-0.2 rounded bg-[#00f5c4]/15 border border-[#00f5c4]/30 text-[#00f5c4] font-bold">
-            v3.0
-          </span>
-        </div>
-
-        {/* Bottom: Status */}
-        <div className="flex items-center gap-1.5 text-[10px] text-slate-300 font-medium">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#00f5c4] shadow-[0_0_6px_#00f5c4] animate-pulse" />
-          <span>{symbol} @ {interval}</span>
-          <span className="text-slate-600">•</span>
-          <span className="text-[#00f5c4]">ONLINE / READY</span>
-        </div>
-      </div>
+      {/* Label: just the agent name */}
+      <span className="text-xs font-bold text-white tracking-wider font-mono">
+        WOODY AGENT
+      </span>
 
       {/* Right Chat Icon */}
       <div className="pl-1 text-slate-400 group-hover:text-[#00f5c4] transition-colors">
