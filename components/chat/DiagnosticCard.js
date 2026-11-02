@@ -10,7 +10,7 @@ import React from "react"
 export default function DiagnosticCard({ diagnostic }) {
   if (!diagnostic) return null
 
-  const rsiSub = diagnostic.rsiSubtitle || "▲ Alcista oculta"
+  const rsiSub = diagnostic.rsiSubtitle || "\u25CF Sin dato"
   const isRsiBullish = rsiSub.includes("▲") || rsiSub.toLowerCase().includes("alcista")
   const isRsiBearish = rsiSub.includes("▼") || rsiSub.toLowerCase().includes("bajista")
   const rsiSubText = rsiSub.startsWith("▲") || rsiSub.startsWith("▼") || rsiSub.startsWith("●")
@@ -39,7 +39,7 @@ export default function DiagnosticCard({ diagnostic }) {
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-mono text-slate-400 tracking-wider">RSI (14)</span>
             <span className="text-[9px] font-mono text-cyan-400 bg-cyan-950/60 border border-cyan-500/30 px-1.5 py-0.5 rounded font-semibold">
-              {diagnostic.rsiBadge || "DIVERGENCIA"}
+              {diagnostic.rsiBadge || "SIN DATO"}
             </span>
           </div>
           <div className="flex items-baseline gap-2">
@@ -57,12 +57,12 @@ export default function DiagnosticCard({ diagnostic }) {
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-mono text-slate-400 tracking-wider">SOPORTE CLAVE</span>
             <span className="text-[9px] font-mono text-emerald-400 bg-emerald-950/60 border border-emerald-500/30 px-1.5 py-0.5 rounded font-semibold">
-              {diagnostic.supportBadge || "S1 DINÁMICO"}
+              {diagnostic.supportBadge || "SIN DATO"}
             </span>
           </div>
           <div className="flex items-baseline gap-2">
             <span className="text-white font-mono font-bold text-base sm:text-lg">{diagnostic.supportValue}</span>
-            <span className="text-emerald-400 font-mono text-[11px]">{diagnostic.supportSubtitle || "Rechazo fuerte"}</span>
+            <span className="text-emerald-400 font-mono text-[11px]">{diagnostic.supportSubtitle || "\u2014"}</span>
           </div>
         </div>
 
@@ -71,12 +71,12 @@ export default function DiagnosticCard({ diagnostic }) {
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-mono text-slate-400 tracking-wider">ADX FUERZA</span>
             <span className="text-[9px] font-mono text-amber-400 bg-amber-950/60 border border-amber-500/30 px-1.5 py-0.5 rounded font-semibold">
-              {diagnostic.adxBadge || "DEFINIDA"}
+              {diagnostic.adxBadge || "SIN DATO"}
             </span>
           </div>
           <div className="flex items-baseline gap-2">
             <span className="text-amber-400 font-mono font-bold text-base sm:text-lg">{diagnostic.adxValue}</span>
-            <span className="text-slate-300 font-mono text-[11px]">{diagnostic.adxSubtitle || "Tendencia alta"}</span>
+            <span className="text-slate-300 font-mono text-[11px]">{diagnostic.adxSubtitle || "\u2014"}</span>
           </div>
         </div>
 
@@ -85,12 +85,12 @@ export default function DiagnosticCard({ diagnostic }) {
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-mono text-slate-400 tracking-wider">MACD CRUCE</span>
             <span className="text-[9px] font-mono text-rose-400 bg-rose-950/60 border border-rose-500/30 px-1.5 py-0.5 rounded font-semibold">
-              {diagnostic.macdBadge || "CONTRACCIÓN"}
+              {diagnostic.macdBadge || "SIN DATO"}
             </span>
           </div>
           <div className="flex items-baseline gap-2">
             <span className="text-rose-400 font-mono font-bold text-base sm:text-lg">{diagnostic.macdValue}</span>
-            <span className="text-slate-400 font-mono text-[11px]">{diagnostic.macdSubtitle || "Histograma"}</span>
+            <span className="text-slate-400 font-mono text-[11px]">{diagnostic.macdSubtitle || "\u2014"}</span>
           </div>
         </div>
       </div>

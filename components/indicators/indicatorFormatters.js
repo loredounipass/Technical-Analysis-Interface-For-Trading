@@ -25,7 +25,9 @@ export function levelDistance(a, b) {
 
 export function fmt(v, d = 2) {
   const n = Number(v)
-  return Number.isFinite(n) ? n.toFixed(d) : (0).toFixed(d)
+  // Un valor no numerico (undefined/NaN) se muestra como ausencia veraz "---",
+  // nunca como un 0.00 que podria leerse como una medida real.
+  return Number.isFinite(n) ? n.toFixed(d) : "\u2014"
 }
 
 export function formatZoneTime(timestamp) {

@@ -62,20 +62,21 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
     const buy = datos?.buySignals || 0
     const sell = datos?.sellSignals || 0
     const neutral = datos?.neutralSignals || 0
-    const total = buy + sell + neutral
+    const emDash = "\u2014"
+    const num = (v) => (v != null && Number.isFinite(Number(v)) ? Number(v) : null)
 
-    let buyerPercent = "52.8%"
-    // VOLUMEN COMPRADOR REAL: buyerPercent llega del backend calculado con el
-    // libro de órdenes de Binance (o proxy de volumen de velas para stocks).
-    // Solo si el backend no lo manda se cae al conteo de señales de indicadores.
+    // VOLUMEN COMPRADOR REAL: proviene del backend (profundidad del libro de
+    // ordenes de Coinbase/Binance, o proxy de volumen de velas). Si no llega un
+    // numero real se muestra "---"; nunca se inventa un porcentaje ni se vende
+    // un conteo de senales como si fuera volumen.
     const realBuyerPercent = datos?.buyerPercent
-    if (realBuyerPercent != null && !isNaN(Number(realBuyerPercent))) {
-      buyerPercent = Number(realBuyerPercent).toFixed(1) + "%"
-    } else if (total > 0) {
-      buyerPercent = ((buy / total) * 100).toFixed(1) + "%"
-    }
+    const hasBuyerPercent = realBuyerPercent != null && Number.isFinite(Number(realBuyerPercent))
+    const buyerPercent = hasBuyerPercent
+      ? Number(realBuyerPercent).toFixed(1) + "%"
+      : emDash
 
-    let trendLabel = "ALCISTA LEVE"
+    // Tendencia derivada honestamente del conteo de senales reales del backend.
+    let trendLabel = "RANGO NEUTRAL"
     if (buy > sell + 2) {
       trendLabel = "ALCISTA FUERTE"
     } else if (buy > sell) {
@@ -84,66 +85,66 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
       trendLabel = "BAJISTA FUERTE"
     } else if (sell > buy) {
       trendLabel = "BAJISTA LEVE"
-    } else {
-      trendLabel = "RANGO NEUTRAL"
     }
 
-    // RSI (14) - Lee datos reales de datos.rsi
-    const rsiVal = datos?.rsi != null ? Number(datos.rsi).toFixed(2) : "28.12"
-    const rsiNum = Number(rsiVal)
-    let rsiBadge = "DIVERGENCIA"
-    let rsiSubtitle = "▲ Alcista oculta"
-    if (rsiNum < 30) {
-      rsiBadge = "SOBREVENTA"
-      rsiSubtitle = "▲ Alcista oculta"
-    } else if (rsiNum < 40) {
-      rsiBadge = "DIVERGENCIA"
-      rsiSubtitle = "▲ Alcista oculta"
-    } else if (rsiNum > 70) {
-      rsiBadge = "SOBRECOMPRA"
-      rsiSubtitle = "▼ Presión bajista"
-    } else if (rsiNum > 60) {
-      rsiBadge = "PRESIÓN ALTA"
-      rsiSubtitle = "▲ Impulso activo"
-    } else {
-      rsiBadge = "EQUILIBRIO"
-      rsiSubtitle = "● Neutral"
-    }
-
-    // SOPORTE CLAVE (S1 DINÁMICO) - Lee datos reales de datos.s1 o calcula con datos.precio
-    let s1Val = "$2,197.57"
-    if (datos?.s1 != null) {
-      const s1Num = Number(datos.s1)
-      s1Val = "$" + (s1Num < 1 ? s1Num.toFixed(4) : s1Num.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }))
-    } else if (datos?.precio != null) {
-      const s1Calc = Number(datos.precio) * 0.985
-      s1Val = "$" + (s1Calc < 1 ? s1Calc.toFixed(4) : s1Calc.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }))
-    }
-
-    // ADX FUERZA - Lee datos reales de datos.adx
-    const adxVal = datos?.adx != null ? Number(datos.adx).toFixed(2) : "42.38"
-    const adxNum = Number(adxVal)
-    const adxBadge = adxNum >= 25 ? "DEFINIDA" : "CONSOLIDACIÓN"
-    const adxSubtitle = adxNum >= 25 ? "Tendencia alta" : "Lateral"
-
-    // MACD CRUCE - Lee datos reales de datos.macdHistogram
-    const macdVal = datos?.macdHistogram != null ? Number(datos.macdHistogram).toFixed(2) : "-1.04"
-    const macdNum = Number(macdVal)
-    const macdBadge = macdNum < 0 ? "CONTRACCIÓN" : "EXPANSIÓN"
-    const macdSubtitle = "Histograma"
-
-    // Diagnóstico resumen dinámico basado en las señales e indicadores reales
-    let summary = "Actualmente observo compresión de volatilidad con presión compradora absorbiendo ventas cerca de soporte clave."
-    if (datos) {
-      if (buy > sell && rsiNum < 40) {
-        summary = "Actualmente observo compresión de volatilidad con presión compradora absorbiendo ventas cerca de soporte clave."
-      } else if (buy > sell) {
-        summary = `Flujo comprador predominante (${buyerPercent}) con estructura alcista consolidando sobre soporte dinámico.`
-      } else if (sell > buy) {
-        summary = `Presión vendedora activa en el histograma MACD. Monitoreando soporte clave para confirmación de absorción.`
+    // RSI (14): solo valor real. Sin dato no se inventa numero ni se clasifica.
+    const rsiNum = num(datos?.rsi)
+    const rsiVal = rsiNum != null ? rsiNum.toFixed(2) : emDash
+    let rsiBadge = "SIN DATO"
+    let rsiSubtitle = "\u25CF Sin RSI"
+    if (rsiNum != null) {
+      if (rsiNum < 30) {
+        rsiBadge = "SOBREVENTA"
+        rsiSubtitle = "\u25B2 Sobreventa"
+      } else if (rsiNum < 40) {
+        rsiBadge = "ZONA BAJA"
+        rsiSubtitle = "\u25CF Zona baja"
+      } else if (rsiNum > 70) {
+        rsiBadge = "SOBRECOMPRA"
+        rsiSubtitle = "\u25BC Sobrecompra"
+      } else if (rsiNum > 60) {
+        rsiBadge = "ZONA ALTA"
+        rsiSubtitle = "\u25CF Zona alta"
       } else {
-        summary = "Actualmente observo compresión de volatilidad con equilibrio entre oferta y demanda cerca de niveles clave."
+        rsiBadge = "EQUILIBRIO"
+        rsiSubtitle = "\u25CF Neutral"
       }
+    }
+
+    // SOPORTE CLAVE: usa el nivel pivote S1 REAL del backend. No se fabrica un
+    // soporte restando un porcentaje al precio (eso era un valor inventado).
+    const s1Num = num(datos?.s1)
+    const supportValue = s1Num != null
+      ? "$" + (s1Num < 1
+        ? s1Num.toFixed(4)
+        : s1Num.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }))
+      : emDash
+    const supportBadge = s1Num != null ? "S1 PIVOTE" : "SIN DATO"
+    const supportSubtitle = s1Num != null ? "Nivel pivote real" : emDash
+
+    // ADX: solo valor real; la fortaleza se clasifica a partir de el.
+    const adxNum = num(datos?.adx)
+    const adxVal = adxNum != null ? adxNum.toFixed(2) : emDash
+    const adxBadge = adxNum == null ? "SIN DATO" : adxNum >= 25 ? "DEFINIDA" : "CONSOLIDACIÓN"
+    const adxSubtitle = adxNum == null ? emDash : adxNum >= 25 ? "Tendencia definida" : "Lateral"
+
+    // MACD histograma: solo valor real; el signo define expansion/contraccion.
+    const macdNum = num(datos?.macdHistogram)
+    const macdVal = macdNum != null ? macdNum.toFixed(2) : emDash
+    const macdBadge = macdNum == null ? "SIN DATO" : macdNum < 0 ? "CONTRACCIÓN" : "EXPANSIÓN"
+    const macdSubtitle = macdNum == null ? emDash : "Histograma"
+
+    // Resumen: narracion acotada a lo que los datos realmente muestran. Sin
+    // datos suficientes se declara la ausencia en lugar de inventar una tesis.
+    let summary
+    if (!datos || (rsiNum == null && !hasBuyerPercent && buy + sell + neutral === 0)) {
+      summary = "Sin datos de mercado suficientes para un diagnóstico."
+    } else if (buy > sell) {
+      summary = `Flujo comprador predominante entre las señales activas${hasBuyerPercent ? ` (volumen comprador ${buyerPercent})` : ""}. RSI ${rsiVal}, ADX ${adxVal}.`
+    } else if (sell > buy) {
+      summary = `Presión vendedora predominante entre las señales activas. RSI ${rsiVal}, histograma MACD ${macdVal}.`
+    } else {
+      summary = `Equilibrio entre oferta y demanda en las señales. RSI ${rsiVal}, ADX ${adxVal}.`
     }
 
     return {
@@ -157,9 +158,9 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
         rsiValue: rsiVal,
         rsiBadge,
         rsiSubtitle,
-        supportValue: s1Val,
-        supportBadge: "S1 DINÁMICO",
-        supportSubtitle: "Rechazo fuerte",
+        supportValue,
+        supportBadge,
+        supportSubtitle,
         adxValue: adxVal,
         adxBadge,
         adxSubtitle,
