@@ -42,7 +42,7 @@ export default function ChatSessionsDrawer({
           <Plus className="w-4 h-4" /> Nueva Consulta
         </button>
 
-        <div className="flex-1 overflow-y-auto space-y-1.5 cyber-scrollbar">
+        <div className="flex-1 overflow-y-auto overscroll-contain space-y-1.5 cyber-scrollbar">
           {sessions.map((s) => (
             <div
               key={s.id}

@@ -584,7 +584,7 @@ Veredicto claro basado en todos los datos del terminal: el momentum favorece COM
           onClick={() => setIsOpen(false)}
         >
           <div
-            className="relative w-full max-w-[640px] max-h-[82vh] overflow-y-auto cyber-scrollbar rounded-2xl border border-emerald-500/30 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.9),0_0_35px_rgba(0,255,178,0.15)] animate-in zoom-in-95 duration-200"
+            className="relative w-full max-w-[640px] max-h-[82vh] overflow-y-auto overscroll-contain cyber-scrollbar rounded-2xl border border-emerald-500/30 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.9),0_0_35px_rgba(0,255,178,0.15)] animate-in zoom-in-95 duration-200"
             style={{
               background:
                 "linear-gradient(180deg, rgba(8, 18, 25, 0.90) 0%, rgba(5, 12, 17, 0.92) 100%)",

@@ -144,7 +144,7 @@ export default function ChatMessageList({
     <div
       ref={chatContainerRef}
       onScroll={onScroll}
-      className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5 space-y-5 cyber-scrollbar relative z-10"
+      className="flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6 sm:py-5 space-y-5 cyber-scrollbar relative z-10"
       style={{ background: "rgba(4, 9, 14, 0.25)" }}
     >
       {/* Lista de Mensajes: memoizada para que los mensajes ya completados no
@@ -324,7 +324,7 @@ export default function ChatMessageList({
                   <span className="font-semibold tracking-wide">Razonamiento del modelo</span>
                   <span className="text-[10px] text-slate-500">({msg.thought.length} chars)</span>
                 </summary>
-                <div className="mt-2 p-3.5 rounded-xl bg-[#040a0f]/80 border border-slate-800/80 text-slate-300 font-mono text-[11px] leading-relaxed max-h-56 overflow-y-auto cyber-scrollbar whitespace-pre-wrap break-words">
+                <div className="mt-2 p-3.5 rounded-xl bg-[#040a0f]/80 border border-slate-800/80 text-slate-300 font-mono text-[11px] leading-relaxed max-h-56 overflow-y-auto overscroll-contain cyber-scrollbar whitespace-pre-wrap break-words">
                   {msg.thought}
                 </div>
               </details>
@@ -373,7 +373,7 @@ export default function ChatMessageList({
               {streamingThought ? (
                 <div
                   ref={thoughtBoxRef}
-                  className="text-xs sm:text-[13px] font-mono leading-relaxed text-slate-200 max-h-48 sm:max-h-56 overflow-y-auto cyber-scrollbar pr-2 whitespace-pre-wrap break-words"
+                  className="text-xs sm:text-[13px] font-mono leading-relaxed text-slate-200 max-h-48 sm:max-h-56 overflow-y-auto overscroll-contain cyber-scrollbar pr-2 whitespace-pre-wrap break-words"
                 >
                   <span className="text-[#00f5c4] font-bold mr-2 select-none animate-pulse">›</span>
                   <span>{streamingThought}</span>

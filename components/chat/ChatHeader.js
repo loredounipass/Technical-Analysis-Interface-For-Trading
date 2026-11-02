@@ -5,12 +5,10 @@ import { FlaskConical, History, Trash2, Minus, X, SquarePen } from "lucide-react
 
 /**
  * Encabezado superior de la ventana Cyber-Quant:
- * Icono de matraz, título con símbolo, timeframe y precio actual,
+ * Icono de matraz, título con precio actual,
  * junto a los controles de ventana.
  */
 export default function ChatHeader({
-  symbol,
-  interval,
   price,
   decimals = 2,
   onOpenSidebar,
@@ -42,10 +40,6 @@ export default function ChatHeader({
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-white font-mono font-bold tracking-wider text-sm sm:text-base">
                 WOODY AGENT
-              </span>
-              <span className="text-slate-600 font-mono">•</span>
-              <span className="text-slate-400 font-mono text-xs">
-                {symbol} @ {interval}
               </span>
               <span className="text-slate-600 font-mono">•</span>
               <span className="text-emerald-300 font-mono text-xs font-semibold">

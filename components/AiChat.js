@@ -100,8 +100,6 @@ export default function AiChat({ symbol, datos, interval = "15m", market = "cryp
 
         {/* 1. Encabezado de la Ventana */}
         <ChatHeader
-          symbol={symbol}
-          interval={interval}
           price={datos?.precio}
           decimals={datos?.decimales}
           onOpenSidebar={() => chat.setIsSidebarOpen(true)}
