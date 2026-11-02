@@ -437,18 +437,11 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
   }
 
   // 4. MOVING AVERAGES (EMA 50 / 100 / 200)
+  // Solo las líneas de medias (sin velas de precio de fondo).
   if (type === "ema") {
-    // Estilo exchange: las MAs se leen superpuestas sobre las velas, no como
-    // curvas sueltas. Se reutilizan las barras de rango [min,max] (mecha y
-    // cuerpo) del gráfico principal.
     let emaFullData = []
     if (datos.history && Array.isArray(datos.history.closes) && datos.history.closes.length > 0) {
       emaFullData = datos.history.closes.map((c, i) => {
-        const o = Number(datos.history.opens?.[i])
-        const h = Number(datos.history.highs?.[i])
-        const l = Number(datos.history.lows?.[i])
-        const cl = Number(c)
-        const hasCandle = [o, h, l, cl].every(Number.isFinite)
         const t = datos.history.times?.[i]
         return {
           name: `${i}`,
@@ -462,56 +455,35 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
           ema50: datos.history.ema50?.[i] ?? null,
           ema100: datos.history.ema100?.[i] ?? null,
           ema200: datos.history.ema200?.[i] ?? null,
-          price: cl,
-          open: hasCandle ? o : null,
-          high: hasCandle ? h : null,
-          low: hasCandle ? l : null,
-          close: hasCandle ? cl : null,
-          isBull: hasCandle ? cl >= o : true,
-          wickRange: hasCandle ? [l, h] : null,
-          bodyRange: hasCandle ? [o, cl] : null,
+          price: Number(c),
         }
       })
       if (datos.precio !== null && datos.precio !== undefined && emaFullData.length > 0) {
         const last = emaFullData.length - 1
         const prev = emaFullData[last]
-        const live = Number(datos.precio)
-        const liveOk = Number.isFinite(live)
         emaFullData[last] = {
           ...prev,
           ema50: datos.ema50 ?? prev.ema50,
           ema100: datos.ema100 ?? prev.ema100,
           ema200: datos.ema200 ?? prev.ema200,
-          price: live,
-          close: liveOk ? live : prev.close,
-          isBull: liveOk && Number.isFinite(prev.open) ? live >= prev.open : prev.isBull,
-          bodyRange:
-            liveOk && Number.isFinite(prev.open) ? [prev.open, live] : prev.bodyRange,
-          wickRange:
-            liveOk && Number.isFinite(prev.high) && Number.isFinite(prev.low)
-              ? [Math.min(prev.low, live), Math.max(prev.high, live)]
-              : prev.wickRange,
+          price: Number(datos.precio),
         }
       }
     }
     let emaChartData = ensureMinPoints(emaFullData.slice(win.start, win.effEnd))
 
-    // El dominio incluye mechas (no solo cierres) para que las velas no se corten
+    // Dominio calculado sobre MAs y precios de cierre de la ventana
     const emaValues = emaChartData
-      .flatMap((d) => [d.ema50, d.ema100, d.ema200, d.high ?? d.price, d.low ?? d.price])
+      .flatMap((d) => [d.ema50, d.ema100, d.ema200, d.price])
       .filter((v) => Number.isFinite(v))
     const minEma = emaValues.length > 0 ? Math.min(...emaValues) : 0
     const maxEma = emaValues.length > 0 ? Math.max(...emaValues) : 100
     const padEma = Math.max((maxEma - minEma) * 0.15, 0.001)
     const emaDomain = [minEma - padEma, maxEma + padEma]
 
-    // Grosor de vela escalado con el zoom, igual que en el gráfico principal
-    const emaBodySize = Math.min(Math.max((win.plotWidth / win.effCount) * 0.62, 1.5), 18)
-    const emaWickSize = Math.max(1, emaBodySize * 0.18)
-
     const isBullTrend = datos.precio > datos.ema50 && datos.ema50 > datos.ema200
 
-    // Tooltip OHLC + MAs (el por defecto mostraría los arrays mecha/cuerpo)
+    // Tooltip MAs + precio de cierre
     const EmaTooltip = ({ active, payload }) => {
       if (!active || !payload || !payload.length) return null
       const d = payload[0].payload
@@ -533,13 +505,8 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
         >
           <div style={{ color: "#ffffff" }} className="flex items-center justify-between gap-5 mb-1 pb-1 border-b border-[#16283d]">
             <span>{d.time}</span>
-            <span style={{ color: d.isBull ? "#00f5c4" : "#ff3b69" }}>
-              {d.isBull ? "BULL" : "BEAR"}
-            </span>
           </div>
-          {d.open !== null && d.open !== undefined
-            ? row("O / H / L / C", `${safeToFixed(d.open, datos.decimales)} / ${safeToFixed(d.high, datos.decimales)} / ${safeToFixed(d.low, datos.decimales)} / ${safeToFixed(d.close, datos.decimales)}`)
-            : row("Price", money(d.price))}
+          {row("Close", money(d.price))}
           {row("EMA 50", money(d.ema50), "#f59e0b")}
           {row("EMA 100", money(d.ema100), "#38bdf8")}
           {row("EMA 200", money(d.ema200), "#a855f7")}
@@ -578,25 +545,6 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
                   content={<EmaTooltip />}
                   cursor={{ stroke: "#244163", strokeDasharray: "3 3" }}
                 />
-                {/* Mecha y cuerpo: velas tenues para que las MAs se lean encima */}
-                <Bar dataKey="wickRange" barSize={emaWickSize} isAnimationActive={false}>
-                  {emaChartData.map((entry, index) => (
-                    <Cell
-                      key={`ema-wick-${index}`}
-                      fill={entry.isBull ? "#00f5c4" : "#ff3b69"}
-                      fillOpacity={0.5}
-                    />
-                  ))}
-                </Bar>
-                <Bar dataKey="bodyRange" barSize={emaBodySize} isAnimationActive={false}>
-                  {emaChartData.map((entry, index) => (
-                    <Cell
-                      key={`ema-body-${index}`}
-                      fill={entry.isBull ? "#00f5c4" : "#ff3b69"}
-                      fillOpacity={0.35}
-                    />
-                  ))}
-                </Bar>
                 <Line
                   type="monotone"
                   dataKey="ema50"
