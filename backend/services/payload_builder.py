@@ -43,6 +43,19 @@ def build_payload(symbol, interval_str, market, klines, vol_24h=None):
         closes = [float(k[4]) for k in klines]
         timestamps = [int(k[0]) for k in klines]
         quote_volumes = [float(k[7]) for k in klines]
+        # Yahoo NO expone volumen para forex (=X) y varios indices/futuros (=F):
+        # llegan todas las velas en 0. Sin volumen, el proxy de order flow, el
+        # libro de liquidez por volume profile y la dominancia compradora quedan
+        # vacios ("Waiting for order flow...", "No order book data available").
+        # Se sustituye un proxy de actividad deterministico por vela: el rango
+        # REAL (high-low) expresado en pips notacionales ((high-low)/close*1e5).
+        # Solo usa velas que existieron (no inventa niveles nuevos) y da una
+        # escala legible al bubble map y al delta direccional.
+        if klines and not any(v > 0 for v in quote_volumes):
+            quote_volumes = [
+                (float(k[2]) - float(k[3])) / float(k[4]) * 100000.0
+                for k in klines
+            ]
 
     precio = closes[-1] if closes else fetch_last_price(symbol, market)
 

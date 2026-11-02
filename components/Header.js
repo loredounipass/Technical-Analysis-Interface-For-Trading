@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { ArrowLeftRight, Newspaper, Activity, Diamond, LayoutDashboard } from "lucide-react"
 import { useRouter, usePathname } from "next/navigation"
 import InstallButton from "./InstallButton"
+import { formatDisplaySymbol } from "@/utils/dataUtils"
 
 export default function Header({
   moneda,
@@ -61,11 +62,12 @@ export default function Header({
 
   const timeframes = ["1m", "5m", "15m", "1h", "6h", "1d"]
 
-  // Par formateado con slash: ETHUSDT -> ETH/USDT (stocks quedan igual)
+  // Par formateado con slash: ETHUSDT -> ETH/USDT. Stocks/forex/indices de Yahoo
+  // pasan por formatDisplaySymbol para quitar el sufijo =X/=F (EURUSD=X -> EUR/USD).
   const rawSymbol = activeAsset?.symbol || "ETHUSDT"
   const pairLabel =
     activeAsset?.market === "stock"
-      ? rawSymbol
+      ? formatDisplaySymbol(rawSymbol)
       : rawSymbol.includes("/")
         ? rawSymbol
         : rawSymbol.replace(/(USDT|USDC|BTC|ETH|EUR|USD)$/, "/$1")
@@ -167,11 +169,13 @@ export default function Header({
             </button>
           </div>
   
-          {/* Timeframe pill selector: compacto y con scroll horizontal propio,
-              asi ocupa menos ancho y las opciones fuera de vista se deslizando
-              siguen accesibles (drag en movil, shift+rueda / trackpad en desktop). */}
+          {/* Timeframe pill selector: ancho acotado (~ al boton Change Pair) con
+              scroll horizontal propio, asi al reducir la pantalla NO se estira
+              para mostrar las 6 temporalidades: queda compacto y las opciones
+              fuera de vista se alcanzan haciendo scroll a la izquierda (drag en
+              movil, shift+rueda / trackpad en desktop). */}
           {onTimeframeChange && (
-            <div className="flex min-w-0 max-w-full items-center gap-0.5 px-1 rounded-full bg-[#09111b] border border-[#16283d] overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+            <div className="flex min-w-0 w-full sm:w-auto max-w-[9.5rem] sm:max-w-[11rem] lg:max-w-[12rem] items-center gap-0.5 px-1 rounded-full bg-[#09111b] border border-[#16283d] overflow-x-auto overscroll-contain [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
               {timeframes.map((tf) => {
                 const isActive = timeframe.toLowerCase() === tf.toLowerCase()
                 return (

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { BarChart3, Activity, Zap, Shield, Globe, ChevronRight, Radio, Bitcoin, LineChart } from "lucide-react"
 import CoinLogo from "@/components/CoinLogo"
+import { formatDisplaySymbol } from "@/utils/dataUtils"
 
 export default function CoinSelector({ monedas, acciones, indices, onSelect }) {
   const [hoveredKey, setHoveredKey] = useState(null)
@@ -209,7 +210,7 @@ export default function CoinSelector({ monedas, acciones, indices, onSelect }) {
                   <div className="font-mono">
                     <div className="flex items-center gap-2 mb-0.5">
                       <span className="text-sm font-bold text-white group-hover:text-[#00f5c4] transition-colors">
-                        {moneda.symbol}
+                        {formatDisplaySymbol(moneda.symbol)}
                       </span>
                       <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-[#00f5c4]/10 text-[#00f5c4] border border-[#00f5c4]/30 uppercase">
                         {moneda.badge || "USDT"}
