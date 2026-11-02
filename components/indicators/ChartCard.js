@@ -8,6 +8,7 @@ import {
   Line,
   Bar,
   Cell,
+  XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
@@ -437,37 +438,114 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
 
   // 4. MOVING AVERAGES (EMA 50 / 100 / 200)
   if (type === "ema") {
+    // Estilo exchange: las MAs se leen superpuestas sobre las velas, no como
+    // curvas sueltas. Se reutilizan las barras de rango [min,max] (mecha y
+    // cuerpo) del gráfico principal.
     let emaFullData = []
     if (datos.history && Array.isArray(datos.history.closes) && datos.history.closes.length > 0) {
-      emaFullData = datos.history.closes.map((c, i) => ({
-        name: `${i}`,
-        ema50: datos.history.ema50?.[i] ?? null,
-        ema100: datos.history.ema100?.[i] ?? null,
-        ema200: datos.history.ema200?.[i] ?? null,
-        price: c,
-      }))
+      emaFullData = datos.history.closes.map((c, i) => {
+        const o = Number(datos.history.opens?.[i])
+        const h = Number(datos.history.highs?.[i])
+        const l = Number(datos.history.lows?.[i])
+        const cl = Number(c)
+        const hasCandle = [o, h, l, cl].every(Number.isFinite)
+        const t = datos.history.times?.[i]
+        return {
+          name: `${i}`,
+          time: t
+            ? new Date(t).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+              timeZone: "America/Chicago",
+            })
+            : `Vela ${i + 1}`,
+          ema50: datos.history.ema50?.[i] ?? null,
+          ema100: datos.history.ema100?.[i] ?? null,
+          ema200: datos.history.ema200?.[i] ?? null,
+          price: cl,
+          open: hasCandle ? o : null,
+          high: hasCandle ? h : null,
+          low: hasCandle ? l : null,
+          close: hasCandle ? cl : null,
+          isBull: hasCandle ? cl >= o : true,
+          wickRange: hasCandle ? [l, h] : null,
+          bodyRange: hasCandle ? [o, cl] : null,
+        }
+      })
       if (datos.precio !== null && datos.precio !== undefined && emaFullData.length > 0) {
         const last = emaFullData.length - 1
+        const prev = emaFullData[last]
+        const live = Number(datos.precio)
+        const liveOk = Number.isFinite(live)
         emaFullData[last] = {
-          name: `${last}`,
-          ema50: datos.ema50 ?? emaFullData[last].ema50,
-          ema100: datos.ema100 ?? emaFullData[last].ema100,
-          ema200: datos.ema200 ?? emaFullData[last].ema200,
-          price: datos.precio,
+          ...prev,
+          ema50: datos.ema50 ?? prev.ema50,
+          ema100: datos.ema100 ?? prev.ema100,
+          ema200: datos.ema200 ?? prev.ema200,
+          price: live,
+          close: liveOk ? live : prev.close,
+          isBull: liveOk && Number.isFinite(prev.open) ? live >= prev.open : prev.isBull,
+          bodyRange:
+            liveOk && Number.isFinite(prev.open) ? [prev.open, live] : prev.bodyRange,
+          wickRange:
+            liveOk && Number.isFinite(prev.high) && Number.isFinite(prev.low)
+              ? [Math.min(prev.low, live), Math.max(prev.high, live)]
+              : prev.wickRange,
         }
       }
     }
     let emaChartData = ensureMinPoints(emaFullData.slice(win.start, win.effEnd))
 
+    // El dominio incluye mechas (no solo cierres) para que las velas no se corten
     const emaValues = emaChartData
-      .flatMap((d) => [d.ema50, d.ema100, d.ema200, d.price])
+      .flatMap((d) => [d.ema50, d.ema100, d.ema200, d.high ?? d.price, d.low ?? d.price])
       .filter((v) => Number.isFinite(v))
     const minEma = emaValues.length > 0 ? Math.min(...emaValues) : 0
     const maxEma = emaValues.length > 0 ? Math.max(...emaValues) : 100
     const padEma = Math.max((maxEma - minEma) * 0.15, 0.001)
     const emaDomain = [minEma - padEma, maxEma + padEma]
 
+    // Grosor de vela escalado con el zoom, igual que en el gráfico principal
+    const emaBodySize = Math.min(Math.max((win.plotWidth / win.effCount) * 0.62, 1.5), 18)
+    const emaWickSize = Math.max(1, emaBodySize * 0.18)
+
     const isBullTrend = datos.precio > datos.ema50 && datos.ema50 > datos.ema200
+
+    // Tooltip OHLC + MAs (el por defecto mostraría los arrays mecha/cuerpo)
+    const EmaTooltip = ({ active, payload }) => {
+      if (!active || !payload || !payload.length) return null
+      const d = payload[0].payload
+      if (!d) return null
+      const money = (v) => (Number.isFinite(Number(v)) ? `$${safeToFixed(v, datos.decimales)}` : "—")
+      const row = (label, value, color) => (
+        <div className="flex items-center justify-between gap-5">
+          <span style={{ color: color || "#94a3b8" }}>{label}</span>
+          <span style={{ color: "#ffffff" }}>{value}</span>
+        </div>
+      )
+      return (
+        <div
+          style={{
+            ...TOOLTIP_STYLE,
+            padding: "8px 10px",
+            lineHeight: 1.6,
+          }}
+        >
+          <div style={{ color: "#ffffff" }} className="flex items-center justify-between gap-5 mb-1 pb-1 border-b border-[#16283d]">
+            <span>{d.time}</span>
+            <span style={{ color: d.isBull ? "#00f5c4" : "#ff3b69" }}>
+              {d.isBull ? "BULL" : "BEAR"}
+            </span>
+          </div>
+          {d.open !== null && d.open !== undefined
+            ? row("O / H / L / C", `${safeToFixed(d.open, datos.decimales)} / ${safeToFixed(d.high, datos.decimales)} / ${safeToFixed(d.low, datos.decimales)} / ${safeToFixed(d.close, datos.decimales)}`)
+            : row("Price", money(d.price))}
+          {row("EMA 50", money(d.ema50), "#f59e0b")}
+          {row("EMA 100", money(d.ema100), "#38bdf8")}
+          {row("EMA 200", money(d.ema200), "#a855f7")}
+        </div>
+      )
+    }
 
     return (
       <div className="synapse-card p-3.5 flex flex-col justify-between">
@@ -492,25 +570,38 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
         <div {...chartInteraction} className={`h-[120px] w-full my-1 ${chartCursor}`}>
           {emaChartData.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={emaChartData} margin={{ top: 5, right: 10, left: 10, bottom: 0 }}>
+              <ComposedChart data={emaChartData} margin={{ top: 5, right: 10, left: 10, bottom: 0 }}>
+                <XAxis dataKey="name" hide />
                 <CartesianGrid strokeDasharray="2 2" stroke="#132235" vertical={false} />
                 <YAxis domain={emaDomain} hide={true} />
                 <Tooltip
-                  contentStyle={TOOLTIP_STYLE}
-                  formatter={(value, name) => {
-                    const val = `$${safeToFixed(value, datos.decimales)}`
-                    if (name === "ema50") return [val, "EMA 50 (Fast)"]
-                    if (name === "ema100") return [val, "EMA 100 (Mid)"]
-                    if (name === "ema200") return [val, "EMA 200 (Slow)"]
-                    if (name === "price") return [val, "Price"]
-                    return [val, name]
-                  }}
+                  content={<EmaTooltip />}
+                  cursor={{ stroke: "#244163", strokeDasharray: "3 3" }}
                 />
+                {/* Mecha y cuerpo: velas tenues para que las MAs se lean encima */}
+                <Bar dataKey="wickRange" barSize={emaWickSize} isAnimationActive={false}>
+                  {emaChartData.map((entry, index) => (
+                    <Cell
+                      key={`ema-wick-${index}`}
+                      fill={entry.isBull ? "#00f5c4" : "#ff3b69"}
+                      fillOpacity={0.5}
+                    />
+                  ))}
+                </Bar>
+                <Bar dataKey="bodyRange" barSize={emaBodySize} isAnimationActive={false}>
+                  {emaChartData.map((entry, index) => (
+                    <Cell
+                      key={`ema-body-${index}`}
+                      fill={entry.isBull ? "#00f5c4" : "#ff3b69"}
+                      fillOpacity={0.35}
+                    />
+                  ))}
+                </Bar>
                 <Line
                   type="monotone"
                   dataKey="ema50"
-                  stroke="#00f5c4"
-                  strokeWidth={2}
+                  stroke="#f59e0b"
+                  strokeWidth={1.8}
                   dot={false}
                   connectNulls={true}
                   isAnimationActive={false}
@@ -519,7 +610,7 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
                   type="monotone"
                   dataKey="ema100"
                   stroke="#38bdf8"
-                  strokeWidth={1.5}
+                  strokeWidth={1.6}
                   dot={false}
                   connectNulls={true}
                   isAnimationActive={false}
@@ -527,13 +618,13 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
                 <Line
                   type="monotone"
                   dataKey="ema200"
-                  stroke="#ff3b69"
-                  strokeWidth={1.5}
+                  stroke="#a855f7"
+                  strokeWidth={1.6}
                   dot={false}
                   connectNulls={true}
                   isAnimationActive={false}
                 />
-              </LineChart>
+              </ComposedChart>
             </ResponsiveContainer>
           ) : (
             <div className="h-full flex items-center justify-center text-slate-400 font-mono text-xs">
@@ -544,10 +635,23 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
 
         {renderNavControls()}
 
-        <div className="flex items-center justify-between pt-2 border-t border-[#142335] text-[10px] font-mono tracking-wider text-slate-300">
-          <span>EMA50: <span className="text-[#00f5c4] font-medium">${safeToFixed(datos.ema50, datos.decimales)}</span></span>
-          <span>EMA100: <span className="text-[#38bdf8] font-medium">${safeToFixed(datos.ema100, datos.decimales)}</span></span>
-          <span>EMA200: <span className="text-[#ff3b69] font-medium">${safeToFixed(datos.ema200, datos.decimales)}</span></span>
+        <div className="flex items-center justify-between gap-2 pt-2 border-t border-[#142335] text-[10px] font-mono tracking-wider text-slate-300">
+          {[
+            { label: "MA50", color: "#f59e0b", value: datos.ema50 },
+            { label: "MA100", color: "#38bdf8", value: datos.ema100 },
+            { label: "MA200", color: "#a855f7", value: datos.ema200 },
+          ].map((ma) => (
+            <span key={ma.label} className="flex items-center gap-1.5 whitespace-nowrap">
+              <span
+                className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                style={{ backgroundColor: ma.color }}
+              />
+              <span style={{ color: ma.color }}>{ma.label}</span>
+              <span className="text-white font-medium">
+                ${safeToFixed(ma.value, datos.decimales)}
+              </span>
+            </span>
+          ))}
         </div>
       </div>
     )
