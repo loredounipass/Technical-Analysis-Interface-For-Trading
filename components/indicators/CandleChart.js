@@ -9,7 +9,6 @@ import {
   CartesianGrid,
   Tooltip,
   Bar,
-  Cell,
   Line,
   ReferenceLine,
 } from "recharts"
@@ -142,6 +141,59 @@ export default function CandleChart({
       )
     }
     return null
+  }
+
+  // Shape de vela: una SOLA Bar con dataKey de rango [low, high]. Dibuja la
+  // mecha (linea fina centrada) y el cuerpo (rectangulo open-close centrado)
+  // en la MISMA posicion X. Usar dos Bars separadas hacia que Recharts las
+  // agrupara lado-a-lado y la mecha quedara desplazada a la izquierda.
+  const CandleShape = (props) => {
+    const { x, y, width, height, payload: d } = props
+    if (
+      !d ||
+      d.isPlaceholder ||
+      !Number.isFinite(d.open) ||
+      !Number.isFinite(d.close) ||
+      !Number.isFinite(d.high) ||
+      !Number.isFinite(d.low)
+    ) {
+      return <g />
+    }
+    const range = d.high - d.low
+    if (range <= 0 || !Number.isFinite(height) || height <= 0) {
+      return <g />
+    }
+    const isBull = d.close >= d.open
+    const color = isBull ? "#00f5c4" : "#ff3b69"
+    const filter = isBull ? "url(#neonGlowCyan)" : "url(#neonGlowPink)"
+    // Mapea precio -> pixel vertical: y corresponde al high, y+height al low.
+    const priceToPixel = (p) => y + ((d.high - p) / range) * height
+    const cx = x + width / 2
+    const bodyTop = priceToPixel(Math.max(d.open, d.close))
+    const bodyBottom = priceToPixel(Math.min(d.open, d.close))
+    const bodyH = Math.max(1, bodyBottom - bodyTop)
+    return (
+      <g>
+        {/* Mecha: linea vertical centrada de low a high */}
+        <rect
+          x={cx - wickSize / 2}
+          y={y}
+          width={wickSize}
+          height={height}
+          fill={color}
+          fillOpacity={0.8}
+        />
+        {/* Cuerpo: rectangulo centrado de open a close */}
+        <rect
+          x={cx - bodySize / 2}
+          y={bodyTop}
+          width={bodySize}
+          height={bodyH}
+          fill={color}
+          filter={filter}
+        />
+      </g>
+    )
   }
 
   if (!hasData) {
@@ -281,33 +333,14 @@ export default function CandleChart({
               />
             )}
 
-            {/* Wick Bar (thin centered line from low to high) */}
-            <Bar dataKey="wickRange" barSize={wickSize} isAnimationActive={false}>
-              {visibleData.map((entry, index) => {
-                const isBull = entry.close >= entry.open
-                return (
-                  <Cell
-                    key={`wick-${index}`}
-                    fill={isBull ? "#00f5c4" : "#ff3b69"}
-                    fillOpacity={0.8}
-                  />
-                )
-              })}
-            </Bar>
-
-            {/* Body Bar (wide rectangle from open to close) */}
-            <Bar dataKey="bodyRange" barSize={bodySize} isAnimationActive={false}>
-              {visibleData.map((entry, index) => {
-                const isBull = entry.close >= entry.open
-                return (
-                  <Cell
-                    key={`body-${index}`}
-                    fill={isBull ? "#00f5c4" : "#ff3b69"}
-                    filter={isBull ? "url(#neonGlowCyan)" : "url(#neonGlowPink)"}
-                  />
-                )
-              })}
-            </Bar>
+            {/* Candlestick: una sola Bar con rango [low, high] y shape propia
+                que centra mecha y cuerpo en la misma X. */}
+            <Bar
+              dataKey="wickRange"
+              barSize={bodySize}
+              isAnimationActive={false}
+              shape={CandleShape}
+            />
 
             {/* EMA 20 (Cyan dashed line) */}
             <Line
