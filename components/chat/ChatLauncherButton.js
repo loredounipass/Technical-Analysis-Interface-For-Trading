@@ -1,7 +1,8 @@
 "use client"
 
 import React from "react"
-import { Bot, MessageSquare } from "lucide-react"
+import { MessageSquare } from "lucide-react"
+import WoodyAgentIcon from "./WoodyAgentIcon"
 
 /**
  * Floating Woody Agent launcher matching the screenshot design.
@@ -15,7 +16,7 @@ export default function ChatLauncherButton({ onOpen, symbol = "ETHUSDT", interva
     >
       {/* Bot Icon Box */}
       <div className="w-8 h-8 rounded-lg bg-[#00f5c4]/15 border border-[#00f5c4]/40 flex items-center justify-center text-[#00f5c4] shadow-[0_0_10px_rgba(0,245,196,0.2)]">
-        <Bot className="w-4 h-4" />
+        <WoodyAgentIcon className="w-5 h-5 text-[#00f5c4]" />
       </div>
 
       {/* Details */}
