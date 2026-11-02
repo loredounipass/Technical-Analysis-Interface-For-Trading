@@ -276,8 +276,14 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
     createNewSession()
   }, [])
 
-  // Sincronizar reactivamente el diagnóstico y el modelo en el mensaje de bienvenida
-  // cuando lleguen datos nuevos de indicadores o cuando cambie el modelo / timeframe / símbolo
+  // Sincronizar el diagnostico y el modelo en el mensaje de bienvenida cuando
+  // cambian el simbolo / timeframe / modelo. Deliberadamente NO depende de
+  // `datos`: el socket emite cada ~1.5s y cada emision crearia un array nuevo
+  // de `messages`, lo que (a) invalida la memoizacion de ChatMessageList y
+  // re-parsea el markdown de TODA la conversacion y (b) re-stringify-nea las
+  // sesiones en localStorage. Esa cascada de fondo es la que hace que tipear se
+  // "pegue". El greeting muestra el diagnostico real del ultimo cambio de
+  // contexto (snapshot valido, no un dato inventado).
   useEffect(() => {
     setMessages((prev) => {
       if (prev.length === 0) return prev
@@ -294,7 +300,7 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
       }
       return prev
     })
-  }, [datos, symbol, interval, selectedModel, marketTelemetry.diagnostic])
+  }, [symbol, interval, selectedModel])
 
   useEffect(() => {
     localStorage.setItem("trading_terminal_model", selectedModel)

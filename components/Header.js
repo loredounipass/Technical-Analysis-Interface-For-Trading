@@ -168,16 +168,16 @@ export default function Header({
             </button>
           </div>
   
-          {/* Timeframe pill selector: full-width, evenly spread on mobile */}
+          {/* Timeframe pill selector: left-aligned on mobile, right on desktop */}
           {onTimeframeChange && (
-            <div className="flex items-center gap-1 p-1 rounded-full bg-[#09111b] border border-[#16283d] w-full sm:w-auto sm:ml-auto">
+            <div className="flex items-center gap-1 p-1 rounded-full bg-[#09111b] border border-[#16283d] sm:ml-auto">
               {timeframes.map((tf) => {
                 const isActive = timeframe.toLowerCase() === tf.toLowerCase()
                 return (
                   <button
                     key={tf}
                     onClick={() => onTimeframeChange(tf)}
-                    className={`flex-1 sm:flex-none px-2.5 sm:px-3.5 py-1.5 rounded-full text-sm font-semibold tracking-wide transition-all uppercase text-center ${isActive
+                    className={`px-2.5 sm:px-3.5 py-1.5 rounded-full text-sm font-semibold tracking-wide transition-all uppercase text-center ${isActive
                       ? "bg-[#00f5c4]/15 border border-[#00f5c4] text-[#00f5c4] shadow-[0_0_12px_rgba(0,245,196,0.35)]"
                       : "text-slate-300 hover:text-white border border-transparent"
                       }`}

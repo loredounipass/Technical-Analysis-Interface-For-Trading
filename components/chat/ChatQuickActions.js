@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useState } from "react"
+import React, { useEffect, useMemo, useState } from "react"
 import {
   X,
   Check,
@@ -70,7 +70,12 @@ export default function ChatQuickActions({
     })
   }
 
-  const strategies = [
+  // Las listas de estrategias/analisis son derivaciones puras de symbol e
+  // interval (template literals de prompts largos). Se memoizan para NO
+  // reconstruir ~20KB de strings en cada render: AiChat re-renderiza con cada
+  // tick del socket (~1.5s) y ese trabajo de fondo compite con el tipeo.
+  const strategies = useMemo(
+    () => [
     {
       icon: Zap,
       iconColor: "text-emerald-400",
@@ -343,9 +348,12 @@ Condiciones que deben cumplirse TODAS simultáneamente para validar la entrada:
 - Alertas de agotamiento: divergencias RSI/precio y caída de MFI
 - Veredicto: evalúa todos los indicadores de momentum del terminal y determina si hay momentum operable ahora y con qué confianza.`,
     },
-  ]
+    ],
+    [symbol, interval]
+  )
 
-  const analyses = [
+  const analyses = useMemo(
+    () => [
     {
       icon: GitCompare,
       iconColor: "text-cyan-400",
@@ -488,7 +496,9 @@ Veredicto claro basado en todos los datos del terminal: el momentum favorece COM
 - Setup con zona de entrada, Stop Loss, Take Profit y ratio riesgo/beneficio
 - Nivel de confianza del informe basado en la confluencia de datos del terminal.`,
     },
-  ]
+    ],
+    [symbol, interval]
+  )
 
   const renderAction = (a, category) => {
     const Icon = a.icon
@@ -573,7 +583,7 @@ Veredicto claro basado en todos los datos del terminal: el momentum favorece COM
         >
           <Cpu className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0" />
           <span className="text-slate-500 hidden sm:inline">Modelo:</span>
-          <span className="max-w-[140px] sm:max-w-[190px] truncate">{currentModelName}</span>
+          <span className="max-w-[100px] sm:max-w-[190px] truncate">{currentModelName}</span>
           <ChevronDown className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0" />
         </button>
       </div>
