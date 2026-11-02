@@ -583,7 +583,7 @@ Veredicto claro basado en todos los datos del terminal: el momentum favorece COM
         >
           <Cpu className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0" />
           <span className="text-slate-500 hidden sm:inline">Modelo:</span>
-          <span className="max-w-[100px] sm:max-w-[190px] truncate">{currentModelName}</span>
+          <span className="max-w-[84px] sm:max-w-[120px] truncate">{currentModelName}</span>
           <ChevronDown className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0" />
         </button>
       </div>
