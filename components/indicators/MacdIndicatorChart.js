@@ -37,10 +37,14 @@ const MacdIndicatorChart = ({ title, datos = {} }) => {
   let macdChartData = ensureMinPoints(macdFullData.slice(win.start, win.effEnd))
   const histBarSize = Math.min(Math.max((win.plotWidth / win.effCount) * 0.5, 1), 10)
 
-  const macdVal = Number(datos.macdValue) || 0
-  const histVal = Number(datos.macdHistogram ?? (datos.macdValue - (datos.macdSignal || 0))) || 0
+  const macdVal = Number(datos.macdValue)
+  const hasMacd = Number.isFinite(macdVal)
+  const histVal = Number(datos.macdHistogram ?? (datos.macdValue - (datos.macdSignal || 0)))
+  const hasHist = Number.isFinite(histVal)
   const isBull = macdVal > 0
-  const badgeColor = isBull
+  const badgeColor = !hasMacd
+    ? "bg-slate-500/15 border border-slate-500/40 text-slate-400"
+    : isBull
     ? "bg-[#00f5c4]/15 border border-[#00f5c4]/40 text-[#00f5c4]"
     : "bg-[#ff3b69]/15 border border-[#ff3b69]/40 text-[#ff3b69]"
 
@@ -55,7 +59,7 @@ const MacdIndicatorChart = ({ title, datos = {} }) => {
           <span>{title || "MACD (12, 26, 9)"}</span>
         </div>
         <div className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold font-mono tracking-wider ${badgeColor}`}>
-          {safeToFixed(macdVal, 2)} {isBull ? "Bullish" : "Bearish"}
+          {hasMacd ? safeToFixed(macdVal, 2) : "\u2014"} {hasMacd ? (isBull ? "Bullish" : "Bearish") : "NO DATA"}
         </div>
       </div>
 
@@ -130,7 +134,7 @@ const MacdIndicatorChart = ({ title, datos = {} }) => {
         <span>
           Histogram:{" "}
           <span className={histVal >= 0 ? "text-[#00f5c4] font-medium" : "text-[#ff3b69] font-medium"}>
-            {safeToFixed(histVal, 2)}
+            {hasHist ? safeToFixed(histVal, 2) : "\u2014"}
           </span>
         </span>
         <span>

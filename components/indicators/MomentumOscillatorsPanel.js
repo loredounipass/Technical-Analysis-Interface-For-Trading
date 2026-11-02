@@ -12,14 +12,28 @@ const MomentumOscillatorsPanel = ({ datos = {} }) => {
   // Convencion global: alto (>=50, inflow/overbought) = verde, bajo (<50,
   // outflow/oversold) = rojo. Sin amarillo. >80 = Acumulacion (OB),
   // <20 = Distribucion (OS).
-  const mfiVal = Number(datos.mfi ?? 50)
+  const mfiVal = Number(datos.mfi)
+  const hasMfi = Number.isFinite(mfiVal)
   const mfiGreen = mfiVal >= 50
-  const mfiBadgeCls = mfiGreen
+  const mfiBadgeCls = !hasMfi
+    ? "bg-slate-500/15 border border-slate-500/40 text-slate-400"
+    : mfiGreen
     ? "bg-[#00f5c4]/15 border border-[#00f5c4]/40 text-[#00f5c4]"
     : "bg-[#ff3b69]/15 border border-[#ff3b69]/40 text-[#ff3b69]"
-  const mfiLabel =
-    mfiVal > 80 ? "Accumulation (OB)" : mfiVal < 20 ? "Distribution (OS)" : mfiGreen ? "Net Inflow" : "Net Outflow"
-  const mfiTextCls = mfiGreen ? "text-[#00f5c4]" : "text-[#ff3b69]"
+  const mfiLabel = !hasMfi
+    ? "NO DATA"
+    : mfiVal > 80
+    ? "Accumulation (OB)"
+    : mfiVal < 20
+      ? "Distribution (OS)"
+      : mfiGreen
+        ? "Net Inflow"
+        : "Net Outflow"
+  const mfiTextCls = !hasMfi
+    ? "text-slate-400"
+    : mfiGreen
+    ? "text-[#00f5c4]"
+    : "text-[#ff3b69]"
   const mfiBarCls = mfiGreen ? "bg-[#00f5c4] shadow-[0_0_8px_#00f5c4]" : "bg-[#ff3b69] shadow-[0_0_8px_#ff3b69]"
 
   return (
@@ -92,7 +106,7 @@ const MomentumOscillatorsPanel = ({ datos = {} }) => {
           <div className="flex justify-between items-center bg-[#09111b] p-2.5 rounded-md border border-[#16283d]">
             <span className="text-[10px] text-slate-300 uppercase tracking-wider">Institutional Flow Index</span>
             <span className={`text-lg font-bold tabular-nums ${mfiTextCls}`}>
-              {fmt(datos.mfi ?? 50.0)}
+              {hasMfi ? fmt(mfiVal) : "\u2014"}
             </span>
           </div>
           <div className="w-full bg-[#08111a] rounded-full h-1.5 relative overflow-hidden flex items-center">
@@ -102,7 +116,7 @@ const MomentumOscillatorsPanel = ({ datos = {} }) => {
             <div
               className={`h-full transition-all duration-300 ${mfiBarCls}`}
               style={{
-                width: `${Math.min(100, Math.max(0, datos.mfi ?? 50))}%`,
+                width: hasMfi ? `${Math.min(100, Math.max(0, mfiVal))}%` : "0%",
               }}
             />
           </div>

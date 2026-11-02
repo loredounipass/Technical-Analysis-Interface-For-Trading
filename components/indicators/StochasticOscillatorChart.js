@@ -34,12 +34,16 @@ const StochasticOscillatorChart = ({ title, datos = {} }) => {
   }
   let stochChartData = ensureMinPoints(stochFullData.slice(win.start, win.effEnd))
 
-  const kVal = Number(datos.stochK) || 50
-  const dVal = Number(datos.stochD) || 50
-  const isOB = kVal >= 80
-  const isOS = kVal <= 20
-  const statusText = isOB ? "Overbought" : isOS ? "Oversold" : "Neutral"
-  const badgeColor = isOB
+  const kVal = Number(datos.stochK)
+  const dVal = Number(datos.stochD)
+  const hasK = Number.isFinite(kVal)
+  const hasD = Number.isFinite(dVal)
+  const isOB = hasK && kVal >= 80
+  const isOS = hasK && kVal <= 20
+  const statusText = !hasK ? "NO DATA" : isOB ? "Overbought" : isOS ? "Oversold" : "Neutral"
+  const badgeColor = !hasK
+    ? "bg-slate-500/15 border border-slate-500/40 text-slate-400"
+    : isOB
     ? "bg-[#00f5c4]/15 border border-[#00f5c4]/40 text-[#00f5c4]"
     : isOS
     ? "bg-[#ff3b69]/15 border border-[#ff3b69]/40 text-[#ff3b69]"
@@ -56,7 +60,7 @@ const StochasticOscillatorChart = ({ title, datos = {} }) => {
           <span>{title || "STOCHASTIC OSCILLATOR (14, 3, 3)"}</span>
         </div>
         <div className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold font-mono tracking-wider ${badgeColor}`}>
-          %K: {safeToFixed(kVal, 2)} {statusText}
+          %K: {hasK ? safeToFixed(kVal, 2) : "\u2014"} {statusText}
         </div>
       </div>
 
@@ -112,8 +116,8 @@ const StochasticOscillatorChart = ({ title, datos = {} }) => {
 
       {/* Footer: lineas %K/%D con nombre y zonas 20=rojo (venta) / 80=verde (compra) */}
       <div className="flex items-center justify-between pt-2 border-t border-[#142335] text-[10px] font-mono tracking-wider">
-        <span className="text-[#00f5c4]">%K · Principal: <span className="text-[#00f5c4] font-medium">{safeToFixed(kVal, 2)}</span></span>
-        <span className="text-[#ff3b69]">%D · Señal: <span className="text-[#ff3b69] font-medium">{safeToFixed(dVal, 2)}</span></span>
+        <span className="text-[#00f5c4]">%K · Principal: <span className="text-[#00f5c4] font-medium">{hasK ? safeToFixed(kVal, 2) : "\u2014"}</span></span>
+        <span className="text-[#ff3b69]">%D · Señal: <span className="text-[#ff3b69] font-medium">{hasD ? safeToFixed(dVal, 2) : "\u2014"}</span></span>
         <span>Zona: <span className="text-[#ff3b69] font-medium">Venta 20</span> / <span className="text-[#00f5c4] font-medium">Compra 80</span></span>
       </div>
     </div>

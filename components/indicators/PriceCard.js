@@ -25,31 +25,44 @@ export default function PriceCard({
   const value = parsePrecio(precio)
   const formattedPrice = formatWithDots(value, decimales)
 
-  // Calculate 24h High, Low, and % Change from history
-  let high24 = value * 1.015
-  let low24 = value * 0.985
-  let pctChange = 0
+  // HIGH/LOW y % de variacion REALES de las ultimas 24h, derivados de las velas
+  // cuyo timestamp cae dentro de la ventana de 24h respecto a la ultima vela.
+  // Sin inventar bandas: si no hay velas en la ventana, se muestra "—".
+  let high24 = null
+  let low24 = null
+  let pctChange = null
   let priceChartData = []
 
   try {
     if (history && Array.isArray(history.closes) && history.closes.length > 0) {
-      const closes = history.closes.slice(-30)
-      const highs = Array.isArray(history.highs) ? history.highs.slice(-30) : closes
-      const lows = Array.isArray(history.lows) ? history.lows.slice(-30) : closes
+      const closes = history.closes
+      const highs = Array.isArray(history.highs) ? history.highs : closes
+      const lows = Array.isArray(history.lows) ? history.lows : closes
+      const times = Array.isArray(history.times) ? history.times : []
+      const lastT = times.length ? Number(times[times.length - 1]) : 0
+      const DAY_MS = 86400000
 
-      const validHighs = highs.filter((v) => Number.isFinite(Number(v)))
-      const validLows = lows.filter((v) => Number.isFinite(Number(v)))
+      // Indices dentro de las ultimas 24h (todos si no hay timestamps reales).
+      const idx = []
+      for (let i = 0; i < closes.length; i++) {
+        const t = Number(times[i])
+        if (!lastT || !Number.isFinite(t) || t > lastT - DAY_MS) idx.push(i)
+      }
 
+      const validHighs = idx.map((i) => Number(highs[i])).filter((v) => Number.isFinite(v))
+      const validLows = idx.map((i) => Number(lows[i])).filter((v) => Number.isFinite(v))
       if (validHighs.length > 0) high24 = Math.max(...validHighs)
       if (validLows.length > 0) low24 = Math.min(...validLows)
 
-      const firstClose = Number(closes[0])
+      const baseClose = idx.length ? Number(closes[idx[0]]) : NaN
       const lastClose = value || Number(closes[closes.length - 1])
-      if (firstClose > 0) {
-        pctChange = ((lastClose - firstClose) / firstClose) * 100
+      if (Number.isFinite(baseClose) && baseClose > 0 && Number.isFinite(lastClose)) {
+        pctChange = ((lastClose - baseClose) / baseClose) * 100
       }
 
-      priceChartData = closes.map((p, i) => ({
+      // Sparkline: ultimas ~30 velas del timeframe seleccionado.
+      const spark = closes.slice(-30)
+      priceChartData = spark.map((p, i) => ({
         index: i,
         price: Number(p),
       }))
@@ -72,8 +85,9 @@ export default function PriceCard({
     return `$${n.toFixed(2)}`
   }
 
-  const isPositive = pctChange >= 0
-  const pctFormatted = `${isPositive ? "+" : ""}${pctChange.toFixed(2)}%`
+  const hasPct = pctChange !== null && Number.isFinite(pctChange)
+  const isPositive = hasPct && pctChange >= 0
+  const pctFormatted = hasPct ? `${isPositive ? "+" : ""}${pctChange.toFixed(2)}%` : "\u2014"
 
   return (
     <div className="synapse-card p-5 relative overflow-hidden flex flex-col justify-between min-h-[200px] group transition-all duration-300">
@@ -92,7 +106,7 @@ export default function PriceCard({
         <div className="text-slate-400">
           HIGH 24H:{" "}
           <span className="text-white font-bold tabular-nums">
-            ${formatWithDots(high24, decimales)}
+            {high24 !== null ? `$${formatWithDots(high24, decimales)}` : "\u2014"}
           </span>
         </div>
       </div>
@@ -107,12 +121,14 @@ export default function PriceCard({
 
           <div
             className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold font-mono ${
-              isPositive
+              !hasPct
+                ? "bg-slate-500/15 border border-slate-500/40 text-slate-400"
+                : isPositive
                 ? "bg-[#00f5c4]/15 border border-[#00f5c4]/40 text-[#00f5c4] shadow-[0_0_10px_rgba(0,245,196,0.2)]"
                 : "bg-[#ff3b69]/15 border border-[#ff3b69]/40 text-[#ff3b69] shadow-[0_0_10px_rgba(255,59,105,0.2)]"
             }`}
           >
-            <span>{isPositive ? "▲" : "▼"}</span>
+            <span>{!hasPct ? "\u2022" : isPositive ? "\u25b2" : "\u25bc"}</span>
             <span>{pctFormatted}</span>
           </div>
         </div>
@@ -153,7 +169,7 @@ export default function PriceCard({
         <span>
           Low:{" "}
           <span className="text-slate-300 font-medium tabular-nums">
-            ${formatWithDots(low24, decimales)}
+            {low24 !== null ? `$${formatWithDots(low24, decimales)}` : "\u2014"}
           </span>
         </span>
         <span className="text-slate-400">•</span>

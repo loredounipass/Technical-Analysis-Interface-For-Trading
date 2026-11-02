@@ -29,15 +29,18 @@ const RsiOscillatorChart = ({ title, datos = {} }) => {
   }
   let rsiChartData = ensureMinPoints(rsiFullData.slice(win.start, win.effEnd))
 
-  const rsiVal = Number(datos.rsi) || 50
-  const isOB = rsiVal >= 70
-  const isOS = rsiVal <= 30
-  const statusText = isOB ? "Overbought" : isOS ? "Oversold" : "Neutral"
-  const badgeColor = isOB
+  const rsiVal = Number(datos.rsi)
+  const hasRsi = Number.isFinite(rsiVal)
+  const isOB = hasRsi && rsiVal >= 70
+  const isOS = hasRsi && rsiVal <= 30
+  const statusText = !hasRsi ? "NO DATA" : isOB ? "Overbought" : isOS ? "Oversold" : "Neutral"
+  const badgeColor = !hasRsi
+    ? "bg-slate-500/15 border border-slate-500/40 text-slate-400"
+    : isOB
     ? "bg-[#00f5c4]/15 border border-[#00f5c4]/40 text-[#00f5c4]"
     : isOS
-      ? "bg-[#ff3b69]/15 border border-[#ff3b69]/40 text-[#ff3b69]"
-      : "bg-amber-500/10 border border-amber-500/30 text-amber-400"
+    ? "bg-[#ff3b69]/15 border border-[#ff3b69]/40 text-[#ff3b69]"
+    : "bg-amber-500/10 border border-amber-500/30 text-amber-400"
 
   return (
     <div className="synapse-card p-3.5 flex flex-col justify-between">
@@ -50,7 +53,7 @@ const RsiOscillatorChart = ({ title, datos = {} }) => {
           <span>{title || "RSI OSCILLATOR (14)"}</span>
         </div>
         <div className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold font-mono tracking-wider ${badgeColor}`}>
-          {safeToFixed(rsiVal, 2)} {statusText}
+          {hasRsi ? safeToFixed(rsiVal, 2) : "\u2014"} {statusText}
         </div>
       </div>
 

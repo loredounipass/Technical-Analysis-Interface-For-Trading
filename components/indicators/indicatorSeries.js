@@ -37,7 +37,9 @@ export function buildCandleAndVolumeSeries(datos) {
 
       volumeChartData.push({
         time: t,
-        volume: vol || 10,
+        // Volumen real de la vela (quote USDT). Si una vela no tuvo volumen, se
+        // muestra 0 (ausencia veraz) en lugar de inventar una altura.
+        volume: Number.isFinite(vol) ? vol : 0,
         isBull,
       })
     }

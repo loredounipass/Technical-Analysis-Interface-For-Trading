@@ -13,10 +13,12 @@ export default function RecommendationCard({
   const neutrals = Number(neutralSignals) || 0
   const totalSignals = buys + sells + neutrals
 
-  // Calculate flow ratios (if no signals, default 50/50)
+  // Calculate flow ratios. Con cero senales NO se inventa un 50/50: se marca
+  // hasFlow=false y la barra queda vacia con "—" (ausencia veraz de dato).
   const activeTotal = buys + sells
-  let bullishPct = 50.0
-  let bearishPct = 50.0
+  const hasFlow = totalSignals > 0
+  let bullishPct = 0
+  let bearishPct = 0
 
   if (activeTotal > 0) {
     bullishPct = (buys / activeTotal) * 100
@@ -103,21 +105,21 @@ export default function RecommendationCard({
         <div className="w-full h-2 rounded-full bg-[#08111a] border border-[#16283d] overflow-hidden flex p-0.5">
           <div
             className="h-full bg-[#00f5c4] rounded-l-full transition-all duration-500 shadow-[0_0_10px_rgba(0,245,196,0.5)]"
-            style={{ width: `${Math.max(4, Math.min(96, bullishPct))}%` }}
+            style={{ width: `${hasFlow ? Math.max(4, Math.min(96, bullishPct)) : 0}%` }}
           />
           <div
             className="h-full bg-[#ff3b69] rounded-r-full transition-all duration-500 shadow-[0_0_10px_rgba(255,59,105,0.5)]"
-            style={{ width: `${Math.max(4, Math.min(96, bearishPct))}%` }}
+            style={{ width: `${hasFlow ? Math.max(4, Math.min(96, bearishPct)) : 0}%` }}
           />
         </div>
 
         {/* Labels below bar */}
         <div className="flex justify-between items-center text-[10px] font-mono tracking-wider">
           <span className="text-[#00f5c4] font-medium">
-            {bullishPct.toFixed(1)}% Bullish Flow
+            {hasFlow ? `${bullishPct.toFixed(1)}%` : "\u2014"} Bullish Flow
           </span>
           <span className="text-[#ff3b69] font-medium">
-            {bearishPct.toFixed(1)}% Bearish Pressure
+            {hasFlow ? `${bearishPct.toFixed(1)}%` : "\u2014"} Bearish Pressure
           </span>
         </div>
       </div>

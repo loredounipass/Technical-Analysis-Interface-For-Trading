@@ -34,12 +34,15 @@ const StochasticRsiChart = ({ title, datos = {} }) => {
   }
   let stochRsiChartData = ensureMinPoints(stochRsiFullData.slice(win.start, win.effEnd))
 
-  const rsiStochVal = Number(datos.rsiStoch) || 50
+  const rsiStochVal = Number(datos.rsiStoch)
+  const hasK = Number.isFinite(rsiStochVal)
   const stochRsiDVal = stochRsiFullData[stochRsiFullData.length - 1]?.d
-  const isOB = rsiStochVal >= 80
-  const isOS = rsiStochVal <= 20
-  const statusText = isOB ? "Overbought" : isOS ? "Oversold" : "Neutral"
-  const badgeColor = isOB
+  const isOB = hasK && rsiStochVal >= 80
+  const isOS = hasK && rsiStochVal <= 20
+  const statusText = !hasK ? "NO DATA" : isOB ? "Overbought" : isOS ? "Oversold" : "Neutral"
+  const badgeColor = !hasK
+    ? "bg-slate-500/15 border border-slate-500/40 text-slate-400"
+    : isOB
     ? "bg-[#00f5c4]/15 border border-[#00f5c4]/40 text-[#00f5c4]"
     : isOS
     ? "bg-[#ff3b69]/15 border border-[#ff3b69]/40 text-[#ff3b69]"
@@ -56,7 +59,7 @@ const StochasticRsiChart = ({ title, datos = {} }) => {
           <span>{title || "STOCHASTIC RSI (14, 3, 3)"}</span>
         </div>
         <div className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold font-mono tracking-wider ${badgeColor}`}>
-          {safeToFixed(rsiStochVal, 2)} {statusText}
+          {hasK ? safeToFixed(rsiStochVal, 2) : "\u2014"} {statusText}
         </div>
       </div>
 
@@ -107,7 +110,7 @@ const StochasticRsiChart = ({ title, datos = {} }) => {
 
       {/* Footer: lineas %K/%D con nombre y zonas 20=rojo (venta) / 80=verde (compra) */}
       <div className="flex items-center justify-between pt-2 border-t border-[#142335] text-[10px] font-mono tracking-wider">
-        <span className="text-[#00f5c4]">%K · Principal: <span className="text-[#00f5c4] font-medium">{safeToFixed(rsiStochVal, 2)}</span></span>
+        <span className="text-[#00f5c4]">%K · Principal: <span className="text-[#00f5c4] font-medium">{hasK ? safeToFixed(rsiStochVal, 2) : "\u2014"}</span></span>
         <span className="text-[#ff3b69]">%D · Señal: <span className="text-[#ff3b69] font-medium">
           {stochRsiDVal === null || stochRsiDVal === undefined ? "\u2014" : safeToFixed(stochRsiDVal, 2)}
         </span></span>
