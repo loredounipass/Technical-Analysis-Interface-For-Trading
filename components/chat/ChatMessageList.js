@@ -361,8 +361,8 @@ export default function ChatMessageList({
           statusPulse
           steps={LOADING_STEPS}
         >
-          <div className="flex items-start gap-4">
-            <div className="skynet-ring mt-0.5">
+          <div className="flex items-center gap-4">
+            <div className="skynet-ring flex-shrink-0">
               <div className="ring ring-1" />
               <div className="ring ring-2" />
               <div className="ring ring-3" />
