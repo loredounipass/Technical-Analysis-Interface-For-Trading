@@ -574,7 +574,7 @@ const IndicatorGrid = ({ datos = {} }) => {
           footerLeft={<span>{orderFlow ? `${orderFlow.tradeCount} trades` : "—"}</span>}
           footerRight={<span>{orderFlow ? orderFlow.sideClassification?.replace(/_/g, " ") : "—"}</span>}
         >
-          <div className="h-[220px] overflow-y-auto overscroll-contain space-y-2 pr-1 font-mono scrollbar-hidden">
+          <div className="h-[280px] overflow-y-auto overscroll-contain space-y-2 pr-1 font-mono scrollbar-hidden">
             {!orderFlow ? (
               <div className="h-full flex items-center justify-center text-slate-400 text-xs text-center">
                 Waiting for executed trade data (crypto only)...
@@ -692,7 +692,7 @@ const IndicatorGrid = ({ datos = {} }) => {
           footerLeft={<span>2L/2R swing confirmation</span>}
           footerRight={<span>Potential stop clusters</span>}
         >
-          <div className="h-[220px] overflow-y-auto overscroll-contain space-y-2 pr-1 font-mono scrollbar-hidden">
+          <div className="h-[280px] overflow-y-auto overscroll-contain space-y-2 pr-1 font-mono scrollbar-hidden">
             {!hasLiquiditySwings ? (
               <div className="h-full flex items-center justify-center text-slate-400 text-xs text-center">
                 Waiting for Liquidity Swing data...
