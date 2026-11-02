@@ -704,6 +704,9 @@ const IndicatorGrid = ({ datos = {} }) => {
             ) : (
               liquiditySwings.map((swing) => {
                 const isBuySide = swing.side === "buy_side"
+                // Color del nivel por lado: BUY-SIDE en verde, SELL-SIDE en rojo.
+                const sideTextColor = isBuySide ? "text-[#00f5c4]" : "text-[#ff3b69]"
+                const sideBarColor = isBuySide ? "bg-[#00f5c4]/60" : "bg-[#ff3b69]/60"
                 const isActive = swing.status === "active"
                 const isSwept = swing.status === "swept"
                 const distPct =
@@ -733,9 +736,7 @@ const IndicatorGrid = ({ datos = {} }) => {
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2">
                         <span
-                          className={`text-[10px] font-bold ${
-                            isBuySide ? "text-[#ff3b69]" : "text-[#00f5c4]"
-                          }`}
+                          className={`text-[10px] font-bold ${sideTextColor}`}
                         >
                           {isBuySide ? "▲ BUY-SIDE" : "▼ SELL-SIDE"}
                         </span>
@@ -754,9 +755,7 @@ const IndicatorGrid = ({ datos = {} }) => {
                       <div className="flex items-center gap-2">
                         {distPct !== null && (
                           <span
-                            className={`text-[10px] tabular-nums ${
-                              Number(distPct) > 0 ? "text-[#ff3b69]" : "text-[#00f5c4]"
-                            }`}
+                            className={`text-[10px] tabular-nums ${sideTextColor}`}
                           >
                             {Number(distPct) > 0 ? "+" : ""}
                             {distPct}%
@@ -777,9 +776,7 @@ const IndicatorGrid = ({ datos = {} }) => {
                             className={`h-full transition-all duration-300 ${
                               Math.abs(Number(distPct)) < 0.5
                                 ? "bg-amber-400 shadow-[0_0_6px_#fbbf24]"
-                                : isBuySide
-                                  ? "bg-[#ff3b69]/60"
-                                  : "bg-[#00f5c4]/60"
+                                : sideBarColor
                             }`}
                             style={{ width: `${Math.max(5, Math.min(100, 100 - Math.abs(Number(distPct)) * 10))}%` }}
                           />
