@@ -638,9 +638,12 @@ def compute_signal_summary(rsi, stoch_k, stoch_d, cci, macd_v, macd_sig, adx_v,
         if value is None:
             neutral += 1
             return
-        if value > buy_threshold:
+        # Logica mean-reversion (estilo TradingView): sobreventa (valor bajo,
+        # por debajo de buy_threshold) = COMPRA; sobrecompra (valor alto, por
+        # encima de sell_threshold) = VENTA; entre ambas lineas = NEUTRAL.
+        if value < buy_threshold:
             buy += 1
-        elif value < sell_threshold:
+        elif value > sell_threshold:
             sell += 1
         else:
             neutral += 1
