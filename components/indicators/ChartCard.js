@@ -585,9 +585,9 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
 
         <div className="flex items-center justify-between gap-2 pt-2 border-t border-[#142335] text-[10px] font-mono tracking-wider text-slate-300">
           {[
-            { label: "MA50", color: "#f59e0b", value: datos.ema50 },
-            { label: "MA100", color: "#38bdf8", value: datos.ema100 },
-            { label: "MA200", color: "#a855f7", value: datos.ema200 },
+            { label: "EMA 50", color: "#f59e0b", value: datos.ema50 },
+            { label: "EMA 100", color: "#38bdf8", value: datos.ema100 },
+            { label: "EMA 200", color: "#a855f7", value: datos.ema200 },
           ].map((ma) => (
             <span key={ma.label} className="flex items-center gap-1.5 whitespace-nowrap">
               <span
@@ -709,8 +709,8 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
 
         {/* Footer con letras blancas */}
         <div className="flex items-center justify-between pt-2 border-t border-[#142335] text-[10px] font-mono tracking-wider text-slate-300">
-          <span>%K: <span className="text-[#00f5c4] font-medium">{safeToFixed(kVal, 2)}</span></span>
-          <span>%D: <span className="text-[#ff3b69] font-medium">{safeToFixed(dVal, 2)}</span></span>
+          <span>Fast Line (%K): <span className="text-[#00f5c4] font-medium">{safeToFixed(kVal, 2)}</span></span>
+          <span>Slow Line (%D): <span className="text-[#ff3b69] font-medium">{safeToFixed(dVal, 2)}</span></span>
           <span>Zone: <span className="text-white font-medium">20 / 80</span></span>
         </div>
       </div>
@@ -815,8 +815,8 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
 
         {/* Footer con letras blancas */}
         <div className="flex items-center justify-between pt-2 border-t border-[#142335] text-[10px] font-mono tracking-wider text-slate-300">
-          <span>%K: <span className="text-[#00f5c4] font-medium">{safeToFixed(rsiStochVal, 2)}</span></span>
-          <span>%D: <span className="text-[#ff3b69] font-medium">
+          <span>Fast Line (%K): <span className="text-[#00f5c4] font-medium">{safeToFixed(rsiStochVal, 2)}</span></span>
+          <span>Slow Line (%D): <span className="text-[#ff3b69] font-medium">
             {stochRsiDVal === null || stochRsiDVal === undefined ? "—" : safeToFixed(stochRsiDVal, 2)}
           </span></span>
           <span>Zone: <span className="text-white font-medium">20 / 80</span></span>

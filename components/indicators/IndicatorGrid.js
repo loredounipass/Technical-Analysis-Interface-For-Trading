@@ -247,7 +247,7 @@ const IndicatorGrid = ({ datos = {} }) => {
           {/* Footer */}
           <div className="flex items-center justify-between pt-2 border-t border-[#142335] text-[10px] font-mono tracking-wider text-white">
             <span>
-              Raw Vol:{" "}
+              Raw Volume:{" "}
               <span className="text-white font-medium">
                 ${formatVolume(datos.volumen)}
               </span>
