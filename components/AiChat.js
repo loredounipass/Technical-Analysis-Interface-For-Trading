@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react"
 import { useChatSession } from "./chat/useChatSession"
 import ChatHeader from "./chat/ChatHeader"
-import ChatTelemetryBar from "./chat/ChatTelemetryBar"
 import ChatMessageList from "./chat/ChatMessageList"
 import ChatQuickActions from "./chat/ChatQuickActions"
 import ChatCommandBar from "./chat/ChatCommandBar"
@@ -18,7 +17,6 @@ const CHAT_OPEN_KEY = "trading_terminal_open"
  * Actúa como orquestador componiendo los submódulos especializados:
  * - useChatSession: Estado, API, sesiones y telemetría
  * - ChatHeader: Encabezado superior y controles
- * - ChatTelemetryBar: Telemetría de libro de órdenes y tendencia
  * - ChatMessageList: Mensajes, diagnósticos y streaming
  * - ChatQuickActions: Barra de píldoras de acción rápida
  * - ChatCommandBar: Entrada de comandos, voz y pie de página
@@ -111,14 +109,6 @@ export default function AiChat({ symbol, datos, interval = "15m", market = "cryp
           onClearChat={chat.clearChat}
           onMinimize={() => setIsOpen(false)}
           onClose={() => setIsOpen(false)}
-        />
-
-        {/* 2. Barra de Telemetría de Mercado */}
-        <ChatTelemetryBar
-          buyerPercent={chat.marketTelemetry.buyerPercent}
-          trendLabel={chat.marketTelemetry.trendLabel}
-          orderBookLinked={chat.marketTelemetry.orderBookLinked}
-          orderBookSource={chat.marketTelemetry.orderBookSource}
         />
 
         {/* 3. Área de Mensajes del Chat */}

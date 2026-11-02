@@ -519,7 +519,6 @@ Veredicto claro basado en todos los datos del terminal: el momentum favorece COM
       <div className="px-5 py-2.5 sm:px-6 bg-[#050d12]/40 backdrop-blur-sm border-t border-emerald-500/10 flex flex-wrap items-center gap-2 sm:gap-3 z-10">
         <div className="flex items-center gap-1.5 text-[11px] font-mono text-slate-400 font-semibold flex-shrink-0">
           <Bot className="w-3.5 h-3.5 text-cyan-400" />
-          <span>Acciones Rápidas:</span>
         </div>
 
         <button
