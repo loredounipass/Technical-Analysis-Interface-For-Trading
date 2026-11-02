@@ -545,7 +545,7 @@ def get_trading_system_prompt(indicator_data=None, global_context=None, model_na
         data_block += _format_price_action_context(indicator_data)
         
         data_block += "\nUse THESE EXACT VALUES when citing data. For focused questions, synthesize only the relevant metrics; reserve the complete cross-indicator synthesis for a full report. Never mislabel the indicator signal split as order flow or probability.\n"
-        data_block += "VOLUME DISAMBIGUATION: when the user asks about the 'current volume' or the volume of the chart/timeframe, cite the Current Candle Volume (per-candle, timeframe-adaptive), NOT the 24h Volume. The 24h Volume is a separate fixed daily ticker figure. If both are relevant, state each explicitly (e.g. 'last 15m candle: X USDT; rolling 24h: Y USDT'). When a precise, non-estimated figure is needed, prefer the BASE-asset volume (exact from the exchange) over the USDT figure (which for Coinbase is derived as base x close).\n"
+        data_block += "VOLUME DISAMBIGUATION: when the user asks about the 'current volume' or the volume of the chart/timeframe, cite the Current Candle Volume (per-candle, timeframe-adaptive), NOT the 24h Volume. Always report BOTH figures together exactly as the terminal card shows them, in the format '<base> <baseAsset> ($<usdt> USDT)' (for example: '499.38 ETH ($1.12M)') — the BASE figure is the exact exchange value and the USDT is the estimated base x close, so never drop either one. The 24h Volume is a separate fixed daily ticker figure; only mention it if the user explicitly asks about 24h. Note the current candle is still forming, so its volume grows until it closes.\n"
         base += data_block
 
         # Contexto multi-temporalidad: el MISMO activo en todas las temporalidades
