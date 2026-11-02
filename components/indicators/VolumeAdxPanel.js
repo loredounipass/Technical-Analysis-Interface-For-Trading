@@ -7,22 +7,29 @@ import useChartWindow from "@/components/indicators/useChartWindow"
 import ChartNavControls from "@/components/indicators/ChartNavControls"
 import { formatVolume, fmt } from "@/components/indicators/indicatorFormatters"
 
-// Tarjeta 24H VOLUME & ADX: barras de volumen navegables (pan/zoom) + ratio
+// Numero FIJO de velas mas recientes que reporta el "Window Vol". Es estable
+// frente al pan/zoom del grafico (las barras navegables siguen siendo libres).
+const VOL_WINDOW = 24
+
+// Tarjeta VOLUME {tf} & ADX: barras de volumen navegables (pan/zoom) + ratio
 // comprador. Recibe la serie de volumen ya construida desde el orquestador.
 const VolumeAdxPanel = ({ datos = {}, volumeChartData = [] }) => {
-  const volWin = useChartWindow(volumeChartData.length, { defaultCount: 36, minCount: 10 })
+  const volWin = useChartWindow(volumeChartData.length, { defaultCount: VOL_WINDOW, minCount: 10 })
   const recentVolumeData = volumeChartData.slice(volWin.start, volWin.effEnd)
   const volBarSize = Math.min(Math.max((volWin.plotWidth / volWin.effCount) * 0.55, 1), 12)
 
-  // Volumen de la VENTANA visible: suma del quote-volume (USDT) real de las
-  // velas del timeframe seleccionado. Es auto-consistente con las barras y
-  // se adapta al timeframe y al pan/zoom, en lugar del 24h fijo.
+  // Volumen de la VENTANA: suma FIJA de las ultimas VOL_WINDOW velas (24) del
+  // timeframe. Antes se sumaban las velas VISIBLES, asi que el total cambiaba
+  // solo con hacer pan/zoom (p. ej. 36 velas = 9h en 15m, pero 36 velas = 36
+  // dias en 1D), sin que el mercado se moviera y sin coincidir con nada. Ahora
+  // el numero es estable: siempre las 24 velas mas recientes.
   const tfLabel = (datos.timeframe || "").toUpperCase()
-  const windowVolume = recentVolumeData.reduce(
+  const fixedWindowData = volumeChartData.slice(-VOL_WINDOW)
+  const windowVolume = fixedWindowData.reduce(
     (s, d) => s + (Number(d.volume) || 0),
     0
   )
-  const windowCount = recentVolumeData.length
+  const windowCount = fixedWindowData.length
 
   // Buyer Vol = % del VOLUMEN EJECUTADO correspondiente a compras agresoras
   // (order flow real de la cinta de trades). Es volumen negociado, NO votos
