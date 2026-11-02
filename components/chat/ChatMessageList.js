@@ -20,12 +20,26 @@ function getHost(url) {
   }
 }
 
-const LOADING_STEPS = [
-  { label: "DATOS MERCADO", done: true },
-  { label: "INDICADORES", done: false },
-  { label: "INFERENCIA", done: false },
-  { label: "INFORME", done: false },
-]
+// Etapas del pipeline real del agente. El punto avanza segun el estado
+// efectivo de la consulta en curso (ver buildSteps), no por rotacion de timer.
+const STEP_LABELS = ["DATOS MERCADO", "INDICADORES", "INFERENCIA", "INFORME"]
+
+/**
+ * Deriva el progreso del pipeline del estado real de la consulta:
+ * 0 = request enviado (datos de mercado en ingestion)
+ * 1 = esperando el modelo (matriz de indicadores computandose)
+ * 2 = razonamiento/pensamiento en vivo del modelo (inferencia)
+ * 3 = texto final transmitiendose (redaccion del informe)
+ */
+function buildSteps({ loading, streamingThought, isTyping }) {
+  if (!loading && !isTyping) return null
+  const activeIdx = isTyping ? 3 : streamingThought ? 2 : loading ? 1 : 0
+  return STEP_LABELS.map((label, i) => ({
+    label,
+    done: i < activeIdx,
+    active: i === activeIdx,
+  }))
+}
 
 /**
  * Mensaje de estado profesional que rota mientras el agente procesa
@@ -35,7 +49,6 @@ function ProcessingStatus({ symbol }) {
   const phases = useMemo(
     () => [
       `Ingestando telemetría de mercado y libro L2/L3 [${symbol}]...`,
-      `Consultando memoria vectorial MCP y contexto institucional...`,
       `Computando matriz técnica cuantitativa (EMAs, RSI, MACD, ADX)...`,
       `Detectando Order Blocks, Fair Value Gaps (FVG) y Swings de liquidez...`,
       `Decodificando microestructura de Order Flow y Delta acumulativo...`,
@@ -85,17 +98,31 @@ function AgentPanel({ statusLabel, statusPulse, steps, children }) {
           </div>
         )}
 
-        {/* Pipeline de ejecución del agente */}
+        {/* Pipeline de ejecución del agente: refleja la fase real de la consulta */}
         {steps && (
           <div className="flex items-center gap-4 px-4 py-2 bg-emerald-950/10 border-b border-slate-800/50 text-[9px] font-mono tracking-wider overflow-x-auto cyber-scrollbar whitespace-nowrap">
             {steps.map((s, i) => (
               <span key={i} className="flex items-center gap-1.5 flex-shrink-0">
                 {s.done ? (
                   <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                ) : s.active ? (
+                  <span className="w-3 h-3 grid place-items-center">
+                    <span className="w-3 h-3 rounded-full border border-[#00f5c4] border-t-transparent animate-spin" />
+                  </span>
                 ) : (
                   <Circle className="w-3 h-3 text-slate-600" />
                 )}
-                <span className={s.done ? "text-slate-300" : "text-slate-600"}>{s.label}</span>
+                <span
+                  className={
+                    s.done
+                      ? "text-slate-300"
+                      : s.active
+                        ? "text-[#00f5c4] font-bold animate-pulse"
+                        : "text-slate-600"
+                  }
+                >
+                  {s.label}
+                </span>
               </span>
             ))}
           </div>
@@ -130,6 +157,7 @@ export default function ChatMessageList({
   const intervalLabel = INTERVAL_LABELS[interval] || interval
   const thoughtBoxRef = useRef(null)
   const currentModelReasons = models.find((m) => m.key === selectedModel)?.reasoning ?? true
+  const pipelineSteps = buildSteps({ loading, streamingThought, isTyping })
 
   // Auto-scroll SOLO de la caja interna de razonamiento. El scroll del
   // contenedor de la conversacion lo gobierna en exclusiva useChatSession
@@ -344,13 +372,15 @@ export default function ChatMessageList({
         )
       }), [messages, symbol, interval, intervalLabel])}
 
-      {/* Efecto de Escritura en Vivo (texto plano) */}
+      {/* Efecto de Escritura en Vivo: pipeline en etapa INFORME + texto plano */}
       {isTyping && typingText && (
         <div className="w-full my-2">
-          <div className="text-[13.5px] sm:text-[14.5px] font-sans leading-[1.68] text-slate-100 break-words tracking-[-0.01em]">
-            {renderMarkdown(typingText, symbol, intervalLabel)}
-            <span className="inline-block w-1.5 h-4 ml-1 bg-emerald-400 animate-pulse align-middle" />
-          </div>
+          <AgentPanel statusLabel="REDACTANDO INFORME" statusPulse steps={pipelineSteps}>
+            <div className="text-[13.5px] sm:text-[14.5px] font-sans leading-[1.68] text-slate-100 break-words tracking-[-0.01em]">
+              {renderMarkdown(typingText, symbol, intervalLabel)}
+              <span className="inline-block w-1.5 h-4 ml-1 bg-emerald-400 animate-pulse align-middle" />
+            </div>
+          </AgentPanel>
         </div>
       )}
 
@@ -359,7 +389,7 @@ export default function ChatMessageList({
         <AgentPanel
           statusLabel={streamingThought ? "PENSAMIENTO EN VIVO" : currentModelReasons ? "RAZONANDO" : "ANALIZANDO"}
           statusPulse
-          steps={LOADING_STEPS}
+          steps={pipelineSteps}
         >
           <div className="flex items-center gap-4">
             <div className="skynet-ring flex-shrink-0">
