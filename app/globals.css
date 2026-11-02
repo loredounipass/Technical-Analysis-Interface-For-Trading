@@ -235,6 +235,20 @@
   animation: neon-glow 2.5s ease-in-out infinite;
 }
 
+/* Woody chat launcher: gentle vertical bob that nudges the user to open it */
+@keyframes woody-bob {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-7px);
+  }
+}
+
+.animate-woody-bob {
+  animation: woody-bob 1.8s ease-in-out infinite;
+}
+
 /* ─── Skynet AI Core Ring ─── */
 @keyframes skynet-orbit {
   0%   { transform: rotate(0deg); }
