@@ -428,9 +428,9 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
         {renderNavControls()}
 
         <div className="flex items-center justify-between pt-2 border-t border-[#142335] text-[10px] font-mono tracking-wider text-slate-300">
-          <span>U: <span className="text-[#ff3b69] font-medium">${safeToFixed(datos.bbUpper, datos.decimales)}</span></span>
-          <span>M: <span className="text-amber-400 font-medium">${safeToFixed(datos.bbMiddle, datos.decimales)}</span></span>
-          <span>L: <span className="text-[#00f5c4] font-medium">${safeToFixed(datos.bbLower, datos.decimales)}</span></span>
+          <span>Upper: <span className="text-[#ff3b69] font-medium">${safeToFixed(datos.bbUpper, datos.decimales)}</span></span>
+          <span>Middle: <span className="text-amber-400 font-medium">${safeToFixed(datos.bbMiddle, datos.decimales)}</span></span>
+          <span>Lower: <span className="text-[#00f5c4] font-medium">${safeToFixed(datos.bbLower, datos.decimales)}</span></span>
         </div>
       </div>
     )
