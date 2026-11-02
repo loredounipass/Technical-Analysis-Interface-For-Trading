@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { ArrowLeftRight, Newspaper, Activity, Diamond, LayoutDashboard } from "lucide-react"
+import { useState, useEffect, useRef } from "react"
+import { ArrowLeftRight, Newspaper, Activity, Diamond, LayoutDashboard, ChevronLeft, ChevronRight } from "lucide-react"
 import { useRouter, usePathname } from "next/navigation"
 import InstallButton from "./InstallButton"
 import { formatDisplaySymbol } from "@/utils/dataUtils"
@@ -61,6 +61,37 @@ export default function Header({
   }
 
   const timeframes = ["1m", "5m", "15m", "1h", "6h", "1d"]
+
+  // Selector de temporalidades: caja compacta (~ al boton Change Pair) con scroll
+  // horizontal garantizado en cualquier dispositivo: flechas para paginar, rueda
+  // del mouse convertida a scroll horizontal y centrado automatico de la activa.
+  const tfScrollRef = useRef(null)
+  const scrollTf = (dir) => {
+    const el = tfScrollRef.current
+    if (el) el.scrollBy({ left: dir * 64, behavior: "smooth" })
+  }
+
+  useEffect(() => {
+    const el = tfScrollRef.current
+    if (!el) return
+    // Rueda vertical -> scroll horizontal (desktop con mouse, sin scrollbar visible).
+    const onWheel = (e) => {
+      if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+        e.preventDefault()
+        el.scrollLeft += e.deltaY
+      }
+    }
+    el.addEventListener("wheel", onWheel, { passive: false })
+    return () => el.removeEventListener("wheel", onWheel)
+  }, [])
+
+  useEffect(() => {
+    // Al cambiar de temporalidad, traer la activa al centro del recuadro.
+    const el = tfScrollRef.current
+    if (!el) return
+    const active = el.querySelector('[data-active="true"]')
+    if (active) active.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" })
+  }, [timeframe])
 
   // Par formateado con slash: ETHUSDT -> ETH/USDT. Stocks/forex/indices de Yahoo
   // pasan por formatDisplaySymbol para quitar el sufijo =X/=F (EURUSD=X -> EUR/USD).
@@ -169,28 +200,50 @@ export default function Header({
             </button>
           </div>
   
-          {/* Timeframe pill selector: ancho acotado (~ al boton Change Pair) con
-              scroll horizontal propio, asi al reducir la pantalla NO se estira
-              para mostrar las 6 temporalidades: queda compacto y las opciones
-              fuera de vista se alcanzan haciendo scroll a la izquierda (drag en
-              movil, shift+rueda / trackpad en desktop). */}
+          {/* Timeframe pill selector: caja compacta del tamano del boton Change
+              Pair (~140px) con flechas laterales para hacer scroll y ver las 6
+              temporalidades (1m..1d) aunque no quepan todas. */}
           {onTimeframeChange && (
-            <div className="flex min-w-0 w-full sm:w-auto max-w-[9.5rem] sm:max-w-[11rem] lg:max-w-[12rem] items-center gap-0.5 px-1 rounded-full bg-[#09111b] border border-[#16283d] overflow-x-auto overscroll-contain [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-              {timeframes.map((tf) => {
-                const isActive = timeframe.toLowerCase() === tf.toLowerCase()
-                return (
-                  <button
-                    key={tf}
-                    onClick={() => onTimeframeChange(tf)}
-                    className={`flex-shrink-0 whitespace-nowrap px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[11px] sm:text-xs font-semibold tracking-wide transition-all uppercase text-center ${isActive
-                      ? "bg-[#00f5c4]/15 border border-[#00f5c4] text-[#00f5c4] shadow-[0_0_12px_rgba(0,245,196,0.35)]"
-                      : "text-slate-300 hover:text-white border border-transparent"
-                      }`}
-                  >
-                    {tf}
-                  </button>
-                )
-              })}
+            <div className="flex flex-shrink-0 items-center gap-1">
+              <button
+                type="button"
+                onClick={() => scrollTf(-1)}
+                aria-label="Temporalidades anteriores"
+                className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-full bg-[#09111b] border border-[#16283d] text-slate-400 hover:text-white hover:border-[#00f5c4]/40 transition-colors"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+              </button>
+
+              <div
+                ref={tfScrollRef}
+                className="flex w-[8.75rem] items-center gap-0.5 px-1 rounded-full bg-[#09111b] border border-[#16283d] overflow-x-auto overscroll-contain [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+              >
+                {timeframes.map((tf) => {
+                  const isActive = timeframe.toLowerCase() === tf.toLowerCase()
+                  return (
+                    <button
+                      key={tf}
+                      data-active={isActive ? "true" : "false"}
+                      onClick={() => onTimeframeChange(tf)}
+                      className={`flex-shrink-0 whitespace-nowrap px-2.5 py-1 rounded-full text-xs font-semibold tracking-wide transition-all uppercase text-center ${isActive
+                        ? "bg-[#00f5c4]/15 border border-[#00f5c4] text-[#00f5c4] shadow-[0_0_12px_rgba(0,245,196,0.35)]"
+                        : "text-slate-300 hover:text-white border border-transparent"
+                        }`}
+                    >
+                      {tf}
+                    </button>
+                  )
+                })}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => scrollTf(1)}
+                aria-label="Temporalidades siguientes"
+                className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-full bg-[#09111b] border border-[#16283d] text-slate-400 hover:text-white hover:border-[#00f5c4]/40 transition-colors"
+              >
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
             </div>
           )}
         </div>
