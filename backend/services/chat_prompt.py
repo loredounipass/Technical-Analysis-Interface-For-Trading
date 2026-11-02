@@ -505,7 +505,10 @@ def get_trading_system_prompt(indicator_data=None, global_context=None, model_na
         data_block += f"| Current Spot Price | ${_fmt(indicator_data.get('precio'))} | Live Spot Price |\n"
         data_block += f"| 24h Volume | {_format_compact(indicator_data.get('volumen'))} | {'USDT turnover' if market == 'crypto' else 'Shares volume'} (FIXED rolling 24h ticker; does NOT change with the chart timeframe) |\n"
         _tf = indicator_data.get('timeframe', 'N/A')
-        data_block += f"| Current Candle Volume ({_tf}) | {_format_compact(indicator_data.get('volCandle'))} | Volume traded in the LAST {_tf} candle (TIMEFRAME-ADAPTIVE: this is the per-candle VOL shown on the chart) |\n"
+        _volbase = indicator_data.get('volCandleBase')
+        _bunit = indicator_data.get('baseAsset') or 'base'
+        _volbase_str = f" | Base (EXACT, as reported by the exchange, no price conversion): {_format_compact(_volbase)} {_bunit}" if _volbase else ""
+        data_block += f"| Current Candle Volume ({_tf}) | {_format_compact(indicator_data.get('volCandle'))} USDT{_volbase_str} | Volume traded in the LAST {_tf} candle (TIMEFRAME-ADAPTIVE: this is the per-candle VOL shown on the chart). The USDT figure for Coinbase is estimated as base x close; the BASE figure is the exact exchange value. |\n"
         data_block += f"| MARKET SIGNAL | **{market_signal}** | {market_signal_summary} |\n"
         data_block += f"| Signal Counts | {buy_sig} BUY | {neutral_sig} HOLD | {sell_sig} SELL | Total Signals: {total_sig} |\n"
         data_block += f"| Indicator Signal Split | {signal_split} | Distribution of active indicator votes; NOT executed order flow or win probability |\n"
@@ -542,7 +545,7 @@ def get_trading_system_prompt(indicator_data=None, global_context=None, model_na
         data_block += _format_price_action_context(indicator_data)
         
         data_block += "\nUse THESE EXACT VALUES when citing data. For focused questions, synthesize only the relevant metrics; reserve the complete cross-indicator synthesis for a full report. Never mislabel the indicator signal split as order flow or probability.\n"
-        data_block += "VOLUME DISAMBIGUATION: when the user asks about the 'current volume' or the volume of the chart/timeframe, cite the Current Candle Volume (per-candle, timeframe-adaptive), NOT the 24h Volume. The 24h Volume is a separate fixed daily ticker figure. If both are relevant, state each explicitly (e.g. 'last 15m candle: X USDT; rolling 24h: Y USDT').\n"
+        data_block += "VOLUME DISAMBIGUATION: when the user asks about the 'current volume' or the volume of the chart/timeframe, cite the Current Candle Volume (per-candle, timeframe-adaptive), NOT the 24h Volume. The 24h Volume is a separate fixed daily ticker figure. If both are relevant, state each explicitly (e.g. 'last 15m candle: X USDT; rolling 24h: Y USDT'). When a precise, non-estimated figure is needed, prefer the BASE-asset volume (exact from the exchange) over the USDT figure (which for Coinbase is derived as base x close).\n"
         base += data_block
 
         # Contexto multi-temporalidad: el MISMO activo en todas las temporalidades

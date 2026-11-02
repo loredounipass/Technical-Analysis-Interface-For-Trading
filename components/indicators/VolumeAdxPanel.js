@@ -11,6 +11,17 @@ import { formatVolume, fmt } from "@/components/indicators/indicatorFormatters"
 // frente al pan/zoom del grafico (las barras navegables siguen siendo libres).
 const VOL_WINDOW = 24
 
+// Formatea volumen en MONEDA BASE (ETH, BTC, acciones). Es el dato crudo del
+// exchange, sin conversion a USDT, asi que se muestra tal cual (no con K/M de
+// dolares). Miles o mas -> separador de miles; por debajo -> 2 decimales.
+const formatBase = (v) => {
+  if (!Number.isFinite(v) || v <= 0) return "\u2014"
+  if (v >= 1e9) return (v / 1e9).toFixed(2) + "B"
+  if (v >= 1e6) return (v / 1e6).toFixed(2) + "M"
+  if (v >= 1000) return Math.round(v).toLocaleString("en-US")
+  return v.toLocaleString("en-US", { maximumFractionDigits: 2 })
+}
+
 // Tarjeta VOLUME {tf} & ADX: barras de volumen navegables (pan/zoom) + ratio
 // comprador. Recibe la serie de volumen ya construida desde el orquestador.
 const VolumeAdxPanel = ({ datos = {}, volumeChartData = [] }) => {
@@ -31,6 +42,10 @@ const VolumeAdxPanel = ({ datos = {}, volumeChartData = [] }) => {
     : null
   const candleVolume =
     Number(datos.volCandle) || (lastBar ? Number(lastBar.volume) || 0 : 0)
+  // Volumen base EXACTO de la ultima vela (crudo del exchange, sin conversion).
+  // Es la cifra fiable; el $ (candleVolume) es una estimacion base x cierre.
+  const baseVolume = Number(datos.volCandleBase) || 0
+  const baseAsset = datos.baseAsset || ""
 
   // Buyer Vol = % del VOLUMEN EJECUTADO correspondiente a compras agresoras
   // (order flow real de la cinta de trades). Es volumen negociado, NO votos
@@ -138,11 +153,18 @@ const VolumeAdxPanel = ({ datos = {}, volumeChartData = [] }) => {
       {/* Footer */}
       <div className="flex items-center justify-between pt-2 border-t border-[#142335] text-[10px] font-mono tracking-wider text-white">
         <span>
-          Last{tfLabel ? ` ${tfLabel}` : ""} Vol:
-          {" "}
-          <span className="text-white font-medium">
-            ${formatVolume(candleVolume)}
-          </span>
+          Last{tfLabel ? ` ${tfLabel}` : ""} Vol:{" "}
+          {baseVolume > 0 ? (
+            <span className="text-white font-medium">
+              {formatBase(baseVolume)}
+              {baseAsset ? ` ${baseAsset}` : ""}
+              <span className="text-slate-400"> (${formatVolume(candleVolume)})</span>
+            </span>
+          ) : (
+            <span className="text-white font-medium">
+              ${formatVolume(candleVolume)}
+            </span>
+          )}
         </span>
         <span>
           Buyer Vol:{" "}

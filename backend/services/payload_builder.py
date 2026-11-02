@@ -36,6 +36,7 @@ def build_payload(symbol, interval_str, market, klines, vol_24h=None):
     closes = []
     timestamps = []
     quote_volumes = []
+    base_volumes = []
     if klines:
         opens = [float(k[1]) for k in klines]
         highs = [float(k[2]) for k in klines]
@@ -43,6 +44,12 @@ def build_payload(symbol, interval_str, market, klines, vol_24h=None):
         closes = [float(k[4]) for k in klines]
         timestamps = [int(k[0]) for k in klines]
         quote_volumes = [float(k[7]) for k in klines]
+        # Volumen por vela en MONEDA BASE (k[5]: ETH, BTC, acciones). Es el dato
+        # CRUDO que reporta el exchange, SIN ninguna conversion de precio, por lo
+        # que es EXACTO. El quote (k[7]) en cambio, para Coinbase se estima como
+        # base*close y puede desviar 1-3%. Se expone para mostrar el "Vol (ETH)"
+        # real, igual que el indicador Vol(ETH) de Binance.
+        base_volumes = [float(k[5]) for k in klines]
         # Yahoo NO expone volumen para forex (=X) y varios indices/futuros (=F):
         # llegan todas las velas en 0. Sin volumen, el proxy de order flow, el
         # libro de liquidez por volume profile y la dominancia compradora quedan
@@ -68,6 +75,8 @@ def build_payload(symbol, interval_str, market, klines, vol_24h=None):
         history['times'] = timestamps
         # Volumen por vela en USDT (quote volume) para el agente y graficos
         history['volumes'] = [float(k[7]) for k in klines]
+        # Volumen por vela en moneda base (exacto, sin conversion)
+        history['volumesBase'] = base_volumes
 
     # Series tecnicas (valores actuales + historial para graficos)
     rsi_series = []
@@ -380,6 +389,11 @@ def build_payload(symbol, interval_str, market, klines, vol_24h=None):
         # lo negociado en ese bloque de 15m, en 1D el dia completo. Es el
         # equivalente al indicador VOL por vela de Binance.
         'volCandle': quote_volumes[-1] if quote_volumes else None,
+        # Volumen de la ultima vela en MONEDA BASE (exacto, crudo del exchange).
+        'volCandleBase': base_volumes[-1] if base_volumes else None,
+        # Activo base del par (ETHUSDT -> ETH) para etiquetar la unidad. Solo
+        # crypto; stocks/indices se etiquetan como 'shares'.
+        'baseAsset': (symbol[:-4] if market == 'crypto' and symbol.endswith('USDT') else (symbol if market == 'crypto' else 'shares')),
         'bbUpper': last_non_none(bb_upper),
         'bbMiddle': last_non_none(bb_middle),
         'bbLower': last_non_none(bb_lower),
