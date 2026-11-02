@@ -62,14 +62,26 @@ export default function Header({
 
   const timeframes = ["1m", "5m", "15m", "1h", "6h", "1d"]
 
-  // Selector de temporalidades: caja compacta (~ al boton Change Pair) con scroll
-  // horizontal garantizado en cualquier dispositivo: flechas para paginar, rueda
-  // del mouse convertida a scroll horizontal y centrado automatico de la activa.
+  // Selector de temporalidades: caja con scroll horizontal garantizado en
+  // cualquier dispositivo (flechas para paginar, rueda del mouse convertida a
+  // scroll horizontal y centrado automatico de la activa). Su ancho se iguala al
+  // del boton Change Pair midiendo el boton real y sincronizandolo en resize.
   const tfScrollRef = useRef(null)
+  const changePairRef = useRef(null)
+  const [tfWidth, setTfWidth] = useState(undefined)
   const scrollTf = (dir) => {
     const el = tfScrollRef.current
     if (el) el.scrollBy({ left: dir * 64, behavior: "smooth" })
   }
+
+  useEffect(() => {
+    const el = changePairRef.current
+    if (!el) return
+    const measure = () => setTfWidth(el.offsetWidth)
+    measure()
+    window.addEventListener("resize", measure)
+    return () => window.removeEventListener("resize", measure)
+  }, [])
 
   useEffect(() => {
     const el = tfScrollRef.current
@@ -191,6 +203,7 @@ export default function Header({
   
             {/* Change pair button */}
             <button
+              ref={changePairRef}
               onClick={handleCambiarMoneda}
               className="flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full bg-[#09111b] border border-[#16283d] hover:border-[#00f5c4]/40 hover:bg-[#00f5c4]/5 text-white transition-all text-sm font-semibold tracking-wide shadow-sm"
               title="Change Trading Pair"
@@ -216,6 +229,7 @@ export default function Header({
 
               <div
                 ref={tfScrollRef}
+                style={tfWidth ? { width: tfWidth } : undefined}
                 className="flex w-[8.75rem] items-center gap-0.5 px-1 rounded-full bg-[#09111b] border border-[#16283d] overflow-x-auto overscroll-contain [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
               >
                 {timeframes.map((tf) => {
