@@ -24,9 +24,6 @@ export default function ChatCommandBar({
   isTyping,
   ttsEnabled,
   onToggleTTS,
-  symbol,
-  interval,
-  selectedModel,
 }) {
   // El campo crece hacia arriba a medida que se escribe (la barra está anclada
   // al final del chat, así que gana altura hacia arriba y la lista de mensajes

@@ -151,9 +151,6 @@ export default function AiChat({ symbol, datos, interval = "15m", market = "cryp
           isTyping={chat.isTyping}
           ttsEnabled={chat.ttsEnabled}
           onToggleTTS={chat.toggleTTS}
-          symbol={symbol}
-          interval={interval}
-          selectedModel={chat.selectedModel}
         />
       </div>
     </div>
