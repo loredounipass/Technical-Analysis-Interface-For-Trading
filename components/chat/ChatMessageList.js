@@ -76,61 +76,58 @@ function ProcessingStatus({ symbol }) {
 }
 
 /**
- * Panel de estado del agente mientras se procesa la consulta:
- * muestra la fase del análisis en curso. Las respuestas finales se
- * renderizan como texto plano, sin tarjeta.
+ * Panel de estado del agente mientras se procesa la consulta: muestra la
+ * fase del analisis en curso. Se renderiza PLANO (sin caja/borde/fondo),
+ * integrado en el flujo del chat, igual que las respuestas finales.
  */
 function AgentPanel({ statusLabel, statusPulse, steps, children }) {
   return (
-    <div className="w-full my-2">
-      <div className="relative w-full overflow-hidden rounded-xl border border-cyan-500/25 bg-[#071218]/55 backdrop-blur-md shadow-xl">
-        {/* Barra de título del panel de estado */}
-        {(statusLabel || steps) && (
-          <div className="flex items-center justify-between gap-2 px-4 py-2.5 border-b border-slate-800/70 bg-[#081820]/70 flex-wrap">
-            {statusLabel && (
-              <span className="text-[9px] font-mono text-emerald-400 bg-emerald-950/60 border border-emerald-500/30 px-2 py-0.5 rounded-full font-semibold flex items-center gap-1">
-                {statusPulse && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block animate-pulse" />
-                )}
-                {statusLabel}
-              </span>
-            )}
-          </div>
-        )}
+    <div className="w-full my-2 space-y-2.5">
+      {/* Chip de estado + pipeline de ejecucion (sin contenedor encajado) */}
+      {(statusLabel || steps) && (
+        <div className="flex items-center gap-3 flex-wrap">
+          {statusLabel && (
+            <span className="text-[9px] font-mono text-emerald-400 px-1.5 py-0.5 rounded-full font-semibold flex items-center gap-1">
+              {statusPulse && (
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block animate-pulse" />
+              )}
+              {statusLabel}
+            </span>
+          )}
 
-        {/* Pipeline de ejecución del agente: refleja la fase real de la consulta */}
-        {steps && (
-          <div className="flex items-center gap-4 px-4 py-2 bg-emerald-950/10 border-b border-slate-800/50 text-[9px] font-mono tracking-wider overflow-x-auto cyber-scrollbar whitespace-nowrap">
-            {steps.map((s, i) => (
-              <span key={i} className="flex items-center gap-1.5 flex-shrink-0">
-                {s.done ? (
-                  <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-                ) : s.active ? (
-                  <span className="w-3 h-3 grid place-items-center">
-                    <span className="w-3 h-3 rounded-full border border-[#00f5c4] border-t-transparent animate-spin" />
+          {steps && (
+            <div className="flex items-center gap-4 text-[9px] font-mono tracking-wider overflow-x-auto cyber-scrollbar whitespace-nowrap">
+              {steps.map((s, i) => (
+                <span key={i} className="flex items-center gap-1.5 flex-shrink-0">
+                  {s.done ? (
+                    <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                  ) : s.active ? (
+                    <span className="w-3 h-3 grid place-items-center">
+                      <span className="w-3 h-3 rounded-full border border-[#00f5c4] border-t-transparent animate-spin" />
+                    </span>
+                  ) : (
+                    <Circle className="w-3 h-3 text-slate-600" />
+                  )}
+                  <span
+                    className={
+                      s.done
+                        ? "text-slate-300"
+                        : s.active
+                          ? "text-[#00f5c4] font-bold animate-pulse"
+                          : "text-slate-600"
+                    }
+                  >
+                    {s.label}
                   </span>
-                ) : (
-                  <Circle className="w-3 h-3 text-slate-600" />
-                )}
-                <span
-                  className={
-                    s.done
-                      ? "text-slate-300"
-                      : s.active
-                        ? "text-[#00f5c4] font-bold animate-pulse"
-                        : "text-slate-600"
-                  }
-                >
-                  {s.label}
                 </span>
-              </span>
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
-        {/* Contenido del panel */}
-        <div className="px-4 sm:px-5 py-4 space-y-3.5">{children}</div>
-      </div>
+      {/* Contenido del panel (loader skynet / texto), plano sin caja */}
+      <div className="space-y-3.5">{children}</div>
     </div>
   )
 }
