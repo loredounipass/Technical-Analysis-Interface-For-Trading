@@ -68,8 +68,35 @@ const getCoinLogo = (symbol) => {
 
 // Logo de stocks desde LoadLogo (https://img.loadlogo.com/ticker/{SYMBOL}),
 // gratis y sin API key. Ej: AAPL, MSFT, NVDA, TSLA, AMZN, GOOGL, META, NFLX, AMD, INTC.
+//
+// Simbolos de Yahoo con marcadores de exchange se normalizan al ticker limpio que
+// LoadLogo si indexa, asi caen por la MISMA via que las acciones:
+//   ^NDX    (indice)    -> NDX    -> logo real de Nasdaq
+//   EURUSD=X (forex)    -> EURUSD -> logo real (bandas EU/US)
+//   GC=F    (futuro)    -> GC     -> LoadLogo devuelve "Goldcliff Resources" (NO es
+//                          oro), por eso se curva con un lingote vectorial abajo.
+const GOLD_BAR_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"><defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe27a"/><stop offset="0.5" stop-color="#f5c542"/><stop offset="1" stop-color="#c8901a"/></linearGradient></defs><rect width="64" height="64" rx="16" fill="#1a1405"/><polygon points="18,24 46,24 52,38 12,38" fill="url(#g)" stroke="#8a5e12" stroke-width="1.5" stroke-linejoin="round"/><polygon points="22,18 42,18 46,24 18,24" fill="#fff0a8" stroke="#8a5e12" stroke-width="1.5" stroke-linejoin="round"/><rect x="26" y="29" width="12" height="6" rx="1" fill="#fff3b0" opacity="0.7"/></svg>`
+const GOLD_BAR_LOGO = `data:image/svg+xml;utf8,${encodeURIComponent(GOLD_BAR_SVG)}`
+
+// Overrides curados (por symbol crudo, antes de limpiar) donde la base de
+// tickers de LoadLogo devuelve la empresa equivocada.
+const SPECIAL_LOGOS = {
+    'GC=F': GOLD_BAR_LOGO,
+    'GC': GOLD_BAR_LOGO,
+}
+
 const getStockLogo = (symbol) => {
-    const ticker = String(symbol || '').trim().toUpperCase().replace(/^[.:-]/, '')
+    const raw = String(symbol || '').trim().toUpperCase()
+    if (!raw) return getCoinFallbackLogo(symbol)
+
+    // Override curado antes de limpiar (evita el ticker erroneo de LoadLogo).
+    if (SPECIAL_LOGOS[raw]) return SPECIAL_LOGOS[raw]
+
+    // Normaliza marcadores de exchange de Yahoo al ticker limpio que indexa LoadLogo.
+    const ticker = raw
+        .replace(/^\^/, '')           // ^NDX -> NDX
+        .replace(/=[A-Z]{1,2}$/, '')  // EURUSD=X -> EURUSD, GC=F -> GC
+        .replace(/^[.:-]+/, '')       // .BRK.B -> BRK.B
     if (!ticker) return getCoinFallbackLogo(symbol)
 
     return `https://img.loadlogo.com/ticker/${encodeURIComponent(ticker)}?size=128`
