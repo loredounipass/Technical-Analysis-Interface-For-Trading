@@ -141,10 +141,7 @@ export default function AiChat({ symbol, datos, interval = "15m", market = "cryp
 
         {/* 5. Barra de Entrada de Comandos */}
         <ChatCommandBar
-          input={chat.input}
-          setInput={chat.setInput}
           inputRef={chat.inputRef}
-          onKeyDown={chat.handleKeyDown}
           onSend={chat.sendMessage}
           onStop={chat.stopGeneration}
           loading={chat.loading}

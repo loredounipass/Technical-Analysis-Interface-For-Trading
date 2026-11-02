@@ -22,7 +22,9 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
   const [sessions, setSessions] = useState([])
   const [activeSessionId, setActiveSessionId] = useState(null)
   const [messages, setMessages] = useState([])
-  const [input, setInput] = useState("")
+  // NOTA: el texto del campo de entrada vive LOCALMENTE en ChatCommandBar (no
+  // aqui) para que cada tecla NO re-renderice toda la ventana del chat. Solo se
+  // recibe ya el texto completo cuando sendMessage es invocado al enviar.
   const [loading, setLoading] = useState(false)
   const [models, setModels] = useState([])
   const [selectedModel, setSelectedModel] = useState(() => {
@@ -392,7 +394,7 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
   }
 
   const sendMessage = async (customPrompt, meta = null) => {
-    const textToSend = typeof customPrompt === "string" ? customPrompt : input
+    const textToSend = typeof customPrompt === "string" ? customPrompt : ""
     const trimmed = textToSend.trim()
     if (!trimmed || loading) return
 
@@ -403,7 +405,6 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
       meta: typeof meta === "object" && meta ? meta : null,
     }
     setMessages((prev) => [...prev, userMsg])
-    setInput("")
     setLoading(true)
     // Marca el modelo de la respuesta en curso: si el usuario interrumpe el
     // stream (stopGeneration), el mensaje parcial queda etiquetado correctamente.
@@ -658,13 +659,6 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
     }
   }
 
-  const handleKeyDown = (e) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault()
-      sendMessage()
-    }
-  }
-
   const currentModelName =
     models.find((m) => m.key === selectedModel)?.name || "Nemotron 3 Nano Omni"
 
@@ -674,8 +668,6 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
     sessions,
     activeSessionId,
     messages,
-    input,
-    setInput,
     loading,
     models,
     selectedModel,
@@ -700,7 +692,6 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
     clearChat: createNewSession,
     sendMessage,
     stopGeneration,
-    handleKeyDown,
     handleScroll,
   }
 }

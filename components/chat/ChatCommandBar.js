@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect } from "react"
+import React, { useEffect, useState } from "react"
 import { ArrowRight, Square } from "lucide-react"
 import { MicIcon } from "../VoiceTTS"
 
@@ -12,12 +12,14 @@ const MAX_INPUT_HEIGHT = 84
  * Barra de comandos inferior:
  * Símbolo de prompt verde '>', campo de entrada de texto, botón de micrófono/TTS,
  * y botón de envío o detención de respuesta.
+ *
+ * El texto del campo es ESTADO LOCAL: vive aqui y no en useChatSession para que
+ * cada pulsacion re-renderice SOLO esta hoja, en lugar de toda la ventana del
+ * chat (header + mensajes + quick actions + drawer). El texto se sube al padre
+ * unicamente al enviar, via onSend(text).
  */
 export default function ChatCommandBar({
-  input,
-  setInput,
   inputRef,
-  onKeyDown,
   onSend,
   onStop,
   loading,
@@ -25,6 +27,9 @@ export default function ChatCommandBar({
   ttsEnabled,
   onToggleTTS,
 }) {
+  const [value, setValue] = useState("")
+  const busy = loading || isTyping
+
   // El campo crece hacia arriba a medida que se escribe (la barra está anclada
   // al final del chat, así que gana altura hacia arriba y la lista de mensajes
   // se reduce) y vuelve a su altura mínima al enviar o borrar el comando.
@@ -33,7 +38,21 @@ export default function ChatCommandBar({
     if (!el) return
     el.style.height = "auto"
     el.style.height = `${Math.min(el.scrollHeight, MAX_INPUT_HEIGHT)}px`
-  }, [input, inputRef])
+  }, [value, inputRef])
+
+  const submit = () => {
+    const text = value.trim()
+    if (!text || busy) return
+    onSend(text)
+    setValue("")
+  }
+
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault()
+      submit()
+    }
+  }
 
   return (
     <div className="px-5 py-3 sm:px-6 bg-[#050c10]/45 backdrop-blur-md border-t border-emerald-500/15 z-10">
@@ -46,9 +65,9 @@ export default function ChatCommandBar({
           ref={inputRef}
           id="ai-chat-input"
           rows={1}
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={onKeyDown}
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onKeyDown={handleKeyDown}
           placeholder="type a command, indicator setup, or question..."
           className="flex-1 bg-transparent text-emerald-100 placeholder-slate-500 font-mono text-xs sm:text-sm outline-none resize-none py-1 min-h-[22px] max-h-[84px] overflow-y-auto overscroll-contain scrollbar-hidden"
           style={{ lineHeight: "1.4" }}
@@ -65,7 +84,7 @@ export default function ChatCommandBar({
         </button>
 
         {/* Botón de Enviar o Detener */}
-        {loading || isTyping ? (
+        {busy ? (
           <button
             id="ai-chat-stop"
             onClick={onStop}
@@ -77,8 +96,8 @@ export default function ChatCommandBar({
         ) : (
           <button
             id="ai-chat-send"
-            onClick={() => onSend()}
-            disabled={!input.trim() || loading}
+            onClick={submit}
+            disabled={!value.trim() || loading}
             title="Enviar comando"
             className="w-8 h-8 rounded-lg bg-emerald-400 hover:bg-emerald-300 active:scale-95 text-slate-950 font-bold flex items-center justify-center flex-shrink-0 transition-all shadow-[0_0_12px_rgba(52,211,153,0.35)] disabled:opacity-25 disabled:cursor-not-allowed"
           >
