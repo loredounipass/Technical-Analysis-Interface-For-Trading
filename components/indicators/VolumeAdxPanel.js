@@ -18,18 +18,19 @@ const VolumeAdxPanel = ({ datos = {}, volumeChartData = [] }) => {
   const recentVolumeData = volumeChartData.slice(volWin.start, volWin.effEnd)
   const volBarSize = Math.min(Math.max((volWin.plotWidth / volWin.effCount) * 0.55, 1), 12)
 
-  // Volumen de la VENTANA: suma FIJA de las ultimas VOL_WINDOW velas (24) del
-  // timeframe. Antes se sumaban las velas VISIBLES, asi que el total cambiaba
-  // solo con hacer pan/zoom (p. ej. 36 velas = 9h en 15m, pero 36 velas = 36
-  // dias en 1D), sin que el mercado se moviera y sin coincidir con nada. Ahora
-  // el numero es estable: siempre las 24 velas mas recientes.
+  // Volumen de la ULTIMA VELA del timeframe activo: es el numero entendible y
+  // auto-adaptable (en 1D = volumen del dia, en 15m = volumen de ese bloque),
+  // igual que el indicador VOL por vela de Binance y el "Current Candle Volume"
+  // que lee el agente. Se prefiere datos.volCandle (fuente unica del backend, la
+  // misma que ve el chat) y se cae a la ultima barra del grafico si aun no llega.
+  // (Antes se mostraba la suma de 24 velas: "Window Vol (24 1D)" eran 24 DIAS,
+  // ~$4.88B, que no representaba ninguna medida concreta y confundia.)
   const tfLabel = (datos.timeframe || "").toUpperCase()
-  const fixedWindowData = volumeChartData.slice(-VOL_WINDOW)
-  const windowVolume = fixedWindowData.reduce(
-    (s, d) => s + (Number(d.volume) || 0),
-    0
-  )
-  const windowCount = fixedWindowData.length
+  const lastBar = volumeChartData.length
+    ? volumeChartData[volumeChartData.length - 1]
+    : null
+  const candleVolume =
+    Number(datos.volCandle) || (lastBar ? Number(lastBar.volume) || 0 : 0)
 
   // Buyer Vol = % del VOLUMEN EJECUTADO correspondiente a compras agresoras
   // (order flow real de la cinta de trades). Es volumen negociado, NO votos
@@ -137,10 +138,10 @@ const VolumeAdxPanel = ({ datos = {}, volumeChartData = [] }) => {
       {/* Footer */}
       <div className="flex items-center justify-between pt-2 border-t border-[#142335] text-[10px] font-mono tracking-wider text-white">
         <span>
-          Window Vol ({windowCount}{tfLabel ? ` ${tfLabel}` : ""}):
+          Last{tfLabel ? ` ${tfLabel}` : ""} Vol:
           {" "}
           <span className="text-white font-medium">
-            ${formatVolume(windowVolume)}
+            ${formatVolume(candleVolume)}
           </span>
         </span>
         <span>
