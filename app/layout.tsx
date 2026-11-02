@@ -2,13 +2,24 @@ import type { Metadata, Viewport } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Trading Terminal',
+  title: 'SYNAPSE TERMINAL',
   description: 'Professional Technical Analysis Platform',
+  manifest: '/manifest.webmanifest',
+  icons: {
+    icon: '/icons/icon-192.png',
+    apple: '/icons/apple-touch-icon.png',
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'SYNAPSE TERMINAL',
+  },
 }
 
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
+  themeColor: '#070c14',
   // Evita que el teclado virtual de Android tape el input del chat
   interactiveWidget: 'resizes-content',
 }
