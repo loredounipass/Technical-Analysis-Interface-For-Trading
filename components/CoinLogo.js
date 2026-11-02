@@ -7,7 +7,12 @@ import { getAssetLogo, getCoinFallbackLogo } from "@/utils/coinLogos"
 // Si se pasa `fallbackIcon` (ej. emoji), se usa como último recurso.
 export default function CoinLogo({ symbol, market = "crypto", size = 32, className = "", fallbackIcon = "" }) {
   const [src, setSrc] = useState(() => getAssetLogo(symbol, market))
-  const [useFallback, setUseFallback] = useState(() => Boolean(fallbackIcon) && src.startsWith("data:"))
+  // El emoji solo reemplaza al placeholder AUTOGENERADO (caja de letras) cuando
+  // existe. Los SVG curados (indices/oro/forex) tambien son data: pero deben
+  // mostrarse, asi que se compara contra el fallback generado para distinguirlos.
+  const [useFallback, setUseFallback] = useState(
+    () => Boolean(fallbackIcon) && src === getCoinFallbackLogo(symbol)
+  )
 
   if (useFallback) {
     return (

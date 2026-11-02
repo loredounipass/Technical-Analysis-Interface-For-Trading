@@ -69,20 +69,22 @@ const getCoinLogo = (symbol) => {
 // Logo de stocks desde LoadLogo (https://img.loadlogo.com/ticker/{SYMBOL}),
 // gratis y sin API key. Ej: AAPL, MSFT, NVDA, TSLA, AMZN, GOOGL, META, NFLX, AMD, INTC.
 //
-// Simbolos de Yahoo con marcadores de exchange se normalizan al ticker limpio que
-// LoadLogo si indexa, asi caen por la MISMA via que las acciones:
-//   ^NDX    (indice)    -> NDX    -> logo real de Nasdaq
-//   EURUSD=X (forex)    -> EURUSD -> logo real (bandas EU/US)
-//   GC=F    (futuro)    -> GC     -> LoadLogo devuelve "Goldcliff Resources" (NO es
-//                          oro), por eso se curva con un lingote vectorial abajo.
-const GOLD_BAR_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"><defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe27a"/><stop offset="0.5" stop-color="#f5c542"/><stop offset="1" stop-color="#c8901a"/></linearGradient></defs><rect width="64" height="64" rx="16" fill="#1a1405"/><polygon points="18,24 46,24 52,38 12,38" fill="url(#g)" stroke="#8a5e12" stroke-width="1.5" stroke-linejoin="round"/><polygon points="22,18 42,18 46,24 18,24" fill="#fff0a8" stroke="#8a5e12" stroke-width="1.5" stroke-linejoin="round"/><rect x="26" y="29" width="12" height="6" rx="1" fill="#fff3b0" opacity="0.7"/></svg>`
-const GOLD_BAR_LOGO = `data:image/svg+xml;utf8,${encodeURIComponent(GOLD_BAR_SVG)}`
+// Los 3 instrumentos de Yahoo (indices / oro / forex) NO usan LoadLogo: el
+// servicio responde mal para ellos (^NDX -> wordmark horizontal que al encogerse
+// queda una rayita, GC=F -> una empresa minera, EURUSD=X -> banderas). Se curan
+// iconos vectoriales propios, cuadrados y legibles a 28px, coherentes con el tema.
+const svgDataUri = (svg) => `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`
 
-// Overrides curados (por symbol crudo, antes de limpiar) donde la base de
-// tickers de LoadLogo devuelve la empresa equivocada.
+const NDX_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#0b1622"/><rect x="12" y="36" width="9" height="14" rx="2" fill="#0090cf"/><rect x="27" y="28" width="9" height="22" rx="2" fill="#2fb6e8"/><rect x="42" y="18" width="9" height="32" rx="2" fill="#8ad8f4"/><polyline points="16,30 31,22 47,12" fill="none" stroke="#00f5c4" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="47" cy="12" r="3" fill="#00f5c4"/></svg>`
+const GOLD_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"><defs><linearGradient id="au" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe27a"/><stop offset="0.5" stop-color="#f5c542"/><stop offset="1" stop-color="#c8901a"/></linearGradient></defs><rect width="64" height="64" rx="14" fill="#1a1405"/><polygon points="14,44 50,44 44,32 20,32" fill="url(#au)" stroke="#8a5e12" stroke-width="1.5" stroke-linejoin="round"/><polygon points="20,32 44,32 40,26 24,26" fill="#fff0a8" stroke="#8a5e12" stroke-width="1.5" stroke-linejoin="round"/><rect x="27" y="36" width="10" height="4" rx="1" fill="#fff3b0" opacity="0.75"/></svg>`
+const EURUSD_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#0b1622"/><circle cx="20" cy="32" r="12" fill="#1e56c8" stroke="#0b1622" stroke-width="2"/><circle cx="44" cy="32" r="12" fill="#1f9d5a" stroke="#0b1622" stroke-width="2"/><text x="20" y="33" text-anchor="middle" dominant-baseline="central" font-family="Arial, sans-serif" font-size="15" font-weight="700" fill="#ffffff">&#8364;</text><text x="44" y="33" text-anchor="middle" dominant-baseline="central" font-family="Arial, sans-serif" font-size="15" font-weight="700" fill="#ffffff">$</text></svg>`
+
+// Overrides curados (por symbol crudo, antes de limpiar).
 const SPECIAL_LOGOS = {
-    'GC=F': GOLD_BAR_LOGO,
-    'GC': GOLD_BAR_LOGO,
+    '^NDX': svgDataUri(NDX_SVG),
+    'GC=F': svgDataUri(GOLD_SVG),
+    'GC': svgDataUri(GOLD_SVG),
+    'EURUSD=X': svgDataUri(EURUSD_SVG),
 }
 
 const getStockLogo = (symbol) => {
