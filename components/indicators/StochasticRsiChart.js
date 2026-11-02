@@ -105,13 +105,13 @@ const StochasticRsiChart = ({ title, datos = {} }) => {
 
       {renderNavControls()}
 
-      {/* Footer con letras blancas */}
-      <div className="flex items-center justify-between pt-2 border-t border-[#142335] text-[10px] font-mono tracking-wider text-slate-300">
-        <span>Fast Line (%K): <span className="text-[#00f5c4] font-medium">{safeToFixed(rsiStochVal, 2)}</span></span>
-        <span>Slow Line (%D): <span className="text-[#ff3b69] font-medium">
-          {stochRsiDVal === null || stochRsiDVal === undefined ? "—" : safeToFixed(stochRsiDVal, 2)}
+      {/* Footer: lineas %K/%D (nomenclatura Stoch RSI) y zonas 20=verde / 80=rojo */}
+      <div className="flex items-center justify-between pt-2 border-t border-[#142335] text-[10px] font-mono tracking-wider">
+        <span className="text-[#00f5c4]">%K: <span className="text-[#00f5c4] font-medium">{safeToFixed(rsiStochVal, 2)}</span></span>
+        <span className="text-[#ff3b69]">%D: <span className="text-[#ff3b69] font-medium">
+          {stochRsiDVal === null || stochRsiDVal === undefined ? "\u2014" : safeToFixed(stochRsiDVal, 2)}
         </span></span>
-        <span>Zone: <span className="text-white font-medium">20 / 80</span></span>
+        <span>Zone: <span className="text-[#00f5c4] font-medium">20</span> / <span className="text-[#ff3b69] font-medium">80</span></span>
       </div>
     </div>
   )

@@ -94,10 +94,10 @@ const RsiOscillatorChart = ({ title, datos = {} }) => {
 
       {renderNavControls()}
 
-      {/* Footer con letras blancas */}
-      <div className="flex items-center justify-between pt-2 border-t border-[#142335] text-[10px] font-mono tracking-wider text-slate-300">
-        <span>Oversold: <span className="text-white font-medium">30</span></span>
-        <span>Overbought: <span className="text-white font-medium">70</span></span>
+      {/* Footer con zonas coloreadas: Oversold=verde (compra), Overbought=rojo (venta) */}
+      <div className="flex items-center justify-between pt-2 border-t border-[#142335] text-[10px] font-mono tracking-wider">
+        <span className="text-[#00f5c4]">Oversold: <span className="text-[#00f5c4] font-medium">30</span></span>
+        <span className="text-[#ff3b69]">Overbought: <span className="text-[#ff3b69] font-medium">70</span></span>
       </div>
     </div>
   )
