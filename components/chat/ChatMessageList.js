@@ -214,7 +214,7 @@ export default function ChatMessageList({
                     </div>
                   ) : (
                     /* Mensaje de Usuario Estándar con Markdown y Espaciado Limpio */
-                    <div className="bg-[#092222]/80 backdrop-blur-sm border border-emerald-500/40 text-white px-4 py-2.5 rounded-2xl rounded-tr-sm text-[13.5px] sm:text-sm font-sans shadow-lg leading-relaxed whitespace-pre-wrap break-words">
+                    <div className="bg-[#092222]/80 backdrop-blur-sm border border-emerald-500/40 text-white px-4 py-2.5 rounded-2xl rounded-tr-sm text-[15.5px] sm:text-[17px] font-sans shadow-lg leading-relaxed whitespace-pre-wrap break-words">
                       {renderMarkdown(msg.content, symbol, intervalLabel)}
                     </div>
                   )}
@@ -330,7 +330,7 @@ export default function ChatMessageList({
               </details>
             )}
 
-            <div className="text-[13.5px] sm:text-[14.5px] font-sans leading-[1.68] text-slate-100 break-words tracking-[-0.01em]">
+            <div className="text-[15.5px] sm:text-[17px] font-sans leading-[1.68] text-slate-100 break-words tracking-[-0.01em]">
               {renderMarkdown(msg.content, symbol, intervalLabel)}
             </div>
 

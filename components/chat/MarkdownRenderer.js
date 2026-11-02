@@ -67,7 +67,7 @@ export function renderMarkdown(text, currentSymbol, currentInterval) {
       elements.push(
         <ul
           key={`ul-${elements.length}`}
-          className="my-2.5 ml-5 space-y-1.5 list-disc marker:text-[#00f5c4] text-slate-300 text-[13.5px] leading-[1.65] font-sans"
+          className="my-2.5 ml-5 space-y-1.5 list-disc marker:text-[#00f5c4] text-slate-300 text-[15.5px] leading-[1.65] font-sans"
         >
           {listItems}
         </ul>
@@ -246,7 +246,7 @@ export function renderMarkdown(text, currentSymbol, currentInterval) {
     if (trimmed.startsWith("### ")) {
       flushList()
       elements.push(
-        <h4 key={i} style={{ color: HEADING_COLORS[headingIdx++ % HEADING_COLORS.length] }} className="font-semibold text-[14px] mt-4 mb-2 flex items-center gap-2 font-sans tracking-tight">
+        <h4 key={i} style={{ color: HEADING_COLORS[headingIdx++ % HEADING_COLORS.length] }} className="font-semibold text-[16px] mt-4 mb-2 flex items-center gap-2 font-sans tracking-tight">
           <span className="inline-block w-1 h-3.5 rounded-sm bg-current opacity-70" />
           {formatInline(trimmed.slice(4), i)}
         </h4>
@@ -254,14 +254,14 @@ export function renderMarkdown(text, currentSymbol, currentInterval) {
     } else if (trimmed.startsWith("## ")) {
       flushList()
       elements.push(
-        <h3 key={i} style={{ color: HEADING_COLORS[headingIdx++ % HEADING_COLORS.length] }} className="font-bold text-[15px] mt-5 mb-2.5 border-b border-[#16283d] pb-1.5 tracking-tight font-sans">
+        <h3 key={i} style={{ color: HEADING_COLORS[headingIdx++ % HEADING_COLORS.length] }} className="font-bold text-[17px] mt-5 mb-2.5 border-b border-[#16283d] pb-1.5 tracking-tight font-sans">
           {formatInline(trimmed.slice(3), i)}
         </h3>
       )
     } else if (trimmed.startsWith("# ")) {
       flushList()
       elements.push(
-        <h2 key={i} style={{ color: HEADING_COLORS[headingIdx++ % HEADING_COLORS.length] }} className="font-bold text-[17px] mt-6 mb-3 tracking-tight font-sans">
+        <h2 key={i} style={{ color: HEADING_COLORS[headingIdx++ % HEADING_COLORS.length] }} className="font-bold text-[19px] mt-6 mb-3 tracking-tight font-sans">
           {formatInline(trimmed.slice(2), i)}
         </h2>
       )
@@ -282,7 +282,7 @@ export function renderMarkdown(text, currentSymbol, currentInterval) {
     } else if (trimmed.startsWith("> ")) {
       flushList()
       elements.push(
-        <blockquote key={i} className="pl-3 border-l-2 border-[#00f5c4] my-2.5 text-slate-300 italic bg-[#00f5c4]/5 py-2 pr-3 rounded-r text-[13.5px] font-sans">
+        <blockquote key={i} className="pl-3 border-l-2 border-[#00f5c4] my-2.5 text-slate-300 italic bg-[#00f5c4]/5 py-2 pr-3 rounded-r text-[15.5px] font-sans">
           {formatInline(trimmed.slice(2), i)}
         </blockquote>
       )
@@ -292,7 +292,7 @@ export function renderMarkdown(text, currentSymbol, currentInterval) {
     } else {
       flushList()
       elements.push(
-        <p key={i} className="text-slate-200 my-1.5 leading-[1.68] text-[13.5px] sm:text-[14px] font-sans">
+        <p key={i} className="text-slate-200 my-1.5 leading-[1.68] text-[15.5px] sm:text-[17px] font-sans">
           {formatInline(trimmed, i)}
         </p>
       )
