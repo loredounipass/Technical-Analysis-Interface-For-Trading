@@ -91,6 +91,12 @@ export default function CandleChart({
   const bodySize = Math.min(Math.max((win.plotWidth / win.effCount) * 0.6, 1.5), 40)
   const wickSize = Math.max(1, bodySize * 0.18)
 
+  // El YAxis con orientation="right" ya reserva su propia banda (60px) dentro
+  // del grafico, asi que margin.right es espacio ADDICIONAL a esa banda. En
+  // pantallas estrechas los 75px de escritorio se comian una sexta parte del
+  // ancho y dejaban la esquina derecha vacia; se reduce segun el contenedor.
+  const chartRightMargin = !win.width ? 75 : win.width < 640 ? 10 : win.width < 1024 ? 26 : 75
+
   // Latest candle values for header stats
   const latestCandle = chartDataWithEma[chartDataWithEma.length - 1] || {}
   const currentPrice = latestCandle.close || 0
@@ -226,7 +232,7 @@ export default function CandleChart({
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart
             data={visibleData}
-            margin={{ top: 12, right: 75, left: 0, bottom: 5 }}
+            margin={{ top: 12, right: chartRightMargin, left: 0, bottom: 5 }}
           >
             <defs>
               <filter id="neonGlowCyan" x="-20%" y="-20%" width="140%" height="140%">
@@ -255,6 +261,7 @@ export default function CandleChart({
             <YAxis
               domain={domain}
               orientation="right"
+              width={win.width > 0 && win.width < 640 ? 52 : 60}
               tick={{ fill: "#94a3b8", fontSize: 10 }}
               axisLine={{ stroke: "#142335" }}
               tickLine={false}

@@ -110,6 +110,7 @@ export default function useChartWindow(total, {
 
   return {
     containerRef,
+    width,
     start,
     effEnd,
     effCount,
