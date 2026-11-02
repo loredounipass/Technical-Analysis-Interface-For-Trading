@@ -116,8 +116,6 @@ La app tiene 2 servicios (frontend y backend), cada uno con su propio `Dockerfil
 
 > 💡 Las variables `NEXT_PUBLIC_*` se inyectan en el build del frontend. Si cambias la URL del backend, ve al servicio en Render → **Environment** → guarda y usa **Deploy → Clear build cache & Deploy**.
 
-> ⚠️ En el plan **Free**, Render pone los servicios a dormir tras ~15 min sin tráfico; el primer acceso puede tardar ~50s en responder.
-
 ### Alternativa: Blueprint (1 click)
 
 En Render → **New → Blueprint**, conecta el repo. Se crean ambos servicios con `render.yaml`. Luego edita las env vars marcadas con `sync: false` con las URLs reales de cada servicio.
