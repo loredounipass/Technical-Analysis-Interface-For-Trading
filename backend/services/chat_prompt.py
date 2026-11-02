@@ -528,7 +528,7 @@ def get_trading_system_prompt(indicator_data=None, global_context=None, model_na
         data_block += f"| Last Candle OHLC | O: {_fmt(opens[-1] if opens else None)} H: {_fmt(highs[-1] if highs else None)} L: {_fmt(lows[-1] if lows else None)} C: {_fmt(closes[-1] if closes else None)} | Forming candle |\n"
         data_block += f"| RSI (14) | {_fmt(indicator_data.get('rsi'))} | Momentum Oscillator (OS <30, OB >70) |\n"
         data_block += f"| Stoch RSI (14, 3, 3) | {_fmt(indicator_data.get('rsiStoch'))} | Stochastic RSI (OS <20, OB >80) |\n"
-        data_block += f"| Stochastic (14, 3, 3) | %K: {_fmt(indicator_data.get('stochK'))} / %D: {_fmt(indicator_data.get('stochD'))} | Fast/Slow Stochastic Oscillator |\n"
+        data_block += f"| Stochastic (14, 3, 3) | %K: {_fmt(indicator_data.get('stochK'))} / %D: {_fmt(indicator_data.get('stochD'))} | Stochastic Oscillator: %K main line / %D signal line (SMA of %K) |\n"
         data_block += f"| CCI (20) | {_fmt(indicator_data.get('cci'))} | Commodity Channel Index (OS <-100, OB >100) |\n"
         data_block += f"| MFI (14) Money Flow | {_fmt(indicator_data.get('mfi'))} | Money Flow Index (Accumulation/Inflow >80, Distribution/Outflow <20) |\n"
         data_block += f"| MACD (12, 26, 9) | Line: {_fmt(indicator_data.get('macdValue'))} | Signal: {_fmt(indicator_data.get('macdSignal'))} | MACD trend line & trigger line |\n"

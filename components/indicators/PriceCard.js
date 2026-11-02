@@ -77,7 +77,7 @@ export default function PriceCard({
 
   return (
     <div className="synapse-card p-5 relative overflow-hidden flex flex-col justify-between min-h-[200px] group transition-all duration-300">
-      {/* Top row: CURRENT PRICE + LIVE FEED badge | HIGH 24H */}
+      {/* Top row: CURRENT PRICE + LIVE MARKET PRICE badge | HIGH 24H */}
       <div className="flex items-center justify-between text-[11px] font-mono tracking-wider mb-2">
         <div className="flex items-center gap-2">
           <span className="text-slate-400 font-bold uppercase tracking-widest text-[11px]">
@@ -85,7 +85,7 @@ export default function PriceCard({
           </span>
           <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[#00f5c4]/10 border border-[#00f5c4]/30 text-[#00f5c4]">
             <span className="w-1.5 h-1.5 rounded-full bg-[#00f5c4] animate-ping" />
-            <span className="text-[9px] font-bold tracking-widest uppercase">LIVE FEED</span>
+            <span className="text-[9px] font-bold tracking-widest uppercase">LIVE MARKET PRICE</span>
           </div>
         </div>
 

@@ -30,7 +30,8 @@ const IndicatorGrid = ({ datos = {} }) => {
           data={candleData}
           decimales={dec}
           timeframe={datos.timeframe || "15m"}
-          spread="0.02"
+          bestBid={datos.bestBid}
+          bestAsk={datos.bestAsk}
         />
       </div>
 
