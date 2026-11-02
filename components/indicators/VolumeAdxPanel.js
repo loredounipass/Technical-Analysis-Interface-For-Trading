@@ -24,12 +24,20 @@ const VolumeAdxPanel = ({ datos = {}, volumeChartData = [] }) => {
   )
   const windowCount = recentVolumeData.length
 
-  // Calculate Buyer Ratio
-  const totalSignals = (datos.buySignals || 0) + (datos.sellSignals || 0)
-  const buyerRatio =
-    totalSignals > 0
-      ? (((datos.buySignals || 0) / totalSignals) * 100).toFixed(1)
-      : "—"
+  // Buyer Vol = % del VOLUMEN EJECUTADO correspondiente a compras agresoras
+  // (order flow real de la cinta de trades). Es volumen negociado, NO votos
+  // de indicadores. Fallback stocks: dominancia compradora del proxy de
+  // volumen de velas (buyerPercent). Si no hay dato real, se muestra vacío.
+  const orderFlow = datos.orderFlow
+  const buyerVolRaw =
+    orderFlow && orderFlow.buyPercent != null
+      ? Number(orderFlow.buyPercent)
+      : datos.buyerPercent != null
+        ? Number(datos.buyerPercent)
+        : null
+  const buyerRatio = buyerVolRaw != null && Number.isFinite(buyerVolRaw)
+    ? buyerVolRaw.toFixed(1)
+    : "\u2014"
 
   const adxVal = Number(datos.adx) || 0
 
@@ -129,8 +137,18 @@ const VolumeAdxPanel = ({ datos = {}, volumeChartData = [] }) => {
           </span>
         </span>
         <span>
-          Buyer Ratio:{" "}
-          <span className="text-[#00f5c4] font-medium">{buyerRatio}%</span>
+          Buyer Vol:{" "}
+          <span
+            className={`font-medium ${
+              buyerRatio === "\u2014"
+                ? "text-slate-400"
+                : Number(buyerRatio) >= 50
+                  ? "text-[#00f5c4]"
+                  : "text-[#ff3b69]"
+            }`}
+          >
+            {buyerRatio === "\u2014" ? "\u2014" : `${buyerRatio}%`}
+          </span>
         </span>
       </div>
     </div>
