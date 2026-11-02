@@ -253,19 +253,38 @@ def compute_adx_series(highs, lows, closes, period=14):
     p_s = sum(pdi_raw[:period])
     m_s = sum(mdi_raw[:period])
     dx_values = []
+    # Primera DI con las sumas crudas de las velas 1..period: pertenece a la
+    # vela `period` (alineación canónica Wilder/TA-Lib).
+    tr_s0 = tr_s
+    if tr_s0:
+        plus_di[period] = 100 * p_s / tr_s0
+        minus_di[period] = 100 * m_s / tr_s0
+    else:
+        plus_di[period] = 0.0
+        minus_di[period] = 0.0
+    total_di = plus_di[period] + minus_di[period]
+    dx_values.append(100 * abs(plus_di[period] - minus_di[period]) / total_di if total_di else 0.0)
     for i in range(period, len(trs)):
         tr_s = tr_s - tr_s / period + trs[i]
         p_s = p_s - p_s / period + pdi_raw[i]
         m_s = m_s - m_s / period + mdi_raw[i]
-        plus_di[i] = 100 * p_s / tr_s if tr_s else 0.0
-        minus_di[i] = 100 * m_s / tr_s if tr_s else 0.0
-        total_di = plus_di[i] + minus_di[i]
-        dx_values.append(100 * abs(plus_di[i] - minus_di[i]) / total_di if total_di else 0.0)
+        # trs[i] pertenece a la vela i+1 (trs arranca en la vela 1); el valor
+        # suavizado de DI se calcula CON datos de la vela i+1, asi que se
+        # almacena en el indice i+1 para alinear la serie con las velas.
+        bar = i + 1
+        plus_di[bar] = 100 * p_s / tr_s if tr_s else 0.0
+        minus_di[bar] = 100 * m_s / tr_s if tr_s else 0.0
+        total_di = plus_di[bar] + minus_di[bar]
+        dx_values.append(100 * abs(plus_di[bar] - minus_di[bar]) / total_di if total_di else 0.0)
 
     if len(dx_values) >= period:
-        adx[period + period - 1] = sum(dx_values[:period]) / period
+        # dx_values[j] corresponde a la vela period+j: la media de los
+        # primeros `period` DX es el ADX de la vela 2*period-1; luego recursa
+        # Wilder (adx[i] = (adx[i-1]*(p-1) + dx[i]) / p) vela a vela.
+        adx[2 * period - 1] = sum(dx_values[:period]) / period
         for j in range(period, len(dx_values)):
-            adx[period + j] = (adx[period + j - 1] * (period - 1) + dx_values[j]) / period
+            bar = period + j
+            adx[bar] = (adx[bar - 1] * (period - 1) + dx_values[j]) / period
     return adx, plus_di, minus_di
 
 
