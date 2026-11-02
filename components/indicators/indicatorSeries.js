@@ -22,7 +22,7 @@ export function buildCandleAndVolumeSeries(datos) {
       const t = new Date(datos.history.times[i]).toLocaleTimeString([], {
         hour: "2-digit",
         minute: "2-digit",
-        timeZone: "America/Chicago",
+        timeZone: "UTC",
       })
 
       candleData.push({

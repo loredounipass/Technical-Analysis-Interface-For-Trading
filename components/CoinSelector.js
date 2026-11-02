@@ -14,7 +14,7 @@ export default function CoinSelector({ monedas, acciones, onSelect }) {
     setMounted(true)
     const updateTime = () => {
       const now = new Date()
-      setTime(now.toLocaleTimeString("en-US", { hour12: false, timeZone: "America/Chicago" }))
+      setTime(now.toLocaleTimeString("en-US", { hour12: false, timeZone: "UTC" }))
     }
     updateTime()
     const interval = setInterval(updateTime, 1000)
@@ -99,7 +99,7 @@ export default function CoinSelector({ monedas, acciones, onSelect }) {
           </div>
 
           <div className="flex items-center gap-4 text-[11px]">
-            <span className="text-slate-400">CT {time}</span>
+            <span className="text-slate-400">UTC {time}</span>
             <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[#0c1420] border border-[#16283d]">
               <Radio className="w-3 h-3 text-[#00f5c4]" />
               <span className="text-[10px] text-slate-300 font-bold">LIVE</span>

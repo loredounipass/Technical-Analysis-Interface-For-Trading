@@ -26,7 +26,7 @@ export default function Dashboard({ moneda, market = "crypto", onCambiarMoneda }
     setMounted(true)
     const updateTime = () => {
       const now = new Date()
-      setTime(now.toLocaleTimeString("en-US", { hour12: false, timeZone: "America/Chicago" }))
+      setTime(now.toLocaleTimeString("en-US", { hour12: false, timeZone: "UTC" }))
     }
     updateTime()
     const interval = setInterval(updateTime, 1000)

@@ -39,7 +39,7 @@ export default function Header({
     } else {
       const updateTime = () => {
         const now = new Date()
-        setCurrentTime(now.toLocaleTimeString("en-US", { hour12: false, timeZone: "America/Chicago" }))
+        setCurrentTime(now.toLocaleTimeString("en-US", { hour12: false, timeZone: "UTC" }))
       }
       updateTime()
       const interval = setInterval(updateTime, 1000)
@@ -175,7 +175,7 @@ export default function Header({
           </div>
 
           <div className="text-slate-300 font-semibold tracking-wider">
-            CT <span className="text-white font-bold">{currentTime || "18:14:02"}</span>
+            UTC <span className="text-white font-bold">{currentTime || "00:00:00"}</span>
           </div>
         </div>
       </div>

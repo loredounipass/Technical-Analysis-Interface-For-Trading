@@ -21,7 +21,7 @@ const MovingAveragesChart = ({ title, datos = {} }) => {
           ? new Date(t).toLocaleTimeString([], {
             hour: "2-digit",
             minute: "2-digit",
-            timeZone: "America/Chicago",
+            timeZone: "UTC",
           })
           : `Vela ${i + 1}`,
         ema50: datos.history.ema50?.[i] ?? null,

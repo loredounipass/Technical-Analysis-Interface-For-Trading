@@ -140,15 +140,13 @@ def _bb_pos(price, upper, lower):
         return 'N/A'
 
 
-# Formatea un timestamp en ms a hora America/Chicago (Central Time)
+# Formatea un timestamp en ms a hora UTC (coherente con velas y pivotes del sistema)
 def _fmt_ts(ms):
     if not ms:
         return 'N/A'
     try:
         utc_dt = datetime.datetime.utcfromtimestamp(int(ms) / 1000).replace(tzinfo=datetime.timezone.utc)
-        ct_offset = datetime.timezone(datetime.timedelta(hours=-5))
-        local_dt = utc_dt.astimezone(ct_offset)
-        return local_dt.strftime('%Y-%m-%d %H:%M CT')
+        return utc_dt.strftime('%Y-%m-%d %H:%M UTC')
     except Exception:
         return str(ms)
 
