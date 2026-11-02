@@ -516,7 +516,7 @@ Veredicto claro basado en todos los datos del terminal: el momentum favorece COM
   return (
     <>
       {/* Barra inferior con accesos a acciones rápidas y modelos */}
-      <div className="px-5 py-2.5 sm:px-6 bg-[#050d12]/40 backdrop-blur-sm border-t border-emerald-500/10 flex flex-wrap items-center gap-2 sm:gap-3 z-10">
+      <div className="px-3.5 py-2 sm:px-6 sm:py-2.5 bg-[#050d12]/40 backdrop-blur-sm border-t border-emerald-500/10 flex flex-wrap items-center gap-2 sm:gap-3 z-10">
         <button
           type="button"
           onClick={() => {
@@ -528,7 +528,8 @@ Veredicto claro basado en todos los datos del terminal: el momentum favorece COM
           className="bg-[#09151d] hover:bg-emerald-950/60 border border-emerald-500/30 hover:border-emerald-400/60 text-xs font-mono text-slate-300 hover:text-white px-3 py-1.5 rounded-full transition-all cursor-pointer whitespace-nowrap shadow-sm flex items-center gap-2 active:scale-95"
         >
           <Layers className="w-3.5 h-3.5 text-emerald-400" />
-          <span>Estrategias y Análisis</span>
+          <span className="sm:hidden">Acciones</span>
+          <span className="hidden sm:inline">Estrategias y Análisis</span>
           <span className="text-[9px] bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 px-1.5 py-0.5 rounded-full font-bold">
             {strategies.length + analyses.length}
           </span>

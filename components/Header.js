@@ -72,22 +72,45 @@ export default function Header({
 
   return (
     <header className="w-full bg-[#070c14]/95 border-b border-[#142335] sticky top-0 z-50 backdrop-blur-md px-3 sm:px-6 py-2.5 mb-5 shadow-lg shadow-black/40">
-      <div className="max-w-[1600px] mx-auto flex flex-wrap items-center justify-between gap-y-2.5 gap-x-3 text-xs font-mono">
-        {/* Left: Brand + Status + Coin badge */}
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-          {/* Brand - Slightly larger logo and title */}
+      <div className="max-w-[1600px] mx-auto flex flex-col gap-2.5 text-xs font-mono">
+        {/* Row 1: Brand (left) + live status (right). Always a single clean line. */}
+        <div className="flex items-center justify-between gap-3">
+          {/* Brand */}
           <div
             onClick={() => router.push("/dashboard")}
-            className="flex items-center gap-2.5 pr-1 cursor-pointer group"
+            className="flex items-center gap-2.5 cursor-pointer group min-w-0"
           >
-            <div className="w-8 h-8 rounded-lg bg-[#00f5c4]/10 border border-[#00f5c4]/40 flex items-center justify-center text-[#00f5c4] shadow-[0_0_12px_rgba(0,245,196,0.3)] group-hover:scale-105 transition-transform">
+            <div className="w-8 h-8 rounded-lg bg-[#00f5c4]/10 border border-[#00f5c4]/40 flex items-center justify-center text-[#00f5c4] shadow-[0_0_12px_rgba(0,245,196,0.3)] group-hover:scale-105 transition-transform flex-shrink-0">
               <Activity className="w-4.5 h-4.5 animate-pulse" />
             </div>
             <span className="font-extrabold tracking-wider text-white text-base sm:text-lg whitespace-nowrap group-hover:text-[#00f5c4] transition-colors">
               SYNAPSE TERMINAL
             </span>
           </div>
-
+  
+          {/* Connection status + UTC clock. The text label collapses to just a
+              colored dot on mobile so the top row never wraps. */}
+          <div className="flex items-center gap-2 sm:gap-3 text-[11px] flex-shrink-0">
+            <div
+              className="flex items-center gap-1.5 px-2 sm:px-2.5 py-0.5 rounded-full bg-[#09111b] border border-[#16283d]"
+              title={isConnected ? "Connection stable" : "Connection lost"}
+            >
+              <span
+                className={`w-1.5 h-1.5 rounded-full ${isConnected ? "bg-[#00f5c4] shadow-[0_0_8px_#00f5c4]" : "bg-[#ff3b69]"}`}
+              />
+              <span className={`hidden sm:inline ${isConnected ? "text-slate-200" : "text-[#ff3b69]"}`}>
+                {isConnected ? "CONN. STABLE" : "CONN. LOST"}
+              </span>
+            </div>
+  
+            <div className="text-slate-300 font-semibold tracking-wider">
+              UTC <span className="text-white font-bold">{currentTime || "00:00:00"}</span>
+            </div>
+          </div>
+        </div>
+  
+        {/* Row 2: Asset badge + navigation actions + timeframe selector */}
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           {/* Coin / Pair badge con ETH/USDT y SPOT claramente separados */}
           <button
             onClick={handleCambiarMoneda}
@@ -102,58 +125,59 @@ export default function Header({
               {activeAsset?.market === "stock" ? (activeAsset?.badge || "STOCK") : "SPOT"}
             </span>
           </button>
-        </div>
-
-        {/* Center: Actions & Timeframes */}
-        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-          {/* Install app button (solo aparece si el navegador ofrece instalar la PWA) */}
-          <InstallButton />
-
-          {/* Dashboard button (shown when on news page) */}
-          {isNewsPage && (
+  
+          {/* Navigation actions: icon-only on mobile, icon + label from sm up */}
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            {/* Install app button (solo aparece si el navegador ofrece instalar la PWA) */}
+            <InstallButton />
+  
+            {/* Dashboard button (shown when on news page) */}
+            {isNewsPage && (
+              <button
+                onClick={() => router.push("/dashboard")}
+                className="flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full bg-[#09111b] border border-[#16283d] hover:border-[#00f5c4]/40 hover:bg-[#00f5c4]/5 text-white transition-all text-sm font-semibold tracking-wide shadow-sm"
+                title="Return to Trading Dashboard"
+              >
+                <LayoutDashboard className="w-4 h-4 text-[#00f5c4]" />
+                <span className="hidden sm:inline font-semibold whitespace-nowrap">Dashboard</span>
+              </button>
+            )}
+  
+            {/* Market News button */}
             <button
-              onClick={() => router.push("/dashboard")}
-              className="flex items-center gap-2 px-4 py-2 rounded-full bg-[#09111b] border border-[#16283d] hover:border-[#00f5c4]/40 hover:bg-[#00f5c4]/5 text-white transition-all text-sm font-semibold tracking-wide shadow-sm"
-              title="Return to Trading Dashboard"
+              onClick={() => router.push("/news")}
+              className={`flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full transition-all text-sm font-semibold tracking-wide shadow-sm ${
+                isNewsPage
+                  ? "bg-cyan-400/15 border border-cyan-400 text-cyan-400 shadow-[0_0_12px_rgba(6,182,212,0.25)]"
+                  : "bg-[#09111b] border border-[#16283d] hover:border-cyan-400/40 hover:bg-cyan-400/5 text-white"
+              }`}
+              title="Market News"
             >
-              <LayoutDashboard className="w-4 h-4 text-[#00f5c4]" />
-              <span className="text-white font-semibold whitespace-nowrap">Dashboard</span>
+              <Newspaper className="w-4 h-4 text-cyan-400" />
+              <span className="hidden sm:inline font-semibold whitespace-nowrap">MarketNews</span>
             </button>
-          )}
-
-          {/* Market News button */}
-          <button
-            onClick={() => router.push("/news")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all text-sm font-semibold tracking-wide shadow-sm ${
-              isNewsPage
-                ? "bg-cyan-400/15 border border-cyan-400 text-cyan-400 shadow-[0_0_12px_rgba(6,182,212,0.25)]"
-                : "bg-[#09111b] border border-[#16283d] hover:border-cyan-400/40 hover:bg-cyan-400/5 text-white"
-            }`}
-          >
-            <Newspaper className="w-4 h-4 text-cyan-400" />
-            <span className="hidden sm:inline font-semibold whitespace-nowrap">MarketNews</span>
-          </button>
-
-          {/* Change pair button */}
-          <button
-            onClick={handleCambiarMoneda}
-            className="flex items-center gap-2 px-4 py-2 rounded-full bg-[#09111b] border border-[#16283d] hover:border-[#00f5c4]/40 hover:bg-[#00f5c4]/5 text-white transition-all text-sm font-semibold tracking-wide shadow-sm"
-            title="Change Trading Pair"
-          >
-            <ArrowLeftRight className="w-4 h-4 text-[#00f5c4]" />
-            <span className="text-white font-semibold whitespace-nowrap">Change Coin</span>
-          </button>
-
-          {/* Timeframe pill selector */}
+  
+            {/* Change pair button */}
+            <button
+              onClick={handleCambiarMoneda}
+              className="flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full bg-[#09111b] border border-[#16283d] hover:border-[#00f5c4]/40 hover:bg-[#00f5c4]/5 text-white transition-all text-sm font-semibold tracking-wide shadow-sm"
+              title="Change Trading Pair"
+            >
+              <ArrowLeftRight className="w-4 h-4 text-[#00f5c4]" />
+              <span className="hidden sm:inline font-semibold whitespace-nowrap">Change Coin</span>
+            </button>
+          </div>
+  
+          {/* Timeframe pill selector: full-width, evenly spread on mobile */}
           {onTimeframeChange && (
-            <div className="flex items-center gap-1 p-1 rounded-full bg-[#09111b] border border-[#16283d]">
+            <div className="flex items-center gap-1 p-1 rounded-full bg-[#09111b] border border-[#16283d] w-full sm:w-auto sm:ml-auto">
               {timeframes.map((tf) => {
                 const isActive = timeframe.toLowerCase() === tf.toLowerCase()
                 return (
                   <button
                     key={tf}
                     onClick={() => onTimeframeChange(tf)}
-                    className={`px-3.5 py-1.5 rounded-full text-sm font-semibold tracking-wide transition-all uppercase ${isActive
+                    className={`flex-1 sm:flex-none px-2.5 sm:px-3.5 py-1.5 rounded-full text-sm font-semibold tracking-wide transition-all uppercase text-center ${isActive
                       ? "bg-[#00f5c4]/15 border border-[#00f5c4] text-[#00f5c4] shadow-[0_0_12px_rgba(0,245,196,0.35)]"
                       : "text-slate-300 hover:text-white border border-transparent"
                       }`}
@@ -164,23 +188,6 @@ export default function Header({
               })}
             </div>
           )}
-        </div>
-
-        {/* Right: Connection Status + UTC Clock */}
-        <div className="flex items-center gap-3 text-[11px]">
-          <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#09111b] border border-[#16283d]">
-            <span
-              className={`w-1.5 h-1.5 rounded-full ${isConnected ? "bg-[#00f5c4] shadow-[0_0_8px_#00f5c4]" : "bg-[#ff3b69]"
-                }`}
-            />
-            <span className={isConnected ? "text-slate-200" : "text-[#ff3b69]"}>
-              {isConnected ? "CONN. STABLE" : "CONN. LOST"}
-            </span>
-          </div>
-
-          <div className="text-slate-300 font-semibold tracking-wider">
-            UTC <span className="text-white font-bold">{currentTime || "00:00:00"}</span>
-          </div>
         </div>
       </div>
     </header>
