@@ -8,7 +8,6 @@ import {
   Line,
   Bar,
   Cell,
-  XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
@@ -635,23 +634,10 @@ const ChartCard = ({ title, icon, type, datos = {} }) => {
 
         {renderNavControls()}
 
-        <div className="flex items-center justify-between gap-2 pt-2 border-t border-[#142335] text-[10px] font-mono tracking-wider text-slate-300">
-          {[
-            { label: "MA50", color: "#f59e0b", value: datos.ema50 },
-            { label: "MA100", color: "#38bdf8", value: datos.ema100 },
-            { label: "MA200", color: "#a855f7", value: datos.ema200 },
-          ].map((ma) => (
-            <span key={ma.label} className="flex items-center gap-1.5 whitespace-nowrap">
-              <span
-                className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                style={{ backgroundColor: ma.color }}
-              />
-              <span style={{ color: ma.color }}>{ma.label}</span>
-              <span className="text-white font-medium">
-                ${safeToFixed(ma.value, datos.decimales)}
-              </span>
-            </span>
-          ))}
+        <div className="flex items-center justify-between pt-2 border-t border-[#142335] text-[10px] font-mono tracking-wider text-slate-300">
+          <span>EMA50: <span className="text-[#00f5c4] font-medium">${safeToFixed(datos.ema50, datos.decimales)}</span></span>
+          <span>EMA100: <span className="text-[#38bdf8] font-medium">${safeToFixed(datos.ema100, datos.decimales)}</span></span>
+          <span>EMA200: <span className="text-[#ff3b69] font-medium">${safeToFixed(datos.ema200, datos.decimales)}</span></span>
         </div>
       </div>
     )
