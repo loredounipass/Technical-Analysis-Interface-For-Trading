@@ -250,10 +250,10 @@ const OrderFlowSwingsPanel = ({ datos = {}, dec = 2 }) => {
                     <div className="mt-1.5">
                       <div className="w-full h-1 bg-[#08111a] rounded-full overflow-hidden">
                         <div
-                          className={`h-full transition-all duration-300 ${
+                          className={`h-full transition-all duration-300 ${sideBarColor} ${
                             Math.abs(Number(distPct)) < 0.5
-                              ? "bg-amber-400 shadow-[0_0_6px_#fbbf24]"
-                              : sideBarColor
+                              ? (isBuySide ? "shadow-[0_0_6px_#00f5c4]" : "shadow-[0_0_6px_#ff3b69]")
+                              : ""
                           }`}
                           style={{ width: `${Math.max(5, Math.min(100, 100 - Math.abs(Number(distPct)) * 10))}%` }}
                         />
