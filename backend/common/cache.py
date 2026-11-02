@@ -131,9 +131,10 @@ def rate_limited(ip):
 # fuentes de datos (p.ej. USDTUSDT) y quemen rate limit
 CRYPTO_SYMBOLS = {"BTCUSDT", "ETHUSDT", "SOLUSDT", "PEPEUSDT", "BNBUSDT", "DOGEUSDT", "XRPUSDT", "SHIBUSDT"}
 # Stocks + indices/commodities servidos todos por Yahoo Finance (market='stock').
-# ^NDX = Nasdaq-100, GC=F = futuro de oro COMEX. Se enrutan igual que las
-# acciones porque fetch_yahoo_chart usa el endpoint generico de chart de Yahoo.
-STOCK_SYMBOLS = {"AAPL", "MSFT", "NVDA", "TSLA", "AMZN", "GOOGL", "META", "NFLX", "AMD", "INTC", "LMT", "^NDX", "GC=F"}
+# ^NDX = Nasdaq-100, GC=F = futuro de oro COMEX, EURUSD=X = par forex.
+# Se enrutan igual que las acciones porque fetch_yahoo_chart usa el endpoint
+# generico de chart de Yahoo.
+STOCK_SYMBOLS = {"AAPL", "MSFT", "NVDA", "TSLA", "AMZN", "GOOGL", "META", "NFLX", "AMD", "INTC", "LMT", "^NDX", "GC=F", "EURUSD=X"}
 
 
 def get_trading_cached(symbol, interval_str='15m', market='crypto', force=False,

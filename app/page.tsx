@@ -38,11 +38,12 @@ const ACCIONES: Record<string, Moneda> = {
   18: { nombre: "Lockheed Martin", symbol: "LMT", icon: "✈️", badge: "NYSE", market: "stock" },
 }
 
-// Indices y materias primas: se sirven por Yahoo Finance, por eso usan
+// Indices, materias primas y forex: se sirven por Yahoo Finance, por eso usan
 // market="stock" (es lo que enruta al gateway de Yahoo en el backend).
 const INDICES: Record<string, Moneda> = {
   19: { nombre: "Nasdaq 100", symbol: "^NDX", icon: "📊", badge: "NASDAQ", market: "stock" },
   20: { nombre: "Oro (Futuro)", symbol: "GC=F", icon: "🥇", badge: "COMEX", market: "stock" },
+  21: { nombre: "Euro / Dólar", symbol: "EURUSD=X", icon: "💶", badge: "FOREX", market: "stock" },
 }
 
 const STORAGE_KEY = "woody-terminal-asset"

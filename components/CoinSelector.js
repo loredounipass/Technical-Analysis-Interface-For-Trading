@@ -47,6 +47,7 @@ export default function CoinSelector({ monedas, acciones, indices, onSelect }) {
       "LMT": { from: "#0ea5e9", to: "#0369a1", glow: "rgba(14, 165, 233, 0.25)" },
       "^NDX": { from: "#6366f1", to: "#312e81", glow: "rgba(99, 102, 241, 0.25)" },
       "GC=F": { from: "#f5c542", to: "#a16207", glow: "rgba(245, 197, 66, 0.25)" },
+      "EURUSD=X": { from: "#2f6fed", to: "#1e3a8a", glow: "rgba(47, 111, 237, 0.25)" },
     }
     
     if (knownColors[symbol]) return knownColors[symbol]

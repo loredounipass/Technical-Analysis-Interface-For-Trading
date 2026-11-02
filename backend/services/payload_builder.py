@@ -15,7 +15,7 @@ from services.indicators import (
     compute_cci_series, compute_mfi_series, compute_adx_series, compute_pivots,
     compute_order_blocks, compute_fair_value_gaps, compute_liquidity_swings,
     compute_order_flow, compute_order_flow_proxy, compute_signal_summary,
-    last_non_none, price_decimals,
+    last_non_none, price_decimals, forex_decimals,
 )
 from services.data_fetchers import (
     fetch_last_price, fetch_klines_and_volume, interval_seconds,
@@ -358,7 +358,7 @@ def build_payload(symbol, interval_str, market, klines, vol_24h=None):
         'symbol': symbol,
         'market': market,
         'precio': precio,
-        'decimales': price_decimals(precio),
+        'decimales': forex_decimals(symbol) or price_decimals(precio),
         'rsi': last_non_none(rsi_series),
         'rsiStoch': last_non_none(stoch_rsi_k),
         'volumen': vol_24h if vol_24h is not None else (quote_volumes[-1] if quote_volumes else None),

@@ -38,6 +38,18 @@ def price_decimals(price):
     return 2
 
 
+# CONVENCION FOREX: los pares con sufijo =X de Yahoo cotizan con 5 decimales
+# (los que incluyen JPY, 3). Sin esto, EURUSD a 1.12 se mostraria con 3
+# decimales y las variaciones del par parecerian siempre 0.00.
+def forex_decimals(symbol):
+    if not symbol or not symbol.endswith('=X'):
+        return None
+    base = symbol[:-2]
+    if base.endswith('JPY'):
+        return 3
+    return 5
+
+
 # ─────────────────────────────────────────────────────────────────────
 # MEDIAS MOVILES
 # ─────────────────────────────────────────────────────────────────────
