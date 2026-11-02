@@ -34,10 +34,10 @@ const RsiOscillatorChart = ({ title, datos = {} }) => {
   const isOS = rsiVal <= 30
   const statusText = isOB ? "Overbought" : isOS ? "Oversold" : "Neutral"
   const badgeColor = isOB
-    ? "bg-[#ff3b69]/15 border border-[#ff3b69]/40 text-[#ff3b69]"
+    ? "bg-[#00f5c4]/15 border border-[#00f5c4]/40 text-[#00f5c4]"
     : isOS
-      ? "bg-[#00f5c4]/15 border border-[#00f5c4]/40 text-[#00f5c4]"
-      : "bg-[#00f5c4]/10 border border-[#00f5c4]/30 text-[#00f5c4]"
+      ? "bg-[#ff3b69]/15 border border-[#ff3b69]/40 text-[#ff3b69]"
+      : "bg-amber-500/10 border border-amber-500/30 text-amber-400"
 
   return (
     <div className="synapse-card p-3.5 flex flex-col justify-between">
@@ -62,8 +62,8 @@ const RsiOscillatorChart = ({ title, datos = {} }) => {
               <CartesianGrid strokeDasharray="2 2" stroke="#132235" vertical={false} />
               <YAxis domain={[0, 100]} hide={true} />
               <Tooltip contentStyle={TOOLTIP_STYLE} />
-              <ReferenceLine y={70} stroke="#ff3b69" strokeDasharray="3 3" strokeOpacity={0.3} />
-              <ReferenceLine y={30} stroke="#00f5c4" strokeDasharray="3 3" strokeOpacity={0.3} />
+              <ReferenceLine y={70} stroke="#00f5c4" strokeDasharray="3 3" strokeOpacity={0.3} />
+              <ReferenceLine y={30} stroke="#ff3b69" strokeDasharray="3 3" strokeOpacity={0.3} />
               <Line
                 type="monotone"
                 dataKey="rsi"
@@ -94,10 +94,10 @@ const RsiOscillatorChart = ({ title, datos = {} }) => {
 
       {renderNavControls()}
 
-      {/* Footer con zonas coloreadas: Oversold=verde (compra), Overbought=rojo (venta) */}
+      {/* Footer con zonas coloreadas: Oversold=rojo (sobre venta), Overbought=verde (sobre compra) */}
       <div className="flex items-center justify-between pt-2 border-t border-[#142335] text-[10px] font-mono tracking-wider">
-        <span className="text-[#00f5c4]">Oversold: <span className="text-[#00f5c4] font-medium">30</span></span>
-        <span className="text-[#ff3b69]">Overbought: <span className="text-[#ff3b69] font-medium">70</span></span>
+        <span className="text-[#ff3b69]">Oversold: <span className="text-[#ff3b69] font-medium">30</span></span>
+        <span className="text-[#00f5c4]">Overbought: <span className="text-[#00f5c4] font-medium">70</span></span>
       </div>
     </div>
   )

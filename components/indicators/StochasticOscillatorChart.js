@@ -40,10 +40,10 @@ const StochasticOscillatorChart = ({ title, datos = {} }) => {
   const isOS = kVal <= 20
   const statusText = isOB ? "Overbought" : isOS ? "Oversold" : "Neutral"
   const badgeColor = isOB
-    ? "bg-[#ff3b69]/15 border border-[#ff3b69]/40 text-[#ff3b69]"
-    : isOS
     ? "bg-[#00f5c4]/15 border border-[#00f5c4]/40 text-[#00f5c4]"
-    : "bg-cyan-500/10 border border-cyan-500/30 text-cyan-400"
+    : isOS
+    ? "bg-[#ff3b69]/15 border border-[#ff3b69]/40 text-[#ff3b69]"
+    : "bg-amber-500/10 border border-amber-500/30 text-amber-400"
 
   return (
     <div className="synapse-card p-3.5 flex flex-col justify-between">
@@ -71,13 +71,13 @@ const StochasticOscillatorChart = ({ title, datos = {} }) => {
                 contentStyle={TOOLTIP_STYLE}
                 formatter={(value, name) => {
                   const val = safeToFixed(value, 2)
-                  if (name === "k") return [val, "%K Line (Fast)"]
-                  if (name === "d") return [val, "%D Line (Slow)"]
+                  if (name === "k") return [val, "%K \u00b7 Principal"]
+                  if (name === "d") return [val, "%D \u00b7 Se\u00f1al"]
                   return [val, name]
                 }}
               />
-              <ReferenceLine y={80} stroke="#ff3b69" strokeDasharray="3 3" strokeOpacity={0.35} />
-              <ReferenceLine y={20} stroke="#00f5c4" strokeDasharray="3 3" strokeOpacity={0.35} />
+              <ReferenceLine y={80} stroke="#00f5c4" strokeDasharray="3 3" strokeOpacity={0.35} />
+              <ReferenceLine y={20} stroke="#ff3b69" strokeDasharray="3 3" strokeOpacity={0.35} />
               {/* %K Line: Neon Cyan */}
               <Line
                 type="monotone"
@@ -110,11 +110,11 @@ const StochasticOscillatorChart = ({ title, datos = {} }) => {
 
       {renderNavControls()}
 
-      {/* Footer: lineas %K/%D y zonas 20=verde / 80=rojo */}
+      {/* Footer: lineas %K/%D con nombre y zonas 20=rojo (venta) / 80=verde (compra) */}
       <div className="flex items-center justify-between pt-2 border-t border-[#142335] text-[10px] font-mono tracking-wider">
-        <span className="text-[#00f5c4]">%K: <span className="text-[#00f5c4] font-medium">{safeToFixed(kVal, 2)}</span></span>
-        <span className="text-[#ff3b69]">%D: <span className="text-[#ff3b69] font-medium">{safeToFixed(dVal, 2)}</span></span>
-        <span>Zone: <span className="text-[#00f5c4] font-medium">20</span> / <span className="text-[#ff3b69] font-medium">80</span></span>
+        <span className="text-[#00f5c4]">%K · Principal: <span className="text-[#00f5c4] font-medium">{safeToFixed(kVal, 2)}</span></span>
+        <span className="text-[#ff3b69]">%D · Señal: <span className="text-[#ff3b69] font-medium">{safeToFixed(dVal, 2)}</span></span>
+        <span>Zona: <span className="text-[#ff3b69] font-medium">Venta 20</span> / <span className="text-[#00f5c4] font-medium">Compra 80</span></span>
       </div>
     </div>
   )
