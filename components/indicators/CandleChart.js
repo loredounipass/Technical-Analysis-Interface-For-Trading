@@ -20,21 +20,8 @@ export default function CandleChart({
   data = [],
   decimales = 2,
   timeframe = "15m",
-  bestBid = null,
-  bestAsk = null,
 }) {
   const hasData = data.length > 0
-
-  // Spread real = bestAsk - bestBid (diferencia entre la mejor oferta de venta
-  // y la mejor de compra del order book). Si no hay datos del libro se muestra
-  // vacio; nunca un valor fijo inventado.
-  const spreadVal =
-    bestBid != null && bestAsk != null &&
-    Number.isFinite(Number(bestBid)) && Number.isFinite(Number(bestAsk))
-      ? Number(bestAsk) - Number(bestBid)
-      : null
-  const spreadText =
-    spreadVal != null ? `${spreadVal.toFixed(Math.max(decimales, 2))} USDT` : "\u2014"
 
   // Format helper
   const fmt = (n) => {
@@ -245,12 +232,8 @@ export default function CandleChart({
           )}
         </div>
 
-        {/* Right stats: Spread + Candles + EMA + Controles de navegación */}
+        {/* Right stats: Candles + EMA + Controles de navegación */}
         <div className="flex items-center gap-2 text-[11px]">
-          <span className="text-slate-300 hidden xl:inline">
-            Spread: <span className="text-[#00f5c4] font-bold">{spreadText}</span>
-          </span>
-
           <span className="px-2 py-0.5 rounded bg-[#09111b] border border-[#16283d] text-white font-medium uppercase hidden sm:inline">
             CANDLES {timeframe}
           </span>
