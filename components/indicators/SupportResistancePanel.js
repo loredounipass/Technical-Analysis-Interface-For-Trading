@@ -13,7 +13,7 @@ const SupportResistancePanel = ({ datos = {}, dec = 2 }) => {
       {/* Support */}
       <IndicatorCard
         title="SUPPORT LEVELS"
-        icon={<Shield className="w-3.5 h-3.5 text-[#00f5c4]" />}
+        icon={<Shield className="w-3.5 h-3.5 text-[#ff3b69]" />}
       >
         <div className="space-y-1.5 font-mono">
           {[
@@ -23,17 +23,17 @@ const SupportResistancePanel = ({ datos = {}, dec = 2 }) => {
           ].map((support) => (
             <div
               key={support.level}
-              className="flex items-center justify-between bg-[#00f5c4]/5 hover:bg-[#00f5c4]/10 transition-colors p-2 rounded-md border border-[#00f5c4]/15"
+              className="flex items-center justify-between bg-[#ff3b69]/5 hover:bg-[#ff3b69]/10 transition-colors p-2 rounded-md border border-[#ff3b69]/15"
             >
               <div className="flex items-center gap-2">
-                <span className="text-[#00f5c4] font-bold text-xs">{support.level}</span>
+                <span className="text-[#ff3b69] font-bold text-xs">{support.level}</span>
                 <span className="text-[9px] text-slate-300 uppercase">[{support.strength}]</span>
               </div>
               <div className="flex items-center gap-3">
                 <span className="text-white font-medium text-xs tabular-nums">
                   {formatLevel(support.value, dec)}
                 </span>
-                <span className="text-[10px] text-[#00f5c4] tabular-nums">
+                <span className="text-[10px] text-[#ff3b69] tabular-nums">
                   -{support.distance}%
                 </span>
               </div>
@@ -45,7 +45,7 @@ const SupportResistancePanel = ({ datos = {}, dec = 2 }) => {
       {/* Resistance */}
       <IndicatorCard
         title="RESISTANCE LEVELS"
-        icon={<Target className="w-3.5 h-3.5 text-[#ff3b69]" />}
+        icon={<Target className="w-3.5 h-3.5 text-[#00f5c4]" />}
       >
         <div className="space-y-1.5 font-mono">
           {[
@@ -55,17 +55,17 @@ const SupportResistancePanel = ({ datos = {}, dec = 2 }) => {
           ].map((resistance) => (
             <div
               key={resistance.level}
-              className="flex items-center justify-between bg-[#ff3b69]/5 hover:bg-[#ff3b69]/10 transition-colors p-2 rounded-md border border-[#ff3b69]/15"
+              className="flex items-center justify-between bg-[#00f5c4]/5 hover:bg-[#00f5c4]/10 transition-colors p-2 rounded-md border border-[#00f5c4]/15"
             >
               <div className="flex items-center gap-2">
-                <span className="text-[#ff3b69] font-bold text-xs">{resistance.level}</span>
+                <span className="text-[#00f5c4] font-bold text-xs">{resistance.level}</span>
                 <span className="text-[9px] text-slate-300 uppercase">[{resistance.strength}]</span>
               </div>
               <div className="flex items-center gap-3">
                 <span className="text-white font-medium text-xs tabular-nums">
                   {formatLevel(resistance.value, dec)}
                 </span>
-                <span className="text-[10px] text-[#ff3b69] tabular-nums">
+                <span className="text-[10px] text-[#00f5c4] tabular-nums">
                   +{resistance.distance}%
                 </span>
               </div>
