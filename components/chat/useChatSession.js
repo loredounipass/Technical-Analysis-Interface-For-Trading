@@ -240,6 +240,19 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
     }
   }, [isOpen, activeSessionId, isSidebarOpen])
 
+  // Devolver el foco al input cuando termina la respuesta: el usuario debe
+  // poder escribir el siguiente mensaje sin volver a clicar en el campo. Se
+  // dispara solo en la transición loading true -> false, para no robarle el
+  // foco a un diálogo o a la barra lateral que estén abiertos en ese momento.
+  const wasLoadingRef = useRef(false)
+  useEffect(() => {
+    const justFinished = wasLoadingRef.current && !loading
+    wasLoadingRef.current = loading
+    if (justFinished && isOpen && !isSidebarOpen) {
+      inputRef.current?.focus()
+    }
+  }, [loading, isOpen, isSidebarOpen])
+
   // Cargar sesiones previas o crear nueva
   useEffect(() => {
     const saved = localStorage.getItem("trading_terminal_sessions")
