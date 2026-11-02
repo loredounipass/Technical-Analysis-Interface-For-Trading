@@ -475,6 +475,7 @@ def compute_order_flow(trades, sample_limit=200):
         'sellVolume': sell_volume,
         'delta': delta,
         'buyPercent': round(buy_volume / total_volume * 100, 1),
+        'sellPercent': round(sell_volume / total_volume * 100, 1),
         'deltaPercent': round(delta / total_volume * 100, 1),
         'windowStart': sample[0]['time'],
         'windowEnd': sample[-1]['time'],

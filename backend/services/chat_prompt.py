@@ -240,6 +240,7 @@ def _format_price_action_context(indicator_data):
         delta = order_flow.get('delta', 0)
         delta_pct = order_flow.get('deltaPercent', 0)
         buy_pct = order_flow.get('buyPercent', 0)
+        sell_pct = order_flow.get('sellPercent', round(100 - buy_pct, 1))
         buy_vol = order_flow.get('buyVolume', 0)
         sell_vol = order_flow.get('sellVolume', 0)
         trade_count = order_flow.get('tradeCount', 0)
@@ -257,11 +258,21 @@ def _format_price_action_context(indicator_data):
             f"- Flow State: {bias} | Delta: ${_fmt(delta)} ({delta_pct:+.1f}%)"
         )
         lines.append(
-            f"- Volume Split: Buy Vol ${_fmt(buy_vol)} ({buy_pct}%) vs Sell Vol ${_fmt(sell_vol)} ({100 - buy_pct:.1f}%)"
+            f"- Volume Split: Buy Vol ${_fmt(buy_vol)} ({buy_pct}%) vs Sell Vol ${_fmt(sell_vol)} ({sell_pct}%)"
         )
         lines.append(
             f"- Trade Activity: {trade_count} trades ({buy_trades} aggressive buys, {sell_trades} aggressive sells) | Scope: {scope}"
         )
+        # Dominancia = delta de VOLUMEN (estandar de order flow), no conteo de
+        # trades. Avisar cuando ambas metricas divergen para no contradecir la UI.
+        count_bias = "buy" if buy_trades > sell_trades else ("sell" if sell_trades > buy_trades else "flat")
+        vol_bias = "buy" if delta > 0 else ("sell" if delta < 0 else "flat")
+        if count_bias != vol_bias and count_bias != "flat":
+            lines.append(
+                f"- NOTE: volume delta favors {vol_bias.upper()} while trade COUNT favors "
+                f"{count_bias.upper()} (a few large {vol_bias}-side trades dominate notional); "
+                f"judge dominance by VOLUME, not by trade count."
+            )
         lines.append(
             f"- Source: {source} (aggressor inferred by inverting Coinbase maker side)"
         )

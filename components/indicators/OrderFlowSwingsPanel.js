@@ -15,6 +15,19 @@ const OrderFlowSwingsPanel = ({ datos = {}, dec = 2 }) => {
   // Order Flow data
   const orderFlow = datos.orderFlow || null
 
+  // Dominancia basada en el delta de volumen (convención estándar de order
+  // flow), no en el conteo de trades: unas pocas compras grandes pueden
+  // dominar el volumen aunque haya más ventas que compras. Bandas simétricas
+  // de ±10% respecto al delta para evitar señales ruidosas cerca del equilibrio.
+  const deltaPct = orderFlow ? Number(orderFlow.deltaPercent) || 0 : 0
+  const dominance = !orderFlow
+    ? "NONE"
+    : deltaPct > 10
+      ? "BUY"
+      : deltaPct < -10
+        ? "SELL"
+        : "BALANCED"
+
   // Liquidity Swings data
   const hasLiquiditySwings = Array.isArray(datos.liquiditySwings)
   const liquiditySwings = hasLiquiditySwings ? datos.liquiditySwings : []
@@ -30,22 +43,22 @@ const OrderFlowSwingsPanel = ({ datos = {}, dec = 2 }) => {
         badge={
           <span
             className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold font-mono tracking-wider ${
-              orderFlow
-                ? orderFlow.buyPercent > 55
-                  ? "bg-[#00f5c4]/15 border border-[#00f5c4]/40 text-[#00f5c4]"
-                  : orderFlow.buyPercent < 45
-                    ? "bg-[#ff3b69]/15 border border-[#ff3b69]/40 text-[#ff3b69]"
-                    : "bg-amber-500/15 border border-amber-500/40 text-amber-400"
-                : "bg-slate-500/15 border border-slate-500/40 text-slate-400"
+              dominance === "BUY"
+                ? "bg-[#00f5c4]/15 border border-[#00f5c4]/40 text-[#00f5c4]"
+                : dominance === "SELL"
+                  ? "bg-[#ff3b69]/15 border border-[#ff3b69]/40 text-[#ff3b69]"
+                  : dominance === "BALANCED"
+                    ? "bg-amber-500/15 border border-amber-500/40 text-amber-400"
+                    : "bg-slate-500/15 border border-slate-500/40 text-slate-400"
             }`}
           >
-            {orderFlow
-              ? orderFlow.buyPercent > 55
-                ? "BUY DOMINANT"
-                : orderFlow.buyPercent < 45
-                  ? "SELL DOMINANT"
-                  : "BALANCED"
-              : "NO DATA"}
+            {dominance === "BUY"
+              ? "BUY DOMINANT"
+              : dominance === "SELL"
+                ? "SELL DOMINANT"
+                : dominance === "BALANCED"
+                  ? "BALANCED"
+                  : "NO DATA"}
           </span>
         }
         footerLeft={<span>{orderFlow ? `${orderFlow.tradeCount} trades` : "—"}</span>}
@@ -86,7 +99,7 @@ const OrderFlowSwingsPanel = ({ datos = {}, dec = 2 }) => {
                     BUY {orderFlow.buyPercent}% ({formatVolume(orderFlow.buyVolume)})
                   </span>
                   <span className="text-[#ff3b69] tabular-nums">
-                    SELL {(100 - orderFlow.buyPercent).toFixed(1)}% ({formatVolume(orderFlow.sellVolume)})
+                    SELL {orderFlow.sellPercent}% ({formatVolume(orderFlow.sellVolume)})
                   </span>
                 </div>
               </div>
