@@ -44,30 +44,17 @@ export default function CandleChart({
     })
   }
 
-  // Compute EMAs for overlay (EMA 20 & EMA 50)
+  // Overlay de EMAs: se usan las series canonicas que llegan del backend
+  // (datos.history.ema50/ema100/ema200, adjuntas a cada vela en
+  // buildCandleAndVolumeSeries). No se recalculan aqui: una EMA recalculada
+  // con seed de primer cierre divergiria de la EMA oficial que muestra el
+  // resto de la terminal.
   const chartDataWithEma = useMemo(() => {
-    const closes = data.map((d) => d.close)
-    const computeEMA = (period) => {
-      const k = 2 / (period + 1)
-      let ema = null
-      return closes.map((c) => {
-        if (c === null || c === undefined || isNaN(c)) return null
-        if (ema === null) ema = c
-        else ema = c * k + ema * (1 - k)
-        return ema
-      })
-    }
-
-    const ema20 = computeEMA(12)
-    const ema50 = computeEMA(26)
-
     return data.map((d, i) => {
       const isLast = i === data.length - 1
       return {
         ...d,
         timeLabel: isLast ? `${d.time} (NOW)` : d.time,
-        ema20: ema20[i],
-        ema50: ema50[i],
       }
     })
   }, [data])
@@ -89,8 +76,9 @@ export default function CandleChart({
       close: null,
       wickRange: null,
       bodyRange: null,
-      ema20: null,
       ema50: null,
+      ema100: null,
+      ema200: null,
       isPlaceholder: true,
     }
   ))
@@ -268,7 +256,7 @@ export default function CandleChart({
           </span>
 
           <span className="px-2 py-0.5 rounded bg-[#00f5c4]/10 border border-[#00f5c4]/30 text-[#00f5c4] font-semibold text-[10px] hidden md:inline">
-            EMA 20/50/200
+            EMA 50/100/200
           </span>
 
           {/* Controles de navegación del gráfico (llevar hasta atrás / zoom / live) */}
@@ -354,24 +342,36 @@ export default function CandleChart({
               shape={CandleShape}
             />
 
-            {/* EMA 20 (Cyan dashed line) */}
-            <Line
-              type="monotone"
-              dataKey="ema20"
-              stroke="#00f5c4"
-              strokeWidth={1.5}
-              strokeDasharray="3 3"
-              dot={false}
-              isAnimationActive={false}
-            />
-
-            {/* EMA 50 (Orange / Amber solid line) */}
+            {/* EMA 50 (Amber solid) - serie canonica del backend */}
             <Line
               type="monotone"
               dataKey="ema50"
               stroke="#f59e0b"
               strokeWidth={1.5}
               dot={false}
+              connectNulls={true}
+              isAnimationActive={false}
+            />
+
+            {/* EMA 100 (Sky solid) - serie canonica del backend */}
+            <Line
+              type="monotone"
+              dataKey="ema100"
+              stroke="#38bdf8"
+              strokeWidth={1.4}
+              dot={false}
+              connectNulls={true}
+              isAnimationActive={false}
+            />
+
+            {/* EMA 200 (Purple solid) - serie canonica del backend */}
+            <Line
+              type="monotone"
+              dataKey="ema200"
+              stroke="#a855f7"
+              strokeWidth={1.4}
+              dot={false}
+              connectNulls={true}
               isAnimationActive={false}
             />
           </ComposedChart>

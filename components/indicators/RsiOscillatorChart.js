@@ -25,7 +25,7 @@ const RsiOscillatorChart = ({ title, datos = {} }) => {
     }
   }
   if (rsiFullData.length === 0 && datos.rsi !== null && datos.rsi !== undefined) {
-    rsiFullData = [{ name: "0", rsi: datos.rsi, rsiSignal: datos.rsiStoch || 50 }]
+    rsiFullData = [{ name: "0", rsi: datos.rsi, rsiSignal: datos.rsiStoch ?? null }]
   }
   let rsiChartData = ensureMinPoints(rsiFullData.slice(win.start, win.effEnd))
 

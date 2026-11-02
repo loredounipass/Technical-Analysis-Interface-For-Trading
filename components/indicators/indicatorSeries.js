@@ -33,6 +33,12 @@ export function buildCandleAndVolumeSeries(datos) {
         close: c,
         wickRange: [l, h],
         bodyRange: [o, c],
+        // EMAs canonicas del backend (compute_ema_series, sembradas con SMA),
+        // alineadas por indice con closes. Se usan como overlay del grafico de
+        // velas en lugar de recalcularlas aqui con un seed ingenuo.
+        ema50: datos.history.ema50?.[i] ?? null,
+        ema100: datos.history.ema100?.[i] ?? null,
+        ema200: datos.history.ema200?.[i] ?? null,
       })
 
       volumeChartData.push({
