@@ -53,7 +53,7 @@ export default function ChatCommandBar({
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={onKeyDown}
           placeholder="type a command, indicator setup, or question..."
-          className="flex-1 bg-transparent text-emerald-100 placeholder-slate-500 font-mono text-xs sm:text-sm outline-none resize-none py-1 min-h-[22px] max-h-[84px] overflow-y-auto overscroll-contain cyber-scrollbar"
+          className="flex-1 bg-transparent text-emerald-100 placeholder-slate-500 font-mono text-xs sm:text-sm outline-none resize-none py-1 min-h-[22px] max-h-[84px] overflow-y-auto overscroll-contain scrollbar-hidden"
           style={{ lineHeight: "1.4" }}
         />
 
