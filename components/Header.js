@@ -10,7 +10,6 @@ export default function Header({
   timeframe = "15m",
   onTimeframeChange,
   isConnected = true,
-  latency = "12ms",
   time = "",
 }) {
   const router = useRouter()
@@ -163,7 +162,7 @@ export default function Header({
           )}
         </div>
 
-        {/* Right: Latency Connection + UTC Clock */}
+        {/* Right: Connection Status + UTC Clock */}
         <div className="flex items-center gap-3 text-[11px]">
           <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#09111b] border border-[#16283d]">
             <span
@@ -171,7 +170,7 @@ export default function Header({
                 }`}
             />
             <span className={isConnected ? "text-slate-200" : "text-[#ff3b69]"}>
-              {isConnected ? `CONN. STABLE (${latency})` : "CONN. LOST"}
+              {isConnected ? "CONN. STABLE" : "CONN. LOST"}
             </span>
           </div>
 
