@@ -9,8 +9,15 @@ import React from "react"
  * calculada con datos reales del backend.
  */
 export default function ChatTelemetryBar({ buyerPercent, trendLabel, orderBookLinked, orderBookSource }) {
-  const isLinked = !!orderBookLinked
+  // Solo un libro de ordenes REAL (depth L2 de Coinbase/Binance) cuenta como
+  // "vinculado". Los proxies de volumen de velas (volume_proxy/volume_profile/
+  // synthetic_profile) NO son el libro real, aunque el perfil de liquidez se
+  // vea parecido. Antes: cualquier valor != "volume_proxy" se marcaba como
+  // vinculado, mintiendo para volume_profile/synthetic_profile.
+  const isLinked = orderBookSource === "order_book"
   const isProxy = orderBookSource === "volume_proxy"
+    || orderBookSource === "volume_profile"
+    || orderBookSource === "synthetic_profile"
 
   const statusLabel = isLinked
     ? "ESTADO: VINCULADO AL LIBRO DE ÓRDENES"

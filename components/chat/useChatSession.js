@@ -150,9 +150,10 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
     return {
       buyerPercent,
       trendLabel,
-      // Estado real del libro de órdenes: order_book = vinculado al libro
-      // real (Coinbase/Binance); volume_proxy = estimación direccional con velas.
-      orderBookLinked: !!datos?.orderBookSource && datos.orderBookSource !== "volume_proxy",
+      // Estado real del libro de órdenes: solo 'order_book' = vinculado al libro
+      // real (Coinbase/Binance). volume_proxy/volume_profile/synthetic_profile
+      // son proxies de volumen de velas, NO el libro real.
+      orderBookLinked: datos?.orderBookSource === "order_book",
       orderBookSource: datos?.orderBookSource || null,
       diagnostic: {
         rsiValue: rsiVal,
