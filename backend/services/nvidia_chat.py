@@ -281,7 +281,7 @@ def nvidia_chat_stream(
     messages = list(initial_messages)
     tools_used = []
     answered = False
-    MAX_CONTINUATIONS = 4
+    MAX_CONTINUATIONS = 6
 
     try:
         for _round in range(MAX_TOOL_ROUNDS):
@@ -349,6 +349,7 @@ def nvidia_chat_stream(
                 # continuar la generacion hasta completar el informe, sin repetir.
                 full_text = "".join(round_content)
                 cont = 0
+                empty_rounds = 0
                 while finish_reason == "length" and cont < MAX_CONTINUATIONS:
                     cont += 1
                     logger.info(f"[NvidiaChatStream] respuesta cortada por longitud; continuando {cont}/{MAX_CONTINUATIONS}")
@@ -387,9 +388,21 @@ def nvidia_chat_stream(
                             except Exception:
                                 pass
                     full_text += "".join(more)
-                    if not more:
-                        break  # sin progreso: evitar bucle infinito
-                if finish_reason == "length":
+                    if more:
+                        empty_rounds = 0
+                    else:
+                        # En modelos de razonamiento una ronda de continuation puede
+                        # gastar todo el presupuesto en 'thinking' y no emitir contenido
+                        # visible (more vacio) con finish_reason='length'. No rendirse al
+                        # primer vacio: reintentar hasta 2 seguidos antes de cortar.
+                        empty_rounds += 1
+                        if empty_rounds >= 2:
+                            break  # sin progreso real: evitar bucle inoperante
+                if finish_reason == "length" and full_text.strip():
+                    # Solo avisar del corte si hubo respuesta real que continuar. Si el
+                    # contenido utile quedo vacio (el 'thinking' se comio el presupuesto),
+                    # NO emitir nada: el frontend muestra un fallback honesto en lugar de
+                    # un mensaje que seria unicamente el aviso de truncamiento.
                     yield {"type": "content", "chunk": "\n\n> \u26a0\ufe0f La respuesta se cort\u00f3 por el l\u00edmite de tokens del modelo."}
                 break
 
