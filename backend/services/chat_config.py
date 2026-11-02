@@ -25,15 +25,17 @@ REQUEST_TIMEOUT = 180
 #     0.3 los degrada).
 #   - top_k: Muse Glimmer recomienda top_k=64.
 #   - max_tokens: techo de salida por modelo. Verificado contra la API real:
-#     Nemotron Nano/Ultra y Muse aceptan hasta 65536 sin rechazo. El peor caso
-#     de entrada (system prompt con TODOS los indicadores + MTF de 6 marcos +
-#     price action + series + web_search) son ~6.8k tokens y cabe holgadamente
-#     en la ventana (128K-1M), asi que analizar todos los indicadores NUNCA se
-#     limita por entrada. El techo de SALIDA si importa: en los razonadores el
-#     `thinking` (2k-10k) comparte presupuesto con el informe (~2.5k-4.5k), por
-#     eso van a 32768; los no-razonadores emiten solo contenido y van a 16384.
-#     finish_reason='length' se recupera ademas con auto-continuacion en
-#     nvidia_chat_stream.
+#     Nano/Bolt/Muse tienen tope de max_tokens de 1.048.576; Ultra no lo valida
+#     (>=1M); DiffusionGemma tiene ventana total de 250.000. El peor caso de
+#     entrada (system prompt con TODOS los indicadores + MTF de 6 marcos + price
+#     action + series + web_search) son ~6.8k tokens y cabe holgadamente en la
+#     ventana, asi que analizar todo NUNCA se limita por entrada. El techo de
+#     SALIDA si importa: en los razonadores el `thinking` comparte presupuesto
+#     con el informe, por eso van a 49152 (~5% del tope); los no-razonadores
+#     emiten solo contenido y van a 32768 (4-5x el informe mas largo posible).
+#     Muse SI EMITE reasoning_content (verificado contra la API) -> es
+#     razonador, NO moverlo a no-razonador. finish_reason='length' se recupera
+#     ademas con auto-continuacion en nvidia_chat_stream.
 #   - timeout: los grandes (Ultra 550B, Muse) son mas lentos -> timeout mayor.
 AVAILABLE_MODELS = {
     "nvidia-nemotron": {
@@ -44,7 +46,7 @@ AVAILABLE_MODELS = {
         "reasoning": True,
         "temperature": 1.0,
         "top_p": 0.95,
-        "max_tokens": 32768,
+        "max_tokens": 49152,
         "timeout": 180,
     },
     "nvidia-nemotron-bolt": {
@@ -55,7 +57,7 @@ AVAILABLE_MODELS = {
         "reasoning": False,
         "temperature": 1.0,
         "top_p": 0.95,
-        "max_tokens": 16384,
+        "max_tokens": 32768,
         "timeout": 180,
     },
     "nvidia-nemotron-ultra": {
@@ -66,7 +68,7 @@ AVAILABLE_MODELS = {
         "reasoning": True,
         "temperature": 1.0,
         "top_p": 0.95,
-        "max_tokens": 32768,
+        "max_tokens": 49152,
         "timeout": 240,
     },
     "meta-muse": {
@@ -78,7 +80,7 @@ AVAILABLE_MODELS = {
         "temperature": 1.0,
         "top_p": 0.95,
         "top_k": 64,
-        "max_tokens": 32768,
+        "max_tokens": 49152,
         "timeout": 240,
     },
     "google-diffusiongemma": {
@@ -89,7 +91,7 @@ AVAILABLE_MODELS = {
         "reasoning": False,
         "temperature": 1.0,
         "top_p": 0.95,
-        "max_tokens": 16384,
+        "max_tokens": 32768,
         "timeout": 180,
     },
 }
