@@ -31,7 +31,7 @@ def nvidia_chat(
     global_context: str | None = None,
     indicator_data: dict | None = None,
     intent: str = "analysis",
-    all_sessions: list | None = None,
+    owner_id=None,
     current_session_id: str | None = None,
     web_search_enabled: bool = False,
 ) -> tuple[str, list]:
@@ -95,7 +95,7 @@ def nvidia_chat(
                     args = {"query": str(raw_args)}
                 result, meta = _run_tool_call(
                     fn_name, args,
-                    prompt=prompt, all_sessions=all_sessions, current_session_id=current_session_id,
+                    prompt=prompt, owner_id=owner_id, current_session_id=current_session_id,
                 )
                 tools_used.append(meta)
                 messages.append({

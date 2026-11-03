@@ -2,7 +2,17 @@
 
 import { useState, useEffect, useRef, useMemo } from "react"
 import { useVoiceTTS } from "../VoiceTTS"
-import { fetchChatModels, openChatStream } from "@/services/api/chatApi"
+import {
+  createChatSession,
+  deleteChatSession,
+  fetchChatModels,
+  fetchChatState,
+  importLegacyChatState,
+  openChatStream,
+  saveChatMessage,
+  updateChatPreferences,
+  updateChatWelcomeMessage,
+} from "@/services/api/chatApi"
 
 export const INTERVAL_LABELS = {
   "1m": "1 minuto",
@@ -27,24 +37,12 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
   // recibe ya el texto completo cuando sendMessage es invocado al enviar.
   const [loading, setLoading] = useState(false)
   const [models, setModels] = useState([])
-  const [selectedModel, setSelectedModel] = useState(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("trading_terminal_model")
-      if (saved && ["nvidia-nemotron", "nvidia-nemotron-bolt", "nvidia-nemotron-ultra", "meta-muse", "google-diffusiongemma"].includes(saved)) {
-        return saved
-      }
-    }
-    return "nvidia-nemotron"
-  })
+  const [selectedModel, setSelectedModelState] = useState("nvidia-nemotron")
+  const [chatReady, setChatReady] = useState(false)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   // Habilidad de busqueda web (DuckDuckGo). Persistente entre sesiones; solo
   // afecta el payload y el estado del boton (no la estructura renderizada).
-  const [webSearchEnabled, setWebSearchEnabled] = useState(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("trading_terminal_web_search") === "true"
-    }
-    return false
-  })
+  const [webSearchEnabled, setWebSearchEnabledState] = useState(false)
   const [typingText, setTypingText] = useState("")
   const [isTyping, setIsTyping] = useState(false)
   const [streamingThought, setStreamingThought] = useState("")
@@ -191,7 +189,7 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
         if (data) {
           setModels(data)
           if (!data.some((m) => m.key === selectedModel)) {
-            setSelectedModel("nvidia-nemotron")
+            setSelectedModelState("nvidia-nemotron")
           }
         }
       } catch (e) {
@@ -257,31 +255,83 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
     }
   }, [loading, isOpen, isSidebarOpen])
 
-  // Cargar sesiones previas o crear nueva
+  // Load persisted chat state, importing legacy browser data once when present.
   useEffect(() => {
-    const saved = localStorage.getItem("trading_terminal_sessions")
-    if (saved) {
+    let cancelled = false
+    async function loadChatState() {
       try {
-        const parsed = JSON.parse(saved)
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setSessions(parsed)
-          setActiveSessionId(parsed[0].id)
-          setMessages(parsed[0].messages || [])
-          return
+        let state = await fetchChatState()
+        const savedSessions = localStorage.getItem("trading_terminal_sessions")
+        const savedModel = localStorage.getItem("trading_terminal_model")
+        const savedWebSearch = localStorage.getItem("trading_terminal_web_search")
+        if (savedSessions || savedModel || savedWebSearch) {
+          let legacySessions = []
+          if (savedSessions) {
+            try {
+              const parsed = JSON.parse(savedSessions)
+              if (Array.isArray(parsed)) legacySessions = parsed
+            } catch (error) {
+              console.error("Could not parse legacy chat history.", error)
+            }
+          }
+          state = await importLegacyChatState({
+            sessions: legacySessions,
+            selected_model: savedModel,
+            web_search_enabled: savedWebSearch === null ? undefined : savedWebSearch === "true",
+          })
+          localStorage.removeItem("trading_terminal_sessions")
+          localStorage.removeItem("trading_terminal_model")
+          localStorage.removeItem("trading_terminal_web_search")
         }
-      } catch (e) {
-        // Fallback
+
+        if (state.sessions.length === 0) {
+          const intervalLabel = INTERVAL_LABELS[interval] || interval
+          const welcomeMessage = {
+            role: "assistant",
+            content: `¡Hola! ¿En qué puedo asistirte con el análisis del mercado de **${symbol}** en el timeframe de **${intervalLabel}**?`,
+            timestamp: Date.now(),
+            model: state.selected_model,
+            diagnostic: marketTelemetry.diagnostic,
+          }
+          await createChatSession({
+            symbol,
+            market,
+            interval,
+            initial_message: welcomeMessage,
+            only_if_empty: true,
+          })
+          state = await fetchChatState()
+        }
+
+        if (cancelled) return
+        setSelectedModelState(state.selected_model || "nvidia-nemotron")
+        setWebSearchEnabledState(Boolean(state.web_search_enabled))
+        setSessions(state.sessions)
+        setActiveSessionId(state.sessions[0].id)
+        setMessages(state.sessions[0].messages || [])
+        setChatReady(true)
+      } catch (error) {
+        console.error("Failed to load chat state from the API.", error)
+        if (!cancelled) {
+          setMessages([{
+            role: "assistant",
+            content: `! ERROR: No se pudo cargar el historial del chat desde el servidor. ${error.message}`,
+            timestamp: Date.now(),
+            isError: true,
+          }])
+        }
       }
     }
-    createNewSession()
+    loadChatState()
+    return () => { cancelled = true }
   }, [])
 
   // Sincronizar el diagnostico y el modelo en el mensaje de bienvenida cuando
   // cambian el simbolo / timeframe / modelo. Deliberadamente NO depende de
   // `datos`: el socket emite cada ~1.5s y cada emision crearia un array nuevo
   // de `messages`, lo que (a) invalida la memoizacion de ChatMessageList y
-  // re-parsea el markdown de TODA la conversacion y (b) re-stringify-nea las
-  // sesiones en localStorage. Esa cascada de fondo es la que hace que tipear se
+  // re-parsea el markdown de TODA la conversacion y (b) reserializa la sesión.
+  // Esa cascada de fondo es la que hace que tipear se
   // "pegue". El greeting muestra el diagnostico real del ultimo cambio de
   // contexto (snapshot valido, no un dato inventado).
   useEffect(() => {
@@ -300,19 +350,26 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
       }
       return prev
     })
-  }, [symbol, interval, selectedModel])
-
-  useEffect(() => {
-    localStorage.setItem("trading_terminal_model", selectedModel)
-  }, [selectedModel])
-
-  useEffect(() => {
-    try {
-      localStorage.setItem("trading_terminal_web_search", String(webSearchEnabled))
-    } catch {
-      // localStorage no disponible
+    if (activeSessionId) {
+      const welcome = messages[0]
+      if (welcome?.role === "assistant" && welcome.diagnostic) {
+        updateChatWelcomeMessage(activeSessionId, {
+          ...welcome,
+          content: `¡Hola! ¿En qué puedo asistirte con el análisis del mercado de **${symbol}** en el timeframe de **${INTERVAL_LABELS[interval] || interval}**?`,
+          model: selectedModel,
+          diagnostic: marketTelemetry.diagnostic,
+        }).catch((error) => {
+          console.error("Could not save updated chat welcome message.", error)
+          setMessages((prev) => [...prev, {
+            role: "assistant",
+            content: `! ERROR: No se pudo guardar el contexto de bienvenida. ${error.message}`,
+            timestamp: Date.now(),
+            isError: true,
+          }])
+        })
+      }
     }
-  }, [webSearchEnabled])
+  }, [symbol, interval, selectedModel])
 
   useEffect(() => {
     if (activeSessionId) {
@@ -321,12 +378,6 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
       )
     }
   }, [messages])
-
-  useEffect(() => {
-    if (sessions.length > 0) {
-      localStorage.setItem("trading_terminal_sessions", JSON.stringify(sessions))
-    }
-  }, [sessions])
 
   useEffect(() => {
     onAnalysisChange?.(loading || isTyping)
@@ -347,9 +398,9 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
   }
 
   // Crear nueva sesión con el saludo inicial estilizado y datos actualizados
-  const createNewSession = () => {
+  const createNewSession = async () => {
+    if (!chatReady) return
     cancelInFlight()
-    const newId = Date.now().toString()
     const intervalLabel = INTERVAL_LABELS[interval] || interval
 
     const initialWelcomeMessage = {
@@ -360,15 +411,33 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
       diagnostic: marketTelemetry.diagnostic,
     }
 
+    let created
+    try {
+      created = await createChatSession({
+        title: `${symbol} Analysis`,
+        symbol,
+        market,
+        interval,
+        initial_message: initialWelcomeMessage,
+      })
+    } catch (error) {
+      setMessages((prev) => [...prev, {
+        role: "assistant",
+        content: `! ERROR: No se pudo crear la sesión. ${error.message}`,
+        timestamp: Date.now(),
+        isError: true,
+      }])
+      return
+    }
     const newSession = {
-      id: newId,
+      id: created.id,
       title: `${symbol} Analysis`,
       messages: [initialWelcomeMessage],
-      symbol: symbol,
+      symbol,
       timestamp: Date.now(),
     }
     setSessions((prev) => [newSession, ...prev])
-    setActiveSessionId(newId)
+    setActiveSessionId(created.id)
     setMessages([initialWelcomeMessage])
     setIsSidebarOpen(false)
   }
@@ -383,15 +452,26 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
     }
   }
 
-  const deleteSession = (e, id) => {
+  const deleteSession = async (e, id) => {
     e.stopPropagation()
+    try {
+      await deleteChatSession(id)
+    } catch (error) {
+      setMessages((prev) => [...prev, {
+        role: "assistant",
+        content: `! ERROR: No se pudo eliminar la sesión. ${error.message}`,
+        timestamp: Date.now(),
+        isError: true,
+      }])
+      return
+    }
     const filtered = sessions.filter((s) => s.id !== id)
     setSessions(filtered)
     if (activeSessionId === id) {
       if (filtered.length > 0) {
         switchSession(filtered[0].id)
       } else {
-        createNewSession()
+        await createNewSession()
       }
       // switchSession/createNewSession cierran el panel, pero al eliminar desde
       // el drawer el usuario espera seguir viendo la lista: lo reabrimos.
@@ -399,10 +479,24 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
     }
   }
 
+  const setSelectedModel = (model) => {
+    const previousModel = selectedModel
+    setSelectedModelState(model)
+    updateChatPreferences({ selected_model: model }).catch((error) => {
+      setSelectedModelState(previousModel)
+      setMessages((prev) => [...prev, {
+        role: "assistant",
+        content: `! ERROR: No se pudo guardar el modelo seleccionado. ${error.message}`,
+        timestamp: Date.now(),
+        isError: true,
+      }])
+    })
+  }
+
   const sendMessage = async (customPrompt, meta = null) => {
     const textToSend = typeof customPrompt === "string" ? customPrompt : ""
     const trimmed = textToSend.trim()
-    if (!trimmed || loading) return
+    if (!trimmed || loading || !chatReady || !activeSessionId) return
 
     const userMsg = {
       role: "user",
@@ -417,14 +511,6 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
     activeModelRef.current = selectedModel
     isAutoScrollPausedRef.current = false
     setTimeout(() => scrollChatToBottom(), 50)
-
-    const otherSessions = sessions.filter((s) => s.id !== activeSessionId)
-    const globalContext = otherSessions
-      .map((s) => {
-        const summary = s.messages.length > 0 ? s.messages[0].content.slice(0, 50) + "..." : "Empty"
-        return `Session [${s.symbol}]: ${summary}`
-      })
-      .join(" | ")
 
     const controller = new AbortController()
     abortRef.current = controller
@@ -449,16 +535,6 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
       }
     }
 
-    // Historial completo sin límites artificiales:
-    // 1. Omitir el mensaje de bienvenida sintético inicial para evitar problemas de orden de roles
-    // 2. Omitir mensajes de error
-    const cleanHistory = messages
-      .filter((m, idx) => !m.isError && !(idx === 0 && m.role === "assistant"))
-      .map((m) => ({
-        role: m.role,
-        content: m.content,
-      }))
-
     setStreamingThought("")
     setIsThinking(true)
 
@@ -467,19 +543,16 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
       // nunca devuelve cabeceras dejaría el `await` trabado indefinidamente
       // (el reader y su resetStall solo existen una vez recibida la Response).
       resetStall()
+      await saveChatMessage(activeSessionId, userMsg)
       const res = await openChatStream(
         {
           prompt: trimmed,
+          session_id: activeSessionId,
           model: selectedModel,
           symbol: symbol,
           interval: interval,
           market: market,
           indicator_data: datos,
-          history: cleanHistory,
-          global_context: globalContext,
-          all_sessions: sessions,
-          current_session_id: activeSessionId,
-          web_search: webSearchEnabled,
           stream: true,
         },
         controller.signal
@@ -488,10 +561,14 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
       if (!res.ok) {
         const errJson = await res.json().catch(() => ({}))
         const errMsg = errJson.error || `Error ${res.status}`
-        setMessages((prev) => [
-          ...prev,
-          { role: "assistant", content: `! ERROR: ${errMsg}`, timestamp: Date.now(), isError: true },
-        ])
+        const errorMessage = {
+          role: "assistant",
+          content: `! ERROR: ${errMsg}`,
+          timestamp: Date.now(),
+          isError: true,
+        }
+        await saveChatMessage(activeSessionId, errorMessage)
+        setMessages((prev) => [...prev, errorMessage])
         setLoading(false)
         setIsThinking(false)
         return
@@ -541,27 +618,34 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
             if (!trimmedLine.startsWith("data: ")) continue
             const jsonStr = trimmedLine.slice(6).trim()
             if (!jsonStr || jsonStr === "[DONE]") continue
+            let parsed
             try {
-              const parsed = JSON.parse(jsonStr)
-              if (parsed.type === "thought" && parsed.chunk) {
-                accumulatedThought += parsed.chunk
-                scheduleFlush()
-              } else if (parsed.type === "content" && parsed.chunk) {
-                if (isThinking) setIsThinking(false)
-                setIsTyping(true)
-                accumulatedContent += parsed.chunk
-                scheduleFlush()
-              } else if (parsed.type === "tool") {
-                memoryMeta.push(parsed)
-              } else if (parsed.type === "done") {
-                if (parsed.memory_accessed) {
-                  memoryMeta = parsed.memory_accessed
-                }
-              } else if (parsed.type === "error") {
-                throw new Error(parsed.error || "Error en streaming")
+              parsed = JSON.parse(jsonStr)
+            } catch {
+              continue
+            }
+            if (parsed.type === "thought" && parsed.chunk) {
+              accumulatedThought += parsed.chunk
+              scheduleFlush()
+            } else if (parsed.type === "content" && parsed.chunk) {
+              if (isThinking) setIsThinking(false)
+              setIsTyping(true)
+              accumulatedContent += parsed.chunk
+              scheduleFlush()
+            } else if (parsed.type === "tool") {
+              memoryMeta.push(parsed)
+            } else if (parsed.type === "session_renamed") {
+              setSessions((prev) => prev.map((session) =>
+                session.id === parsed.session_id
+                  ? { ...session, title: parsed.title }
+                  : session
+              ))
+            } else if (parsed.type === "done") {
+              if (parsed.memory_accessed) {
+                memoryMeta = parsed.memory_accessed
               }
-            } catch (e) {
-              if (e.message && e.message.includes("Error en streaming")) throw e
+            } else if (parsed.type === "error") {
+              throw new Error(parsed.error || "Error en streaming")
             }
           }
         }
@@ -578,16 +662,18 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
       // Finalizar mensaje con el pensamiento y respuesta completas
       const hasMeta = Array.isArray(memoryMeta) && memoryMeta.length > 0
       if (accumulatedContent) {
+        const responseMessage = {
+          role: "assistant",
+          content: accumulatedContent,
+          thought: accumulatedThought || null,
+          timestamp: Date.now(),
+          model: selectedModel,
+          memoryAccessed: hasMeta ? memoryMeta : null,
+        }
+        await saveChatMessage(activeSessionId, responseMessage)
         setMessages((prev) => [
           ...prev,
-          {
-            role: "assistant",
-            content: accumulatedContent,
-            thought: accumulatedThought || null,
-            timestamp: Date.now(),
-            model: selectedModel,
-            memoryAccessed: hasMeta ? memoryMeta : null,
-          },
+          responseMessage,
         ])
         playResponse(accumulatedContent)
       } else if (hasMeta || accumulatedThought) {
@@ -598,16 +684,18 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
         const fallback = webUsed
           ? "Busqué información actualizada pero no obtuve resultados concluyentes en este momento. Probá reformular la pregunta o intentá de nuevo en unos segundos."
           : "No pude generar una respuesta en esta ocasión. Intentá nuevamente."
+        const responseMessage = {
+          role: "assistant",
+          content: fallback,
+          thought: accumulatedThought || null,
+          timestamp: Date.now(),
+          model: selectedModel,
+          memoryAccessed: hasMeta ? memoryMeta : null,
+        }
+        await saveChatMessage(activeSessionId, responseMessage)
         setMessages((prev) => [
           ...prev,
-          {
-            role: "assistant",
-            content: fallback,
-            thought: accumulatedThought || null,
-            timestamp: Date.now(),
-            model: selectedModel,
-            memoryAccessed: hasMeta ? memoryMeta : null,
-          },
+          responseMessage,
         ])
       }
       setTypingText("")
@@ -617,27 +705,29 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
     } catch (err) {
       if (err?.name === "AbortError") {
         if (stalled) {
-          setMessages((prev) => [
-            ...prev,
-            {
-              role: "assistant",
-              content: "La búsqueda tardó demasiado y se interrumpió. Intentá de nuevo en unos segundos.",
-              timestamp: Date.now(),
-              isError: true,
-            },
-          ])
+          const errorMessage = {
+            role: "assistant",
+            content: "La búsqueda tardó demasiado y se interrumpió. Intentá de nuevo en unos segundos.",
+            timestamp: Date.now(),
+            isError: true,
+          }
+          saveChatMessage(activeSessionId, errorMessage).catch((saveError) => {
+            console.error("Could not save chat timeout message.", saveError)
+          })
+          setMessages((prev) => [...prev, errorMessage])
         }
         return
       }
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content: "! ERROR DE CONEXIÓN — Servicio AI offline o no disponible.",
-          timestamp: Date.now(),
-          isError: true,
-        },
-      ])
+      const errorMessage = {
+        role: "assistant",
+        content: `! ERROR DE CONEXIÓN: ${err?.message || "Servicio AI offline o no disponible."}`,
+        timestamp: Date.now(),
+        isError: true,
+      }
+      saveChatMessage(activeSessionId, errorMessage).catch((saveError) => {
+        console.error("Could not save chat error message.", saveError)
+      })
+      setMessages((prev) => [...prev, errorMessage])
     } finally {
       clearStall()
       if (abortRef.current === controller) abortRef.current = null
@@ -658,28 +748,49 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
     setTypingText("")
     setLoading(false)
     if (partial) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content: partial,
-          timestamp: Date.now(),
-          model: activeModelRef.current,
-          interrupted: true,
-        },
-      ])
+      const partialMessage = {
+        role: "assistant",
+        content: partial,
+        timestamp: Date.now(),
+        model: activeModelRef.current,
+        interrupted: true,
+      }
+      setMessages((prev) => [...prev, partialMessage])
+      if (activeSessionId) {
+        saveChatMessage(activeSessionId, partialMessage).catch((error) => {
+          setMessages((prev) => [...prev, {
+            role: "assistant",
+            content: `! ERROR: No se pudo guardar la respuesta interrumpida. ${error.message}`,
+            timestamp: Date.now(),
+            isError: true,
+          }])
+        })
+      }
     }
   }
 
   const currentModelName =
     models.find((m) => m.key === selectedModel)?.name || "Nemotron 3 Nano Omni"
 
-  const toggleWebSearch = () => setWebSearchEnabled((v) => !v)
+  const toggleWebSearch = () => {
+    const nextValue = !webSearchEnabled
+    setWebSearchEnabledState(nextValue)
+    updateChatPreferences({ web_search_enabled: nextValue }).catch((error) => {
+      setWebSearchEnabledState(!nextValue)
+      setMessages((prev) => [...prev, {
+        role: "assistant",
+        content: `! ERROR: No se pudo guardar la preferencia de búsqueda web. ${error.message}`,
+        timestamp: Date.now(),
+        isError: true,
+      }])
+    })
+  }
 
   return {
     sessions,
     activeSessionId,
     messages,
+    chatReady,
     loading,
     models,
     selectedModel,

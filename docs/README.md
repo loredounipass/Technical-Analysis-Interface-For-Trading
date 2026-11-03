@@ -6,7 +6,7 @@
 frontend/       Next.js application, UI, and public assets
 backend/        Flask API, market data services, and chat/TTS logic
 backend/database/
-                Local PostgreSQL environment files
+                PostgreSQL schema and chat persistence
 docker-compose.yml
                 Local frontend, backend, and PostgreSQL services
 ```
@@ -22,17 +22,16 @@ From the repository root, create the local environment files:
 ```bash
 cp frontend/.env.example frontend/.env
 cp backend/.env.example backend/.env
-cp backend/database/.env.example backend/database/.env
 ```
 
-Set `POSTGRES_PASSWORD` in `backend/database/.env`. Add provider keys to
-`backend/.env` for optional NVIDIA chat/TTS, CryptoCompare news, and SerpApi
-search. `NVIDIA_TTS_FUNCTION_ID` is required when using TTS.
+Set the PostgreSQL credentials in `backend/.env`. Add provider keys there for
+optional NVIDIA chat/TTS, CryptoCompare news, and SerpApi search.
+`NVIDIA_TTS_FUNCTION_ID` is required when using TTS.
 
 Build and start all services:
 
 ```bash
-docker compose up --build -d
+docker-compose up --build -d
 ```
 
 The services are available at:
@@ -43,18 +42,25 @@ The services are available at:
 
 Inside the Compose network, other containers can reach PostgreSQL at
 `postgres:5432`. The database data is stored in the `postgres_data` Docker
-volume and persists when containers are recreated. The backend is not currently
-configured to use PostgreSQL.
+volume and persists when containers are recreated. PostgreSQL stores anonymous
+chat sessions, messages, the selected model, and web-search preference. Browser
+histories are isolated by a random browser ID; this is not authentication, and
+a user can replace that ID.
+The `search_chat_history` MCP-style tool reads messages directly from
+PostgreSQL, searches all messages without a result cap, supports filters for a
+specific session ID/name or symbol, and returns matching message IDs and full
+content. It limits its search to the browser owner making the chat request. The
+model can also rename the current session based on its conversation context.
 
 Useful commands:
 
 ```bash
-docker compose ps
-docker compose logs -f frontend backend postgres
-docker compose down
+docker-compose ps
+docker-compose logs -f frontend backend postgres
+docker-compose down
 ```
 
-`docker compose down` preserves the PostgreSQL data volume.
+`docker-compose down` preserves the PostgreSQL data volume.
 
 ## Run frontend and backend without Docker
 
@@ -67,6 +73,10 @@ pnpm install
 cd ../backend
 pip install -r requirements.txt
 ```
+
+When running the backend directly, set `POSTGRES_HOST=localhost` in
+`backend/.env`; Docker Compose overrides it with the service name `postgres`.
+The backend creates the chat tables automatically on startup.
 
 Start the backend from the repository root in one terminal:
 

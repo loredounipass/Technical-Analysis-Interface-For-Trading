@@ -23,6 +23,7 @@ export default function ChatCommandBar({
   onSend,
   onStop,
   loading,
+  disabled = false,
   isTyping,
   ttsEnabled,
   onToggleTTS,
@@ -42,7 +43,7 @@ export default function ChatCommandBar({
 
   const submit = () => {
     const text = value.trim()
-    if (!text || busy) return
+    if (!text || busy || disabled) return
     onSend(text)
     setValue("")
   }
@@ -68,6 +69,7 @@ export default function ChatCommandBar({
           value={value}
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={handleKeyDown}
+          disabled={disabled}
           placeholder="type a command, indicator setup, or question..."
           className="flex-1 bg-transparent text-emerald-100 placeholder-slate-500 font-mono text-xs sm:text-sm outline-none resize-none py-1 min-h-[22px] max-h-[84px] overflow-y-auto overscroll-contain scrollbar-hidden"
           style={{ lineHeight: "1.4" }}
@@ -97,7 +99,7 @@ export default function ChatCommandBar({
           <button
             id="ai-chat-send"
             onClick={submit}
-            disabled={!value.trim() || loading}
+            disabled={!value.trim() || loading || disabled}
             title="Enviar comando"
             className="w-8 h-8 rounded-lg bg-emerald-400 hover:bg-emerald-300 active:scale-95 text-slate-950 font-bold flex items-center justify-center flex-shrink-0 transition-all shadow-[0_0_12px_rgba(52,211,153,0.35)] disabled:opacity-25 disabled:cursor-not-allowed"
           >

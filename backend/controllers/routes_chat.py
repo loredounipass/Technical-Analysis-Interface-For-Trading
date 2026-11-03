@@ -6,9 +6,11 @@ Endpoint del agente de trading AI con contexto multi-temporalidad.
 import logging
 
 import json
+from uuid import UUID
 from flask import Blueprint, jsonify, request, Response, stream_with_context
 from services.chat import nvidia_chat, nvidia_chat_stream, NvidiaChatError, AVAILABLE_MODELS, classify_intent
 from common.cache import rate_limited
+from database import chat_store
 
 logger = logging.getLogger(__name__)
 
@@ -75,24 +77,52 @@ def chat_endpoint():
     if rate_limited(ip):
         return jsonify({'error': 'Too many requests'}), 429
     data = request.get_json()
-    if not data:
-        return jsonify({'error': 'JSON body required'}), 400
+    if not isinstance(data, dict):
+        return jsonify({'error': 'JSON object body required'}), 400
 
-    prompt = data.get('prompt', '').strip()
-    if not prompt:
+    prompt = data.get('prompt', '')
+    if not isinstance(prompt, str) or not prompt.strip():
         return jsonify({'error': 'prompt is required'}), 400
-    model_key = data.get('model', 'nvidia-nemotron')
+    prompt = prompt.strip()
+    try:
+        owner_id = chat_store.normalize_owner_id(request.headers.get('X-Chat-Owner-ID'))
+        current_session_id = str(UUID(str(data.get('session_id'))))
+    except ValueError as error:
+        return jsonify({'error': str(error)}), 400
+
+    state = chat_store.get_state(owner_id)
+    current_session = next(
+        (session for session in state['sessions'] if session['id'] == current_session_id),
+        None,
+    )
+    if current_session is None:
+        return jsonify({'error': 'Chat session not found.'}), 404
+
+    model_key = data.get('model', state['selected_model'])
+    if not isinstance(model_key, str) or model_key not in AVAILABLE_MODELS:
+        return jsonify({'error': 'Unknown chat model.'}), 400
     symbol = data.get('symbol', 'BTCUSDT')
     interval = data.get('interval', '15m')
     market = data.get('market', 'crypto')
+    if not isinstance(symbol, str) or not symbol or not isinstance(interval, str):
+        return jsonify({'error': 'symbol and interval must be strings.'}), 400
     if market not in ('crypto', 'stock'):
         market = 'crypto'
-    history = data.get('history', [])
-    global_context = data.get('global_context', '')
+    history = [
+        {'role': message['role'], 'content': message['content']}
+        for index, message in enumerate(current_session['messages'])
+        if not message.get('isError')
+        and not (index == 0 and message['role'] == 'assistant')
+    ]
+    if history and history[-1]['role'] == 'user' and history[-1]['content'] == prompt:
+        history.pop()
+    global_context = ' | '.join(
+        f"{'Current session' if session['id'] == current_session_id else 'Session'} "
+        f"[{session['symbol']}]: {session['title']}"
+        for session in state['sessions']
+    )
     temperature = data.get('temperature')  # None -> usa el default por modelo
-    all_sessions = data.get('all_sessions', [])
-    current_session_id = data.get('current_session_id')
-    web_search_enabled = bool(data.get('web_search', False))
+    web_search_enabled = state['web_search_enabled']
 
     # ── Intent classification: decide if we need market data ──
     intent = classify_intent(prompt)
@@ -141,7 +171,7 @@ def chat_endpoint():
                     global_context=global_context,
                     indicator_data=indicator_data,
                     intent=intent,
-                    all_sessions=all_sessions,
+                    owner_id=owner_id,
                     current_session_id=current_session_id,
                     web_search_enabled=web_search_enabled,
                 ):
@@ -169,7 +199,7 @@ def chat_endpoint():
             global_context=global_context,
             indicator_data=indicator_data,
             intent=intent,
-            all_sessions=all_sessions,
+            owner_id=owner_id,
             current_session_id=current_session_id,
             web_search_enabled=web_search_enabled,
         )
@@ -193,7 +223,7 @@ def chat_endpoint():
                     global_context=global_context,
                     indicator_data=indicator_data,
                     intent=intent,
-                    all_sessions=all_sessions,
+                    owner_id=owner_id,
                     current_session_id=current_session_id,
                     web_search_enabled=web_search_enabled,
                 )

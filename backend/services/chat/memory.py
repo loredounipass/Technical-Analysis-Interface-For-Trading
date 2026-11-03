@@ -8,43 +8,74 @@ import datetime
 import re
 from typing import Optional
 
+from database import chat_store
+
 
 def search_chat_history(
     query: str,
     symbol: Optional[str] = None,
-    all_sessions: Optional[list] = None,
-    current_session_id: Optional[str] = None
+    session_id: Optional[str] = None,
+    session_name: Optional[str] = None,
+    owner_id=None,
 ) -> dict:
     """Busca en el historial de sesiones pasadas fragmentos relevantes de usuario y asistente."""
+    if not isinstance(query, str) or not query.strip():
+        return {
+            "found_records": 0,
+            "message": "La búsqueda requiere un texto no vacío."
+        }
+    if session_id is not None and not isinstance(session_id, str):
+        return {
+            "found_records": 0,
+            "message": "El ID de sesión debe ser texto."
+        }
+    if session_name is not None and not isinstance(session_name, str):
+        return {
+            "found_records": 0,
+            "message": "El nombre de sesión debe ser texto."
+        }
+    if symbol is not None and not isinstance(symbol, str):
+        return {
+            "found_records": 0,
+            "message": "El símbolo debe ser texto."
+        }
+
+    if owner_id is None:
+        return {
+            "found_records": 0,
+            "message": "No se pudo identificar al propietario del historial guardado."
+        }
+
+    all_sessions = chat_store.get_memory_sessions(owner_id)
     if not all_sessions:
         return {
             "found_records": 0,
             "message": "No se encontraron sesiones previas guardadas en el historial."
         }
 
-    query_tokens = [t.lower() for t in re.split(r'[\s,;.?!]+', query) if len(t) >= 2]
+    query_tokens = [t.lower() for t in re.split(r'[\s,;.?!]+', query) if t]
     symbol_clean = symbol.upper().replace("/", "").replace("-", "") if symbol else None
 
     matches = []
 
     for session in all_sessions:
         s_id = str(session.get("id", ""))
+        s_title = str(session.get("title", ""))
         s_symbol = str(session.get("symbol", "")).upper().replace("/", "")
         s_messages = session.get("messages", [])
 
+        if session_id and s_id != str(session_id):
+            continue
+        if session_name and session_name.casefold() not in s_title.casefold():
+            continue
         symbol_matches = bool(symbol_clean and (symbol_clean in s_symbol or s_symbol in symbol_clean))
+        if symbol_clean and not symbol_matches:
+            continue
 
-        for idx, msg in enumerate(s_messages):
-            if s_id == str(current_session_id) and idx >= len(s_messages) - 1:
-                continue
-
+        for msg in s_messages:
             content = msg.get("content", "")
             role = msg.get("role", "")
             if not content or role not in ("user", "assistant"):
-                continue
-
-            # Omitir saludo generico inicial
-            if idx == 0 and role == "assistant" and "¡Hola!" in content:
                 continue
 
             ts = msg.get("timestamp")
@@ -60,35 +91,38 @@ def search_chat_history(
             for token in query_tokens:
                 if token in content_lower:
                     score += 1
-                if token in s_symbol.lower():
-                    score += 1.5
 
-            if symbol_matches:
-                score += 2
+            if query.strip() and query.casefold() in content_lower:
+                score += len(query_tokens) + 1
 
             if score > 0:
-                speaker = "Usuario" if role == "user" else "Woody AI"
-                clean_content = content.strip().replace("\n", " ")
-                snippet = f"[{date_str or 'Sesión previa'}] [{s_symbol or 'General'}] {speaker}: \"{clean_content}\""
                 matches.append({
+                    "message_id": msg.get("message_id"),
                     "session_id": s_id,
+                    "session_name": s_title,
                     "symbol": s_symbol,
+                    "role": role,
+                    "timestamp": ts,
+                    "date": date_str or None,
+                    "content": content,
                     "score": score,
-                    "snippet": snippet
                 })
 
     matches.sort(key=lambda x: x["score"], reverse=True)
-    top = matches
 
-    if not top:
+    if not matches:
         return {
             "found_records": 0,
             "query": query,
-            "message": f"Búsqueda finalizada. No se encontraron mensajes relacionados con '{query}' en el historial."
+            "session_id": session_id,
+            "session_name": session_name,
+            "message": f"No se encontraron mensajes relacionados con '{query}' en el historial."
         }
 
     return {
-        "found_records": len(top),
+        "found_records": len(matches),
         "query": query,
-        "results": [m["snippet"] for m in top]
+        "session_id": session_id,
+        "session_name": session_name,
+        "results": matches,
     }

@@ -2,7 +2,7 @@ services:
   postgres:
     image: postgres:16-alpine
     env_file:
-      - ./backend/database/.env
+      - ./backend/.env
     container_name: trading-postgres
     ports:
       - "127.0.0.1:5432:5432"
@@ -26,6 +26,11 @@ services:
       - "5000:5000"
     environment:
       - PORT=5000
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+    depends_on:
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
 
   frontend:

@@ -388,7 +388,7 @@ def get_trading_system_prompt(indicator_data=None, global_context=None, model_na
 
     if global_context:
         base += f"=== CROSS-SESSION CONTEXT (MEMORY) ===\n"
-        base += f"The user has other active analysis sessions: {global_context}. "
+        base += f"Session context (current and other sessions): {global_context}. "
         base += f"If the user refers to past discussions or other symbols, use this overview to maintain continuity.\n\n"
 
     base += (
@@ -397,7 +397,13 @@ def get_trading_system_prompt(indicator_data=None, global_context=None, model_na
         "Whenever the user asks about what was discussed, analyzed, agreed, or recommended in previous sessions or earlier in the chat "
         "(e.g., 'qué dijiste ayer', 'recuerdas el soporte de ETH', 'en la sesión previa', 'como acordamos antes'), "
         "YOU MUST CALL `search_chat_history` to query past messages and retrieve the real context before answering. "
-        "Do NOT guess or say you don't remember without searching first.\n\n"
+        "Do NOT guess or say you don't remember without searching first. "
+        "The search covers every stored message in every session without a result cap. "
+        "When a user identifies a particular conversation, pass its session_id or session_name to search only that session; "
+        "use symbol when they identify an asset. Include exact matching message details in your answer.\n"
+        "You are also equipped with `rename_chat_session`. Once the user has supplied a meaningful topic, call it to assign the current session a concise, accurate title based on the actual conversation. "
+        "If the current session name is the generic '[symbol] Analysis' and its history already has a meaningful topic, rename it based on that history. "
+        "Do not rename on a greeting or invent a topic. For later turns, use the stored context and rename again only if the conversation meaningfully changes topic.\n\n"
     )
     if web_search_enabled:
         base += (

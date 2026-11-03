@@ -52,7 +52,7 @@ def nvidia_chat_stream(
     global_context: str | None = None,
     indicator_data: dict | None = None,
     intent: str = "analysis",
-    all_sessions: list | None = None,
+    owner_id=None,
     current_session_id: str | None = None,
     web_search_enabled: bool = False,
 ):
@@ -214,12 +214,14 @@ def nvidia_chat_stream(
                 if fn_name == "web_search":
                     label = {"reddit": "en Reddit", "x": "en X/Twitter", "twitter": "en X/Twitter", "news": "de noticias"}.get(src, "en la web")
                     yield {"type": "thought", "chunk": f"\n[\U0001F50D Buscando {label}: '{query}']\n"}
+                elif fn_name == "rename_chat_session":
+                    yield {"type": "thought", "chunk": "\n[Actualizando el nombre de la sesión]\n"}
                 else:
                     yield {"type": "thought", "chunk": f"\n[Accediendo a memoria MCP: '{query}']\n"}
 
                 result, meta = _run_tool_call(
                     fn_name, args,
-                    prompt=prompt, all_sessions=all_sessions, current_session_id=current_session_id,
+                    prompt=prompt, owner_id=owner_id, current_session_id=current_session_id,
                 )
                 tools_used.append(meta)
 
@@ -227,8 +229,22 @@ def nvidia_chat_stream(
                     yield {"type": "tool", "name": "web_search", "query": query, "source": src, "found": result.get("count", 0), "results": result.get("results", []), "provider": result.get("provider"), "widened": bool(result.get("widened"))}
                     if result.get("widened"):
                         yield {"type": "thought", "chunk": f"\n[\u26a0\ufe0f Sin resultados con filtro '{src}'; busqueda ampliada a web general via {result.get('provider') or 'web'}]\n"}
+                elif fn_name == "rename_chat_session":
+                    if result.get("renamed"):
+                        yield {
+                            "type": "session_renamed",
+                            "session_id": result["session_id"],
+                            "title": result["title"],
+                        }
+                    else:
+                        yield {"type": "thought", "chunk": f"\n[No se pudo actualizar el título: {result.get('error')}]\n"}
                 else:
-                    yield {"type": "tool", "query": query, "found": result.get("found_records", 0)}
+                    yield {
+                        "type": "tool",
+                        "tool": "search_chat_history",
+                        "query": query,
+                        "found": result.get("found_records", 0),
+                    }
 
                 messages.append({
                     "role": "tool",

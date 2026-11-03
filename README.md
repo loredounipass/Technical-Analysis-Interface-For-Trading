@@ -75,14 +75,13 @@ Para instrucciones de estructura del proyecto y configuración local, consulta
 la [guía de documentación](docs/README.md).
 
 ```bash
-# 1. Copia los ejemplos de variables del frontend, backend y PostgreSQL
+# 1. Copia los ejemplos de variables del frontend y backend
 cp frontend/.env.example frontend/.env
 cp backend/.env.example backend/.env
-cp backend/database/.env.example backend/database/.env
-# Cambia POSTGRES_PASSWORD por una contraseña segura en backend/database/.env
+# Configura POSTGRES_PASSWORD y las claves de proveedores en backend/.env
 
 # 2. Levanta frontend, backend y PostgreSQL
-docker compose up --build
+docker-compose up --build
 
 # 3. Abre http://localhost:3000
 ```
@@ -90,8 +89,8 @@ docker compose up --build
 Para correr solo un servicio:
 
 ```bash
-docker compose up --build backend   # API en http://localhost:5000
-docker compose up --build frontend  # UI en http://localhost:3000
+docker-compose up --build backend   # API en http://localhost:5000
+docker-compose up --build frontend  # UI en http://localhost:3000
 ```
 
 ## 📷 Capturas de pantalla

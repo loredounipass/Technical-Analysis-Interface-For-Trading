@@ -26,6 +26,14 @@ export const ENDPOINTS = {
   // POST /api/chat  -> agente de trading (SSE o JSON)
   chat: () => `/chat`,
 
+  chatState: () => `/chat/state`,
+  importChatState: () => `/chat/state/import`,
+  chatPreferences: () => `/chat/preferences`,
+  chatSessions: () => `/chat/sessions`,
+  chatSessionMessages: (sessionId) => `/chat/sessions/${encodeURIComponent(sessionId)}/messages`,
+  chatSessionWelcome: (sessionId) => `/chat/sessions/${encodeURIComponent(sessionId)}/welcome`,
+  chatSession: (sessionId) => `/chat/sessions/${encodeURIComponent(sessionId)}`,
+
   // POST /api/tts  -> síntesis de voz (ruta usada por el frontend)
   tts: () => `/tts`,
 }

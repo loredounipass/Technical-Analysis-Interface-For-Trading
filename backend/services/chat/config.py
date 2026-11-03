@@ -105,7 +105,7 @@ CHAT_TOOLS = [
         "type": "function",
         "function": {
             "name": "search_chat_history",
-            "description": "Busca en el historial de sesiones y conversaciones PASADAS del usuario. Úsala solo cuando el usuario pregunte por conversaciones anteriores, niveles o recomendaciones previas, o para recordar detalles de sesiones pasadas. NO la uses para noticias, eventos actuales ni información externa de internet: para eso existe web_search.",
+            "description": "Busca en TODOS los mensajes de TODAS las sesiones guardadas del usuario, sin límite de sesiones, mensajes ni resultados. Úsala para encontrar mensajes exactos, detalles, niveles, recomendaciones o conversaciones pasadas. Puedes filtrar por ID de sesión o por parte de su nombre; también puedes filtrar por símbolo. Devuelve cada mensaje encontrado con su sesión, ID, autor, fecha y contenido completo. NO la uses para noticias o información externa: para eso existe web_search.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -116,9 +116,34 @@ CHAT_TOOLS = [
                     "symbol": {
                         "type": "string",
                         "description": "Símbolo del activo si la búsqueda es específica de una moneda o acción (ej: 'ETHUSDT', 'SOLUSDT', 'AAPL')"
+                    },
+                    "session_id": {
+                        "type": "string",
+                        "description": "ID UUID de una sesión específica para limitar la búsqueda a esa sesión"
+                    },
+                    "session_name": {
+                        "type": "string",
+                        "description": "Nombre o fragmento del nombre de una sesión específica"
                     }
                 },
                 "required": ["query"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "rename_chat_session",
+            "description": "Asigna un nombre breve, específico y descriptivo a la sesión ACTUAL usando el tema real de la conversación. Llama a esta herramienta cuando el usuario ya haya expresado el tema o después de la primera respuesta sustantiva; no la llames por un saludo o antes de tener contexto. El título debe identificar el tema y activo si aplica, no usar el nombre genérico '[símbolo] Analysis'.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "title": {
+                        "type": "string",
+                        "description": "Título conciso basado en el contenido real de esta conversación, en el idioma del usuario"
+                    }
+                },
+                "required": ["title"]
             }
         }
     }

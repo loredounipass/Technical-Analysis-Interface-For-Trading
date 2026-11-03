@@ -130,7 +130,7 @@ export default function AiChat({ symbol, datos, interval = "15m", market = "cryp
           symbol={symbol}
           interval={interval}
           onSendQuickAction={chat.sendMessage}
-          disabled={chat.loading}
+          disabled={chat.loading || !chat.chatReady}
           models={chat.models}
           selectedModel={chat.selectedModel}
           setSelectedModel={chat.setSelectedModel}
@@ -145,6 +145,7 @@ export default function AiChat({ symbol, datos, interval = "15m", market = "cryp
           onSend={chat.sendMessage}
           onStop={chat.stopGeneration}
           loading={chat.loading}
+          disabled={!chat.chatReady}
           isTyping={chat.isTyping}
           ttsEnabled={chat.ttsEnabled}
           onToggleTTS={chat.toggleTTS}

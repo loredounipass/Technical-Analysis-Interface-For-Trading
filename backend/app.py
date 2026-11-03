@@ -20,7 +20,9 @@ from services.payload_builder import fetch_trading_data
 from controllers.routes_trading import trading_bp, init_trading_routes
 from controllers.routes_news import news_bp
 from controllers.routes_chat import chat_bp, init_chat_routes
+from controllers.routes_chat_sessions import chat_sessions_bp
 from controllers.routes_tts import tts_bp
+from database.chat_store import initialize_database
 from common.sockets import init_sockets
 from gateways.stream_manager import init_market_streams
 
@@ -28,6 +30,7 @@ from gateways.stream_manager import init_market_streams
 # Flask app + CORS + SocketIO
 # ─────────────────────────────────────────────────────────────────────
 app = Flask(__name__)
+app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024
 
 # Confia en X-Forwarded-For/Proto de Render o Vercel para ver la IP real del cliente.
 # Sin esto, request.remote_addr es siempre 127.0.0.1 (el proxy de Render)
@@ -47,8 +50,8 @@ if DEFAULT_ORIGIN not in ALLOWED_ORIGINS:
 CORS(app, resources={
     r"/*": {
         "origins": ALLOWED_ORIGINS,
-        "methods": ["GET", "POST", "OPTIONS"],
-        "allow_headers": ["Content-Type"]
+        "methods": ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "X-Chat-Owner-ID"]
     }
 })
 
@@ -106,9 +109,12 @@ app.register_blueprint(news_bp)
 
 init_chat_routes(_get_trading_cached)
 app.register_blueprint(chat_bp)
+app.register_blueprint(chat_sessions_bp)
 
 # TTS: no requiere inyeccion de cache; expone POST /api/tts (audio/wav).
 app.register_blueprint(tts_bp)
+
+initialize_database()
 
 
 # ─────────────────────────────────────────────────────────────────────
