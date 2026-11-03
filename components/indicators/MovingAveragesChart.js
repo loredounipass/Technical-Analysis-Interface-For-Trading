@@ -6,8 +6,10 @@ import { GitCompare } from "lucide-react"
 import useChartCardNav from "@/components/indicators/useChartCardNav"
 import { TOOLTIP_STYLE, safeToFixed, ensureMinPoints } from "@/components/indicators/chartCardUtils"
 
-// Moving Averages (EMA 50 / 100 / 200): solo las lineas de medias, con dominio
-// Y dinamico y tooltip de cierre + MAs.
+// Moving Averages (EMA 50 / 100 / 200): el precio de cierre se dibuja como
+// base y las medias moviles quedan montadas ENCIMA (igual que en los exchanges).
+// Dominio Y dinamico y tooltip de cierre + MAs. Sin la linea de precio las MAs
+// flotaban solas y la tarjeta se veia plana/poco real.
 const MovingAveragesChart = ({ title, datos = {} }) => {
   const { win, chartInteraction, chartCursor, renderNavControls } = useChartCardNav(datos)
 
@@ -116,6 +118,17 @@ const MovingAveragesChart = ({ title, datos = {} }) => {
               <Tooltip
                 content={<EmaTooltip />}
                 cursor={{ stroke: "#244163", strokeDasharray: "3 3" }}
+              />
+              {/* Precio de cierre: capa base sobre la que se montan las MAs */}
+              <Line
+                type="monotone"
+                dataKey="price"
+                stroke="#f1f5f9"
+                strokeWidth={1.2}
+                strokeOpacity={0.85}
+                dot={false}
+                connectNulls={true}
+                isAnimationActive={false}
               />
               <Line
                 type="monotone"
