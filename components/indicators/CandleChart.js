@@ -92,8 +92,16 @@ export default function CandleChart({
   const allValues = visibleData.flatMap((d) => [d.high, d.low]).filter((v) => Number.isFinite(v))
   const minVal = allValues.length ? Math.min(...allValues) : 0
   const maxVal = allValues.length ? Math.max(...allValues) : 100
-  const pad = Math.max((maxVal - minVal) * 0.08, 0.001)
-  const domain = [minVal - pad, maxVal + pad]
+  // Padding RELATIVO al nivel del precio, no absoluto. El viejo piso fijo de
+  // 0.001 era ~200x el precio de un micro-cap (SHIB ~0.0000045) y aplastaba
+  // las velas a una linea plana con eje Y negativo. Ahora el minimo de padding
+  // es 0.1% del precio, que escala con la magnitud (BTC/ETH no cambian; SHIB y
+  // otros micro-caps dejan de aplastarse porque el piso ya no es absoluto).
+  const pad = Math.max((maxVal - minVal) * 0.08, Math.abs(maxVal) * 0.001, 1e-12)
+  // Un precio jamas es negativo: recorta el borde inferior en 0 cuando el
+  // padding empujaria el minimo por debajo de cero (solo afecta a velas muy
+  // planas cerca de 0; no cambia BTC/ETH cuyo minimo ya es positivo con holgura).
+  const domain = [Math.max(0, minVal - pad), maxVal + pad]
 
   // Custom high-tech Tooltip
   const CustomTooltip = ({ active, payload }) => {
@@ -300,7 +308,7 @@ export default function CandleChart({
               tick={{ fill: "#94a3b8", fontSize: 10 }}
               axisLine={{ stroke: "#142335" }}
               tickLine={false}
-              tickFormatter={(v) => (v > 1 ? v.toFixed(2) : v.toFixed(4))}
+              tickFormatter={(v) => Number(v).toFixed(decimales)}
             />
 
             <Tooltip content={<CustomTooltip />} cursor={{ stroke: "#244163", strokeDasharray: "3 3" }} />

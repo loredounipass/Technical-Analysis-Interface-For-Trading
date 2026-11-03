@@ -50,8 +50,8 @@ const MovingAveragesChart = ({ title, datos = {} }) => {
     .filter((v) => Number.isFinite(v))
   const minEma = emaValues.length > 0 ? Math.min(...emaValues) : 0
   const maxEma = emaValues.length > 0 ? Math.max(...emaValues) : 100
-  const padEma = Math.max((maxEma - minEma) * 0.15, 0.001)
-  const emaDomain = [minEma - padEma, maxEma + padEma]
+  const padEma = Math.max((maxEma - minEma) * 0.15, Math.abs(maxEma) * 0.001, 1e-12)
+  const emaDomain = [Math.max(0, minEma - padEma), maxEma + padEma]
 
   const isBullTrend = datos.precio > datos.ema50 && datos.ema50 > datos.ema200
 

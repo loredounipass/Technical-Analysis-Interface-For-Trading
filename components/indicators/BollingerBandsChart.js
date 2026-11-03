@@ -38,8 +38,8 @@ const BollingerBandsChart = ({ title, datos = {} }) => {
     .filter((v) => Number.isFinite(v))
   const minBb = bbValues.length > 0 ? Math.min(...bbValues) : 0
   const maxBb = bbValues.length > 0 ? Math.max(...bbValues) : 100
-  const padBb = Math.max((maxBb - minBb) * 0.1, 0.001)
-  const bbDomain = [minBb - padBb, maxBb + padBb]
+  const padBb = Math.max((maxBb - minBb) * 0.1, Math.abs(maxBb) * 0.001, 1e-12)
+  const bbDomain = [Math.max(0, minBb - padBb), maxBb + padBb]
 
   const isAbove = datos.precio > datos.bbUpper
   const isBelow = datos.precio < datos.bbLower
