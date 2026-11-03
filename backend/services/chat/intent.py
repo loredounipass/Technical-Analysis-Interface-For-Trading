@@ -13,7 +13,7 @@ _ANALYSIS_TRIGGERS = re.compile(
     r'anali[zs]|análisis|technical|analisis|trade|trading|opera|operar|operacion|'
     r'compra[rs]?|vend[eo]r?|venta|sell|buy|long|short|'
     r'soporte|resistencia|support|resistance|'
-    r'rsi|macd|ema|bollinger|adx|cci|mfi|stoch|indicador|indicator|'
+    r'rsi|macd|ema|bollinger|adx|cci|mfi|stoch|keltner|squeeze|ttm|indicador|indicator|'
     r'señal|signal|tendencia|trend|momentum|'
     r'entrada|salida|entry|exit|stop.?loss|take.?profit|tp|sl|'
     r'precio|price|target|objetivo|'

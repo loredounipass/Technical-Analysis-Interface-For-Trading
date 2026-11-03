@@ -7,6 +7,8 @@ import BollingerBandsChart from "@/components/indicators/BollingerBandsChart"
 import MovingAveragesChart from "@/components/indicators/MovingAveragesChart"
 import StochasticOscillatorChart from "@/components/indicators/StochasticOscillatorChart"
 import StochasticRsiChart from "@/components/indicators/StochasticRsiChart"
+import AdxChart from "@/components/indicators/AdxChart"
+import SqueezeMomentumChart from "@/components/indicators/SqueezeMomentumChart"
 
 // Dispatcher de tarjetas de indicadores: selecciona el componente de grafico
 // segun `type`. Cada tipo vive en su propio modulo; la navegacion pan/zoom y los
@@ -25,6 +27,10 @@ const ChartCard = ({ title, type, datos = {} }) => {
       return <StochasticOscillatorChart title={title} datos={datos} />
     case "stochRsi":
       return <StochasticRsiChart title={title} datos={datos} />
+    case "adx":
+      return <AdxChart title={title} datos={datos} />
+    case "squeeze":
+      return <SqueezeMomentumChart title={title} datos={datos} />
     default:
       return null
   }

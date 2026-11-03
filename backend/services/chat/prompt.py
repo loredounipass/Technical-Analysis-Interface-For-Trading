@@ -89,6 +89,16 @@ def _format_recent_volume(history):
     return ', '.join(_format_compact(v) for v in vals[-10:])
 
 
+# Serie compacta del estado de squeeze ('on'|'off'|'no') de las ultimas 10
+# velas (oldest -> newest). Es texto, no numerico, asi que NO usa
+# _format_recent (que haria float() y reventaria).
+def _format_recent_squeeze_state(history):
+    vals = history.get('squeezeState')
+    if not vals:
+        return 'N/A'
+    return ', '.join((v if v is not None else 'N/A') for v in vals[-10:])
+
+
 # Valor None-safe para la tabla: 'N/A' en vez de 'None'
 def _val(data, key):
     v = data.get(key)
@@ -138,6 +148,20 @@ def _bb_pos(price, upper, lower):
         return f"{(float(price) - float(lower)) / diff * 100:.0f}%"
     except (TypeError, ValueError):
         return 'N/A'
+
+
+# Celda compacta de squeeze para la tabla MTF: estado (ON/off/no) + signo del
+# momentum (+ alcista / - bajista). Ej: 'ON+' compresion con presion compradora.
+def _sqz_cell(state, momentum):
+    st = {'on': 'ON', 'off': 'off', 'no': 'no'}.get(state, '--')
+    sign = ''
+    if momentum is not None:
+        try:
+            m = float(momentum)
+            sign = '+' if m > 0 else ('-' if m < 0 else '')
+        except (TypeError, ValueError):
+            sign = ''
+    return f"{st}{sign}"
 
 
 # Formatea un timestamp en ms a hora UTC (coherente con velas y pivotes del sistema)
@@ -538,6 +562,13 @@ def get_trading_system_prompt(indicator_data=None, global_context=None, model_na
         data_block += f"| MACD Histogram (12, 26, 9)| {_fmt(indicator_data.get('macdHistogram'))} | Momentum acceleration (>0 Bullish, <0 Bearish) |\n"
         data_block += f"| ADX (14) Trend Strength | {_fmt(indicator_data.get('adx'))} | Trend Strength (>25 Trend, <25 Consolidation) |\n"
         data_block += f"| ADX Directional Force | +DI: {_fmt(indicator_data.get('plusDi'))} / -DI: {_fmt(indicator_data.get('minusDi'))} | Directional Movement Index |\n"
+        _sqz_state = indicator_data.get('squeezeState')
+        _sqz_label = {
+            'on': 'SQUEEZE ON (Bollinger inside Keltner: volatility coiled, expansion pending)',
+            'off': 'SQUEEZE RELEASED (Bollinger outside Keltner: expansion underway)',
+            'no': 'PARTIAL / TRANSITION (bands overlapping)',
+        }.get(_sqz_state, 'N/A')
+        data_block += f"| Squeeze Momentum (20,2,1.5) | Momentum: {_fmt(indicator_data.get('squeezeMomentum'))} | {_sqz_label} | TTM/LazyBear: histogram bars = momentum (sign+direction); dots = squeeze state. Positive & rising = bullish; negative & falling = bearish. A squeeze ON right after release flags a potential explosive move |\n"
         data_block += f"| Bollinger Bands (20, 2σ) | Upper: ${_fmt(indicator_data.get('bbUpper'))} | Mid: ${_fmt(indicator_data.get('bbMiddle'))} | Lower: ${_fmt(indicator_data.get('bbLower'))} | Volatility envelope |\n"
         data_block += f"| Moving Averages | EMA50: ${_fmt(indicator_data.get('ema50'))} | EMA100: ${_fmt(indicator_data.get('ema100'))} | EMA200: ${_fmt(indicator_data.get('ema200'))} | Trend bias & dynamic S/R |\n"
         data_block += f"| Support Levels (Pivots) | S1: ${_fmt(indicator_data.get('s1'))} | S2: ${_fmt(indicator_data.get('s2'))} | S3: ${_fmt(indicator_data.get('s3'))} | Key dynamic support floors |\n"
@@ -554,19 +585,20 @@ def get_trading_system_prompt(indicator_data=None, global_context=None, model_na
         mtf = indicator_data.get('multi_timeframe') or []
         if mtf:
             base += "\n=== MULTI-TIMEFRAME CONTEXT (same asset, all OTHER timeframes) ===\n"
-            base += "All rows use the same periods: RSI(14) | Stoch K/D(14,3,3) | MACD Hist(12,26,9) | ADX(14) | CCI(20) | BB(20,2σ) | EMA50. Signals = BUY/SELL/NEUTRAL counts.\n"
-            base += "TF  | Price      | RSI    | StochK/D   | MACD Hist | ADX    | CCI      | BB pos | vs EMA50 | B/S/N  | Last candle (UTC)\n"
+            base += "All rows use the same periods: RSI(14) | Stoch K/D(14,3,3) | MACD Hist(12,26,9) | ADX(14) | Squeeze(20,2,1.5: ON/off/no + momentum sign) | CCI(20) | BB(20,2σ) | EMA50. Signals = BUY/SELL/NEUTRAL counts.\n"
+            base += "TF  | Price      | RSI    | StochK/D   | MACD Hist | ADX    | Squeeze | CCI      | BB pos | vs EMA50 | B/S/N  | Last candle (UTC)\n"
             for s in mtf:
                 base += (
                     f"{s.get('timeframe', '?'):>3} | {_fmt(s.get('precio')):>10} | "
                     f"{_fmt(s.get('rsi')):>6} | {_fmt(s.get('stochK'))}/{_fmt(s.get('stochD'))} | "
                     f"{_fmt(s.get('macdHistogram')):>7} | {_fmt(s.get('adx')):>6} | "
+                    f"{_sqz_cell(s.get('squeezeState'), s.get('squeezeMomentum')):>7} | "
                     f"{_fmt(s.get('cci')):>8} | {_bb_pos(s.get('precio'), s.get('bbUpper'), s.get('bbLower')):>6} | "
                     f"{_pct(s.get('precio'), s.get('ema50')):>8} | "
                     f"{s.get('buySignals', '?')}/{s.get('sellSignals', '?')}/{s.get('neutralSignals', '?')} | "
                     f"{_fmt_ts(s.get('ts'))}\n"
                 )
-            base += "\nUse this to judge trend alignment: if the same signal repeats across most timeframes, the setup is stronger (multi-timeframe confluence). If timeframes conflict, say so.\n"
+            base += "\nUse this to judge trend alignment: if the same signal repeats across most timeframes, the setup is stronger (multi-timeframe confluence). If timeframes conflict, say so. A squeeze ON on several timeframes at once means volatility is coiled market-wide (breakout watch).\n"
 
         # Series historicas recientes: el agente ve la EVOLUCION de cada
         # indicador (ultimos 30 candles, del mas antiguo al mas nuevo) para
@@ -582,6 +614,8 @@ def get_trading_system_prompt(indicator_data=None, global_context=None, model_na
             base += f"STOCH RSI K (14,3,3): {_format_recent(hist, 'rsiStoch')}\n"
             base += f"CCI (20): {_format_recent(hist, 'cci')} | MFI (14): {_format_recent(hist, 'mfi')}\n"
             base += f"ADX (14): {_format_recent(hist, 'adx')}\n"
+            base += f"SQUEEZE MOMENTUM (20,2,1.5): {_format_recent(hist, 'squeezeMomentum')}\n"
+            base += f"SQUEEZE STATE (on/off/no): {_format_recent_squeeze_state(hist)}\n"
             base += f"BB (20,2σ) UPPER: {_format_recent(hist, 'bb_upper')} | MIDDLE: {_format_recent(hist, 'bb_middle')} | LOWER: {_format_recent(hist, 'bb_lower')}\n"
             base += f"EMA 50: {_format_recent(hist, 'ema50')} | EMA 100: {_format_recent(hist, 'ema100')} | EMA 200: {_format_recent(hist, 'ema200')}\n"
             base += "\nUse these series to confirm trends, spot crossovers, divergences, and momentum shifts. They are the source of truth for the exact numbers above.\n"

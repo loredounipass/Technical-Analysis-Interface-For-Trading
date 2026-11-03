@@ -18,6 +18,7 @@ from services.indicators import (
     compute_rsi_series, compute_ema_series, compute_macd_series,
     compute_bollinger_series, compute_stoch_series, compute_stoch_rsi_series,
     compute_cci_series, compute_mfi_series, compute_adx_series, compute_pivots,
+    compute_squeeze_momentum_series,
     compute_signal_summary, last_non_none, price_decimals, forex_decimals,
 )
 from services.data_fetchers import fetch_last_price, interval_seconds
@@ -75,6 +76,8 @@ def build_payload(symbol, interval_str, market, klines, vol_24h=None):
     adx = []
     plus_di = []
     minus_di = []
+    squeeze_momentum = []
+    squeeze_state = []
     pivots = (None, None, None, None, None, None)
     try:
         rsi_series = compute_rsi_series(closes, period=14)
@@ -88,6 +91,7 @@ def build_payload(symbol, interval_str, market, klines, vol_24h=None):
         ema100 = compute_ema_series(closes, 100)
         ema200 = compute_ema_series(closes, 200)
         adx, plus_di, minus_di = compute_adx_series(highs, lows, closes)
+        squeeze_momentum, squeeze_state = compute_squeeze_momentum_series(highs, lows, closes)
         pivots = compute_pivots(highs, lows, closes, timestamps)
 
         history['rsi'] = rsi_series
@@ -110,6 +114,10 @@ def build_payload(symbol, interval_str, market, klines, vol_24h=None):
         history['cci'] = cci_series
         history['mfi'] = mfi_series
         history['adx'] = adx
+        history['plusDi'] = plus_di
+        history['minusDi'] = minus_di
+        history['squeezeMomentum'] = squeeze_momentum
+        history['squeezeState'] = squeeze_state
     except Exception as e:
         logger.error(f"[TradingData] calculo de indicadores fallo para {symbol}: {e}")
 
@@ -155,6 +163,7 @@ def build_payload(symbol, interval_str, market, klines, vol_24h=None):
             ema100 = compute_ema_series(closes, 100)
             ema200 = compute_ema_series(closes, 200)
             adx, plus_di, minus_di = compute_adx_series(highs, lows, closes)
+            squeeze_momentum, squeeze_state = compute_squeeze_momentum_series(highs, lows, closes)
             pivots = compute_pivots(highs, lows, closes, history['times'])
 
             history['rsi'] = rsi_series
@@ -177,6 +186,10 @@ def build_payload(symbol, interval_str, market, klines, vol_24h=None):
             history['cci'] = cci_series
             history['mfi'] = mfi_series
             history['adx'] = adx
+            history['plusDi'] = plus_di
+            history['minusDi'] = minus_di
+            history['squeezeMomentum'] = squeeze_momentum
+            history['squeezeState'] = squeeze_state
 
             if vol_24h is None:
                 vol_24h = precio * max(1, 86400 // secs)
@@ -256,6 +269,8 @@ def build_payload(symbol, interval_str, market, klines, vol_24h=None):
         'adx': last_non_none(adx),
         'plusDi': last_non_none(plus_di),
         'minusDi': last_non_none(minus_di),
+        'squeezeMomentum': last_non_none(squeeze_momentum),
+        'squeezeState': squeeze_state[-1] if squeeze_state else None,
         'stochK': last_non_none(stoch_k),
         'stochD': last_non_none(stoch_d),
         'cci': last_non_none(cci_series),

@@ -53,6 +53,8 @@ def _build_multi_timeframe_context(symbol, current_interval, market):
             'stochD': d.get('stochD'),
             'macdHistogram': d.get('macdHistogram'),
             'adx': d.get('adx'),
+            'squeezeState': d.get('squeezeState'),
+            'squeezeMomentum': d.get('squeezeMomentum'),
             'cci': d.get('cci'),
             'mfi': d.get('mfi'),
             'ema50': d.get('ema50'),
