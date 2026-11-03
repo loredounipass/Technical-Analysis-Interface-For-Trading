@@ -11,7 +11,6 @@ export default function Header({
   onCambiarMoneda,
   timeframe = "15m",
   onTimeframeChange,
-  isConnected = true,
   time = "",
 }) {
   const router = useRouter()
@@ -132,21 +131,8 @@ export default function Header({
             </span>
           </div>
   
-          {/* Connection status + UTC clock. The text label collapses to just a
-              colored dot on mobile so the top row never wraps. */}
+          {/* UTC clock */}
           <div className="order-2 ml-auto flex items-center gap-2 sm:gap-3 text-[11px] flex-shrink-0 lg:order-3 lg:ml-0">
-            <div
-              className="flex items-center gap-1.5 px-2 sm:px-2.5 py-0.5 rounded-full bg-[#09111b] border border-[#16283d]"
-              title={isConnected ? "Connection stable" : "Connection lost"}
-            >
-              <span
-                className={`w-1.5 h-1.5 rounded-full ${isConnected ? "bg-[#00f5c4] shadow-[0_0_8px_#00f5c4]" : "bg-[#ff3b69]"}`}
-              />
-              <span className={`hidden sm:inline ${isConnected ? "text-slate-200" : "text-[#ff3b69]"}`}>
-                {isConnected ? "CONN. STABLE" : "CONN. LOST"}
-              </span>
-            </div>
-  
             <div className="text-slate-300 font-semibold tracking-wider">
               UTC <span className="text-white font-bold">{currentTime || "00:00:00"}</span>
             </div>

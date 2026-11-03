@@ -20,7 +20,7 @@ export default function Dashboard({ moneda, market = "crypto", onCambiarMoneda }
   const [woodyScanning, setWoodyScanning] = useState(false)
 
   const fetchCounterRef = useRef(0)
-  const { liveData, isConnected } = useTradingSocket(moneda.symbol, timeframe, market)
+  const { liveData } = useTradingSocket(moneda.symbol, timeframe, market)
 
   useEffect(() => {
     setMounted(true)
@@ -165,7 +165,6 @@ export default function Dashboard({ moneda, market = "crypto", onCambiarMoneda }
         onCambiarMoneda={onCambiarMoneda}
         timeframe={timeframe}
         onTimeframeChange={handleTimeframeChange}
-        isConnected={isConnected}
         time={time}
       />
 
