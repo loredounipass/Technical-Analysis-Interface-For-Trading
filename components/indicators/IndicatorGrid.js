@@ -53,8 +53,24 @@ const IndicatorGrid = ({ datos = {} }) => {
           datos={datos}
         />
 
-        {/* Card 3: 24H Volume & ADX */}
+        {/* Card 3: 24H Volume */}
         <VolumeAdxPanel datos={datos} volumeChartData={volumeChartData} />
+      </div>
+
+      {/* 2b. Trend Strength & Volatility Squeeze (par: ADX + Squeeze Momentum) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <ChartCard
+          title="ADX (14) TREND STRENGTH"
+          icon={<Gauge className="h-4 w-4 mr-1 text-amber-400" />}
+          type="adx"
+          datos={datos}
+        />
+        <ChartCard
+          title="SQUEEZE MOMENTUM (20, 2, 1.5)"
+          icon={<Waves className="h-4 w-4 mr-1 text-[#00f5c4]" />}
+          type="squeeze"
+          datos={datos}
+        />
       </div>
 
       {/* 3. Secondary Indicators Row (Bollinger Bands & Moving Averages with dynamic Y-axis scaling) */}

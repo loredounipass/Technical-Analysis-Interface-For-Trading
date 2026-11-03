@@ -21,6 +21,9 @@ from services.indicators.oscillators import (
     compute_stoch_series, compute_stoch_rsi_series, compute_cci_series,
     compute_mfi_series, compute_adx_series,
 )
+from services.indicators.squeeze_momentum import (
+    compute_squeeze_momentum_series,
+)
 from services.indicators.price_action_zones import (
     compute_order_blocks, compute_fair_value_gaps, compute_liquidity_swings,
 )
@@ -37,6 +40,7 @@ __all__ = [
     "compute_rsi_series", "compute_macd_series", "compute_bollinger_series",
     "compute_stoch_series", "compute_stoch_rsi_series", "compute_cci_series",
     "compute_mfi_series", "compute_adx_series",
+    "compute_squeeze_momentum_series",
     "compute_order_blocks", "compute_fair_value_gaps", "compute_liquidity_swings",
     "compute_order_flow_proxy", "compute_order_flow",
     "compute_pivots",
