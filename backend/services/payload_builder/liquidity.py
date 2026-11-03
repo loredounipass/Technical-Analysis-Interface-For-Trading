@@ -12,7 +12,8 @@ from services.data_fetchers import fetch_order_book_depth
 logger = logging.getLogger(__name__)
 
 
-def compute_liquidity(symbol, market, precio, opens, highs, lows, closes, quote_volumes):
+def compute_liquidity(symbol, market, precio, opens, highs, lows, closes,
+                      quote_volumes, provider='coinbase'):
     """Devuelve el bloque de liquidez: bid_vol, ask_vol, best_bid, best_ask,
     buyer_percent, ob_source y depth_raw.
 
@@ -31,7 +32,7 @@ def compute_liquidity(symbol, market, precio, opens, highs, lows, closes, quote_
     depth_raw = None
     if market == 'crypto':
         try:
-            depth = fetch_order_book_depth(symbol)
+            depth = fetch_order_book_depth(symbol, provider)
             if depth and depth.get('bids') and depth.get('asks'):
                 bids = [(float(p), float(q)) for p, q in depth['bids']]
                 asks = [(float(p), float(q)) for p, q in depth['asks']]

@@ -23,7 +23,14 @@ const CHAT_OPEN_KEY = "trading_terminal_open"
  * - ChatSessionsDrawer: Historial deslizable de sesiones
  * - ChatLauncherButton: Botón de reapertura cuando está minimizado
  */
-export default function AiChat({ symbol, datos, interval = "15m", market = "crypto", onAnalysisChange }) {
+export default function AiChat({
+  symbol,
+  datos,
+  interval = "15m",
+  market = "crypto",
+  provider = "coinbase",
+  onAnalysisChange,
+}) {
   // Estado de apertura persistido: el chat debe seguir abierto tras un refresh
   // y cerrarse SOLO cuando el usuario lo cierra desde la X. Se restaura en
   // cliente (no en el render inicial de SSR) para evitar un mismatch de
@@ -54,6 +61,7 @@ export default function AiChat({ symbol, datos, interval = "15m", market = "cryp
     datos,
     interval,
     market,
+    provider,
     onAnalysisChange,
     isOpen,
   })

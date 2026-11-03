@@ -42,7 +42,7 @@ def fetch_yahoo_meta_price(symbol):
 
 
 # OBTIENE EL ULTIMO PRECIO DISPONIBLE COMO FALLBACK SI FALLAN LAS KLINES
-def fetch_last_price(symbol, market):
+def fetch_last_price(symbol, market, provider='coinbase'):
     if market == 'stock':
         # Primero el quote en vivo (regularMarketPrice); si falla, el cierre
         # de la ultima vela diaria.
@@ -56,7 +56,7 @@ def fetch_last_price(symbol, market):
         if bars:
             return float(bars[-1][4])
         raise ValueError(f'Yahoo Finance sin datos para {symbol}')
-    try:
+    if provider == 'coinbase':
         product = coinbase_product_id(symbol)
         r = requests.get(
             f'{COINBASE_BASE}/products/{product}/ticker',
@@ -64,58 +64,53 @@ def fetch_last_price(symbol, market):
         )
         r.raise_for_status()
         return float(r.json()['price'])
-    except Exception as e:
-        logger.warning(f"[TradingData] Coinbase last price fallo para {symbol}: {e}")
-    url = 'https://data-api.binance.vision/api/v3/ticker/price'
-    resp = requests.get(url, params={'symbol': symbol}, timeout=8)
-    resp.raise_for_status()
-    return float(resp.json()['price'])
+    if provider == 'binance':
+        url = 'https://data-api.binance.vision/api/v3/ticker/price'
+        resp = requests.get(url, params={'symbol': symbol}, timeout=8)
+        resp.raise_for_status()
+        return float(resp.json()['price'])
+    raise ValueError(f"Proveedor no soportado para precio crypto: {provider}")
 
 
-# OBTIENE KLINES DE MERCADO (BINANCE/YAHOO) + VOLUMEN 24H EXACTO.
+# OBTIENE KLINES DEL PROVEEDOR SELECCIONADO + VOLUMEN 24h.
 # NO calcula indicadores (build_payload hace eso). Separada para que el hilo
 # de streaming de Binance re-seedee sus velas sin duplicar logica.
-def fetch_klines_and_volume(symbol, interval_str, market):
-    klines = None
-    try:
-        if market == 'stock':
-            klines = fetch_yahoo_chart(symbol, interval_str)
-        else:
+def fetch_klines_and_volume(symbol, interval_str, market, provider='coinbase'):
+    if market == 'stock':
+        provider = 'yahoo'
+        klines = fetch_yahoo_chart(symbol, interval_str)
+    elif provider == 'coinbase':
+        klines = fetch_coinbase_klines(symbol, interval_str)
+    elif provider == 'binance':
+        # Binance permite hasta 1000 velas por llamada. Se pide una pagina
+        # adicional mas antigua para que EMA(200)/MACD/ADX converjan.
+        klines = fetch_klines(symbol, interval=interval_str, limit=1000)
+        if klines and len(klines) >= 1000:
             try:
-                klines = fetch_coinbase_klines(symbol, interval_str)
+                older = fetch_klines(
+                    symbol,
+                    interval=interval_str,
+                    limit=1000,
+                    end_time=int(klines[0][0]) - 1,
+                )
+                if older:
+                    klines = older + klines
             except Exception as e:
-                logger.warning(f"[TradingData] Coinbase klines fallo para {symbol}, usando Binance: {e}")
-                klines = None
-            if klines is None:
-                # Binance permite hasta 1000 velas por llamada. Se pide una pagina
-                # adicional mas antigua (2000 total) para que EMA(200)/MACD/ADX
-                # converjan a los mismos valores que TradingView/Binance.
-                klines = fetch_klines(symbol, interval=interval_str, limit=1000)
-                if klines and len(klines) >= 1000:
-                    try:
-                        older = fetch_klines(
-                            symbol,
-                            interval=interval_str,
-                            limit=1000,
-                            end_time=int(klines[0][0]) - 1,
-                        )
-                        if older:
-                            klines = older + klines
-                    except Exception as e:
-                        logger.warning(f"[TradingData] pagina extra fallo para {symbol}: {e}")
-    except Exception as e:
-        logger.warning(f"[TradingData] klines fallo para {symbol} ({market}): {e}")
+                logger.warning(f"[TradingData] pagina extra Binance fallo para {symbol}: {e}")
+    else:
+        raise ValueError(f"Proveedor no soportado: {provider}")
+
+    if not klines:
+        raise ValueError(f"{provider} no devolvio velas para {symbol}")
 
     vol_24h = None
     secs = interval_seconds(interval_str)
-    # Volumen 24h EXACTO al de Binance: ticker oficial /ticker/24hr (ventana
-    # rodante real, quoteVolume = lo que muestra la app en USDT). Si falla, se
-    # cae a la suma de velas. Stocks no tienen equivalente Binance: se suman
-    # las velas de Yahoo dentro de las ultimas 24h.
+    # Si el ticker falla, se calcula el volumen con las velas del mismo
+    # proveedor. Stocks suman las velas de Yahoo de las ultimas 24h.
     try:
         if market == 'crypto' and klines:
             try:
-                vol_24h = fetch_quote_volume_24h(symbol)
+                vol_24h = fetch_quote_volume_24h(symbol, provider)
             except Exception as e:
                 logger.warning(f"[TradingData] ticker 24h fallo para {symbol}: {e}")
         if vol_24h is None:

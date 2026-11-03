@@ -296,7 +296,8 @@ def _format_price_action_context(indicator_data):
                 f"judge dominance by VOLUME, not by trade count."
             )
         lines.append(
-            f"- Source: {source} (aggressor inferred by inverting Coinbase maker side)"
+            f"- Source: {source} | Provider: {order_flow.get('provider', 'N/A')} | "
+            f"Aggressor classification: {side_class}"
         )
         recent = order_flow.get('recentTrades')
         if recent and isinstance(recent, list):
@@ -322,7 +323,7 @@ def get_trading_system_prompt(indicator_data=None, global_context=None, model_na
     # ── IDENTITY (always present) ──
     _now = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     identity = (
-        f"You are a SENIOR INSTITUTIONAL CRYPTO TRADER and QUANTITATIVE STRATEGIST operating as {model_name} inside the SYNAPSE TERMINAL. "
+        f"You are a SENIOR INSTITUTIONAL CRYPTO TRADER and QUANTITATIVE STRATEGIST operating as {model_name} inside SYNAPSE. "
         "Apply Wall Street-style institutional discipline: evidence before narrative, independent judgment, scenario analysis, execution awareness, and risk first. "
         "Your expertise includes market microstructure, order book and liquidity analysis, Price Action, Wyckoff, multi-timeframe confluence, "
         "technical indicators, volatility, derivatives positioning, position sizing, and portfolio risk. "
@@ -350,7 +351,7 @@ def get_trading_system_prompt(indicator_data=None, global_context=None, model_na
             "Respond naturally and warmly, like a senior trader colleague during a coffee break. "
             "Keep responses SHORT (2-4 sentences max). Be personable but always maintain your professional trader identity.\n"
             "If the user asks who you are or what you do, briefly introduce yourself as a quantitative trading strategist "
-            "embedded in the SYNAPSE TERMINAL, ready to analyze any asset when they need it.\n"
+            "embedded in SYNAPSE, ready to analyze any asset when they need it.\n"
             "If the user seems to want analysis, tell them you're ready — just ask about a specific asset or say 'analiza' and you'll deliver a full institutional report.\n"
         )
         if global_context:
@@ -530,6 +531,12 @@ def get_trading_system_prompt(indicator_data=None, global_context=None, model_na
         data_block = "\n[EXACT MARKET DATA FEED & LIVE INDICATORS - SOURCE OF TRUTH]\n"
         data_block += f"| CORE METRIC | VALUE | CONTEXT |\n"
         data_block += f"| :--- | :--- | :--- |\n"
+        selected_provider = indicator_data.get(
+            'provider', 'yahoo' if market == 'stock' else 'N/A'
+        )
+        data_block += f"| Active Market Data Provider | {str(selected_provider).upper()} | User-selected source for every supplied live price, candle, indicator, order book, liquidity, and order-flow value in this request. Do not substitute or infer another exchange from conversation history. |\n"
+        data_block += "| Mandatory provider verification | MCP tool `get_selected_market_data` | Call this tool before every market analysis. Its provider must match the Active Market Data Provider above; use its snapshot as the final source check. If unavailable or mismatched, disclose that and do not analyze using another exchange or invent values. |\n"
+        data_block += "| Provider provenance | Current request | When recalling prior analysis with search_chat_history, distinguish its historical provider from the active provider named here. |\n"
         data_block += f"| Symbol & Market | {indicator_data.get('symbol', 'N/A')} ({market.upper()}) | Trading pair / asset |\n"
         data_block += f"| Timeframe | {indicator_data.get('timeframe', 'N/A')} | Candle interval (all indicator values correspond to this timeframe) |\n"
         data_block += f"| Current Spot Price | ${_fmt(indicator_data.get('precio'))} | Live Spot Price |\n"
@@ -552,7 +559,8 @@ def get_trading_system_prompt(indicator_data=None, global_context=None, model_na
             data_block += f"| Top Ask Liquidity Walls | {liquidity_walls['top_asks']} | Potential ask liquidity; orders may be canceled |\n"
         of = indicator_data.get('orderFlow')
         if isinstance(of, dict):
-            data_block += f"| Executed Order Flow | Net Delta: ${_fmt(of.get('delta'))} ({of.get('deltaPercent', 0):+.1f}%) | Aggressor Buy Vol: {of.get('buyPercent', 0)}% ({of.get('tradeCount', 0)} executed trades) |\n"
+            order_flow_provider = of.get('provider', 'N/A')
+            data_block += f"| Executed Order Flow | Provider: {str(order_flow_provider).upper()} | Net Delta: ${_fmt(of.get('delta'))} ({of.get('deltaPercent', 0):+.1f}%) | Aggressor Buy Vol: {of.get('buyPercent', 0)}% ({of.get('tradeCount', 0)} executed trades) |\n"
         lswings = indicator_data.get('liquiditySwings')
         if isinstance(lswings, list):
             act_cnt = sum(1 for s in lswings if s.get('status') == 'active')

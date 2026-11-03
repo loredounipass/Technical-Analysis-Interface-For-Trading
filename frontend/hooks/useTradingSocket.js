@@ -11,18 +11,26 @@ import { connectTradingRoom } from "@/services/realtime/tradingSocketClient"
  * @param {string} market   - Tipo de mercado ('crypto' | 'stock').
  * @returns {{ liveData: Object|null, isConnected: boolean, error: string|null }}
  */
-export default function useTradingSocket(symbol, interval, market = "crypto") {
+export default function useTradingSocket(
+  symbol,
+  interval,
+  market = "crypto",
+  provider = "coinbase",
+) {
   const [liveData, setLiveData] = useState(null)
   const [isConnected, setIsConnected] = useState(false)
   const [error, setError] = useState(null)
 
   useEffect(() => {
     if (!symbol || !interval) return
+    setLiveData(null)
+    setIsConnected(false)
 
     return connectTradingRoom({
       symbol,
       interval,
       market,
+      provider: market === "stock" ? "yahoo" : provider,
       onConnected: () => {
         setIsConnected(true)
         setError(null)
@@ -34,7 +42,7 @@ export default function useTradingSocket(symbol, interval, market = "crypto") {
       onDataUpdate: (data) => setLiveData(data),
       onDisconnected: () => setIsConnected(false),
     })
-  }, [symbol, interval, market])
+  }, [symbol, interval, market, provider])
 
   return { liveData, isConnected, error }
 }

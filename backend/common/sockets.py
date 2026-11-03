@@ -39,6 +39,17 @@ def data_signature(data):
         return str(time.time())
 
 def init_sockets(socketio, fetch_data_func):
+    def parse_room(room):
+        parts = room.split(':')
+        if len(parts) == 4:
+            market, provider, symbol, interval = parts
+        elif len(parts) == 3:
+            market, symbol, interval = parts
+            provider = 'yahoo' if market == 'stock' else 'coinbase'
+        else:
+            raise ValueError(f"Invalid trading room: {room}")
+        return market, provider, symbol, interval
+
     def remove_room_subscriber(room):
         """Decrementa el contador de un room y lo destruye si queda vacio."""
         with subscriber_lock:
@@ -100,10 +111,10 @@ def init_sockets(socketio, fetch_data_func):
         room = data.get('room')
         if not room: return
         try:
-            parts = room.split(':')
-            if len(parts) < 3: return
-            market, symbol, interval = parts[0], parts[1], parts[2]
-            data = fetch_data_func(symbol, interval, market)
+            market, provider, symbol, interval = parse_room(room)
+            data = fetch_data_func(
+                symbol, interval, market, provider=provider
+            )
             socketio.emit('trading_data_update', data, room=room)
         except Exception as e:
             logger.error(f"[Socket] Manual refresh error for {room}: {e}")
@@ -161,10 +172,10 @@ def init_sockets(socketio, fetch_data_func):
                             socketio.sleep(BASE_STAGGER)
                             continue
 
-                        parts = room_id.split(':')
-                        if len(parts) < 3: continue
-                        market, symbol, interval = parts[0], parts[1], parts[2]
-                        data = fetch_data_func(symbol, interval, market)
+                        market, provider, symbol, interval = parse_room(room_id)
+                        data = fetch_data_func(
+                            symbol, interval, market, provider=provider
+                        )
                         if emit_if_changed(room_id, data):
                             socketio.emit('trading_data_update', data, room=room_id)
                         reset_room_errors(room_id)

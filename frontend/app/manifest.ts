@@ -11,7 +11,7 @@ import type { MetadataRoute } from "next"
  */
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "SYNAPSE TERMINAL",
+    name: "SYNAPSE",
     short_name: "Synapse",
     description:
       "Terminal profesional de analisis tecnico para crypto y acciones, con datos reales de mercado en tiempo real.",

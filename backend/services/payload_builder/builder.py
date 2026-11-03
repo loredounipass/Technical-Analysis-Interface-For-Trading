@@ -30,7 +30,8 @@ from services.payload_builder.liquidity import compute_liquidity
 logger = logging.getLogger(__name__)
 
 
-def build_payload(symbol, interval_str, market, klines, vol_24h=None):
+def build_payload(symbol, interval_str, market, klines, vol_24h=None,
+                  provider='coinbase'):
     """CONSTRUYE EL PAYLOAD COMPLETO (indicadores + historia + senales) A PARTIR
     DE KLINES."""
     is_synthetic = False
@@ -44,7 +45,8 @@ def build_payload(symbol, interval_str, market, klines, vol_24h=None):
     quote_volumes = parsed['quote_volumes']
     base_volumes = parsed['base_volumes']
 
-    precio = closes[-1] if closes else fetch_last_price(symbol, market)
+    provider = 'yahoo' if market == 'stock' else provider
+    precio = closes[-1] if closes else fetch_last_price(symbol, market, provider)
 
     history = {}
     if klines:
@@ -198,7 +200,8 @@ def build_payload(symbol, interval_str, market, klines, vol_24h=None):
 
     # Price action + order flow (order blocks, FVG, swings) con velas reales.
     order_blocks, fair_value_gaps, liquidity_swings, order_flow = compute_price_action(
-        klines, symbol, market, opens, highs, lows, closes, timestamps, quote_volumes
+        klines, symbol, market, opens, highs, lows, closes, timestamps,
+        quote_volumes, provider
     )
 
     # Los indicadores se calculan con toda la historia (convergencia exacta);
@@ -231,7 +234,8 @@ def build_payload(symbol, interval_str, market, klines, vol_24h=None):
     # Libro de ordenes real + dominancia compradora (order book crypto, volume
     # profile / proxy de volumen en stocks).
     liq = compute_liquidity(
-        symbol, market, precio, opens, highs, lows, closes, quote_volumes
+        symbol, market, precio, opens, highs, lows, closes, quote_volumes,
+        provider
     )
     bid_vol = liq['bid_vol']
     ask_vol = liq['ask_vol']
@@ -244,6 +248,7 @@ def build_payload(symbol, interval_str, market, klines, vol_24h=None):
     result = {
         'symbol': symbol,
         'market': market,
+        'provider': provider,
         'precio': precio,
         'decimales': forex_decimals(symbol) or price_decimals(precio),
         'rsi': last_non_none(rsi_series),

@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 def compute_price_action(klines, symbol, market, opens, highs, lows,
-                         closes, timestamps, quote_volumes):
+                         closes, timestamps, quote_volumes, provider='coinbase'):
     """Calcula order blocks, fair value gaps, swings de liquidez y order flow.
 
     El price action se calcula exclusivamente con velas reales del exchange
@@ -38,7 +38,10 @@ def compute_price_action(klines, symbol, market, opens, highs, lows,
             logger.error(f"[TradingData] price action fallo para {symbol}: {e}")
     if market == 'crypto':
         try:
-            order_flow = compute_order_flow(get_order_flow_trades(symbol))
+            order_flow = compute_order_flow(
+                get_order_flow_trades(symbol, provider=provider),
+                provider=provider,
+            )
         except Exception as e:
             logger.warning(f"[TradingData] order flow fallo para {symbol}: {e}")
     elif klines and closes:

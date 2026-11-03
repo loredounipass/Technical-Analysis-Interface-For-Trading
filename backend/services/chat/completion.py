@@ -49,13 +49,20 @@ def nvidia_chat(
     url = ctx["url"]
     headers = ctx["headers"]
     request_tools = ctx["request_tools"]
+    required_initial_tool = ctx["required_initial_tool"]
     initial_messages = ctx["initial_messages"]
 
     messages = list(initial_messages)
     tools_used = []
 
     try:
-        for _round in range(MAX_TOOL_ROUNDS):
+        for round_index in range(MAX_TOOL_ROUNDS):
+            tool_choice = "auto"
+            if round_index == 0 and required_initial_tool:
+                tool_choice = {
+                    "type": "function",
+                    "function": {"name": required_initial_tool},
+                }
             payload_dict = {
                 "model": model_id,
                 "messages": messages,
@@ -64,7 +71,7 @@ def nvidia_chat(
                 # `tools` se mantiene en TODAS las rondas: si desaparece, el modelo
                 # emite el tool_call como texto (XML) y se filtra al usuario.
                 "tools": request_tools,
-                "tool_choice": "auto",
+                "tool_choice": tool_choice,
             }
             req = Request(url, data=json.dumps(payload_dict).encode("utf-8"), headers=headers, method="POST")
             with urlopen(req, timeout=timeout) as resp:
@@ -78,6 +85,11 @@ def nvidia_chat(
             tool_calls = choice_msg.get("tool_calls", [])
 
             if not tool_calls:
+                if round_index == 0 and required_initial_tool:
+                    raise NvidiaChatError(
+                        "No se pudo verificar el proveedor de mercado seleccionado mediante la herramienta de datos.",
+                        code="MARKET_DATA_TOOL_REQUIRED",
+                    )
                 content = choice_msg.get("content", "")
                 if not content or not content.strip():
                     raise NvidiaChatError("El modelo devolvió una respuesta vacía.", code="EMPTY_RESPONSE")
@@ -96,6 +108,7 @@ def nvidia_chat(
                 result, meta = _run_tool_call(
                     fn_name, args,
                     prompt=prompt, owner_id=owner_id, current_session_id=current_session_id,
+                    indicator_data=indicator_data,
                 )
                 tools_used.append(meta)
                 messages.append({
@@ -123,7 +136,11 @@ def nvidia_chat(
         logger.error(f"NVIDIA API HTTP {e.code} for model {model_id}: {body}")
 
         # Si el modelo no soporta el parametro tools (HTTP 400), reintentar sin tools
-        if e.code == 400 and ("tool" in body.lower() or "schema" in body.lower() or "not supported" in body.lower()):
+        if (
+            not required_initial_tool
+            and e.code == 400
+            and ("tool" in body.lower() or "schema" in body.lower() or "not supported" in body.lower())
+        ):
             logger.warning(f"[NvidiaChat] Retrying without tools for {model_name}...")
             payload_no_tools = json.dumps({
                 "model": model_id,

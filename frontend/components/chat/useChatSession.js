@@ -28,7 +28,15 @@ export const INTERVAL_LABELS = {
  * Custom hook que centraliza toda la lógica de estado, sesiones,
  * streaming, telemetría y llamadas al backend para el agente Woody.
  */
-export function useChatSession({ symbol, datos, interval = "15m", market = "crypto", onAnalysisChange, isOpen }) {
+export function useChatSession({
+  symbol,
+  datos,
+  interval = "15m",
+  market = "crypto",
+  provider = "coinbase",
+  onAnalysisChange,
+  isOpen,
+}) {
   const [sessions, setSessions] = useState([])
   const [activeSessionId, setActiveSessionId] = useState(null)
   const [messages, setMessages] = useState([])
@@ -552,6 +560,7 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
           symbol: symbol,
           interval: interval,
           market: market,
+          provider: market === "stock" ? "yahoo" : provider,
           indicator_data: datos,
           stream: true,
         },

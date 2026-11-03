@@ -94,9 +94,10 @@ def set_security_headers(response):
 # ─────────────────────────────────────────────────────────────────────
 # Cache wrapper (inyecta fetch_trading_data para evitar imports circulares)
 # ─────────────────────────────────────────────────────────────────────
-def _get_trading_cached(symbol, interval_str='15m', market='crypto', force=False):
+def _get_trading_cached(symbol, interval_str='15m', market='crypto', force=False,
+                        provider='coinbase'):
     return get_trading_cached(symbol, interval_str, market, force=force,
-                              fetch_fn=fetch_trading_data)
+                              fetch_fn=fetch_trading_data, provider=provider)
 
 
 # ─────────────────────────────────────────────────────────────────────

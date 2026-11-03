@@ -1,4 +1,4 @@
-/* Service worker de SYNAPSE TERMINAL (PWA).
+/* Service worker de SYNAPSE (PWA).
  *
  * Objetivo: habilitar la instalacion como app y dar un "app shell" offline para
  * que la interfaz cargue sin red. NO cachea NUNCA datos del backend: las

@@ -1,7 +1,7 @@
 """Data fetchers: funciones que obtienen datos de mercado desde APIs externas.
 
-Coinbase Exchange / Advanced Trade (fuente PRIMARIA de crypto: API pública,
-sin API key), Binance (fallback de crypto) y Yahoo Finance (stocks).
+Coinbase Exchange / Advanced Trade, Binance (ambos proveedores de crypto) y
+Yahoo Finance (stocks).
 Funciones puras de I/O: no tocan cache, no dependen de Flask.
 
 El modulo se dividio en submodulos por fuente (coinbase_client, binance,

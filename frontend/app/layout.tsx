@@ -3,7 +3,7 @@ import './globals.css'
 import PWARegister from '@/components/PWARegister'
 
 export const metadata: Metadata = {
-  title: 'SYNAPSE TERMINAL',
+  title: 'SYNAPSE',
   description: 'Professional Technical Analysis Platform',
   manifest: '/manifest.webmanifest',
   icons: {
@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'SYNAPSE TERMINAL',
+    title: 'SYNAPSE',
   },
 }
 

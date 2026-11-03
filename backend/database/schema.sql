@@ -6,6 +6,13 @@ CREATE TABLE IF NOT EXISTS chat_preferences (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS market_data_preferences (
+    owner_id UUID PRIMARY KEY,
+    crypto_provider TEXT NOT NULL DEFAULT 'coinbase'
+        CHECK (crypto_provider IN ('binance', 'coinbase')),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 CREATE TABLE IF NOT EXISTS chat_sessions (
     id UUID PRIMARY KEY,
     owner_id UUID NOT NULL,

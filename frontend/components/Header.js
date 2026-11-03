@@ -11,14 +11,17 @@ export default function Header({
   onCambiarMoneda,
   timeframe = "15m",
   onTimeframeChange,
-  time = "",
+  market,
+  provider = "coinbase",
+  providerReady = false,
+  onProviderChange,
+  providerPreferenceError = null,
 }) {
   const router = useRouter()
   const pathname = usePathname()
   const isNewsPage = pathname === "/news"
 
   const [activeAsset, setActiveAsset] = useState(moneda)
-  const [currentTime, setCurrentTime] = useState(time)
 
   useEffect(() => {
     if (moneda) {
@@ -33,20 +36,6 @@ export default function Header({
       } catch (e) {}
     }
   }, [moneda])
-
-  useEffect(() => {
-    if (time) {
-      setCurrentTime(time)
-    } else {
-      const updateTime = () => {
-        const now = new Date()
-        setCurrentTime(now.toLocaleTimeString("en-US", { hour12: false, timeZone: "UTC" }))
-      }
-      updateTime()
-      const interval = setInterval(updateTime, 1000)
-      return () => clearInterval(interval)
-    }
-  }, [time])
 
   const handleCambiarMoneda = () => {
     if (onCambiarMoneda) {
@@ -125,15 +114,8 @@ export default function Header({
               <Activity className="w-4.5 h-4.5 animate-pulse" />
             </div>
             <span className="font-extrabold tracking-wider text-white text-base sm:text-lg whitespace-nowrap group-hover:text-[#00f5c4] transition-colors">
-              SYNAPSE TERMINAL
+              SYNAPSE
             </span>
-          </div>
-  
-          {/* UTC clock */}
-          <div className="order-2 ml-auto flex items-center gap-2 sm:gap-3 text-[11px] flex-shrink-0 lg:order-3 lg:ml-0">
-            <div className="text-slate-300 font-semibold tracking-wider">
-              UTC <span className="text-white font-bold">{currentTime || "00:00:00"}</span>
-            </div>
           </div>
   
         {/* Asset badge + navigation actions + timeframe selector. Centered in the
@@ -195,7 +177,27 @@ export default function Header({
               <ArrowLeftRight className="w-4 h-4 text-[#00f5c4]" />
               <span className="hidden sm:inline font-semibold whitespace-nowrap">Change Pair</span>
             </button>
+            {market === "crypto" && onProviderChange && (
+              <label className="flex items-center gap-2 rounded-full bg-[#09111b] border border-[#16283d] px-3 py-1.5 sm:py-2 text-[10px] sm:text-xs font-semibold text-slate-400">
+                <span className="hidden sm:inline">Provider</span>
+                <select
+                  aria-label="Market data provider"
+                  value={provider}
+                  onChange={onProviderChange}
+                  disabled={!providerReady}
+                  className="bg-transparent text-[#00f5c4] outline-none disabled:opacity-50"
+                >
+                  <option className="bg-[#0c1420]" value="coinbase">Coinbase</option>
+                  <option className="bg-[#0c1420]" value="binance">Binance</option>
+                </select>
+              </label>
+            )}
           </div>
+          {market === "crypto" && providerPreferenceError && (
+            <span role="alert" className="basis-full text-[10px] text-[#ff3b69]">
+              {providerPreferenceError}
+            </span>
+          )}
   
           {/* Timeframe selector: un poco mas ancho que Change Pair y con la misma altura. */}
           {onTimeframeChange && (

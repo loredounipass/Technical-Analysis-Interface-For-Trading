@@ -74,6 +74,7 @@ def nvidia_chat_stream(
     url = ctx["url"]
     headers = ctx["headers"]
     request_tools = ctx["request_tools"]
+    required_initial_tool = ctx["required_initial_tool"]
     initial_messages = ctx["initial_messages"]
 
     messages = list(initial_messages)
@@ -81,7 +82,13 @@ def nvidia_chat_stream(
     answered = False
 
     try:
-        for _round in range(MAX_TOOL_ROUNDS):
+        for round_index in range(MAX_TOOL_ROUNDS):
+            tool_choice = "auto"
+            if round_index == 0 and required_initial_tool:
+                tool_choice = {
+                    "type": "function",
+                    "function": {"name": required_initial_tool},
+                }
             payload_dict = {
                 "model": model_id,
                 "messages": messages,
@@ -90,7 +97,7 @@ def nvidia_chat_stream(
                 # `tools` en TODAS las rondas: si desaparece, el modelo emite el
                 # tool_call como texto (XML) y se filtra al usuario.
                 "tools": request_tools,
-                "tool_choice": "auto",
+                "tool_choice": tool_choice,
                 "stream": True,
             }
             req = Request(url, data=json.dumps(payload_dict).encode("utf-8"), headers=headers, method="POST")
@@ -135,6 +142,16 @@ def nvidia_chat_stream(
 
             # Sin tool_calls => la respuesta final fue streamiada en esta ronda.
             if not tool_calls_acc:
+                if round_index == 0 and required_initial_tool:
+                    yield {
+                        "type": "error",
+                        "error": (
+                            "No se pudo verificar el proveedor de mercado seleccionado "
+                            "mediante la herramienta de datos."
+                        ),
+                        "error_code": "MARKET_DATA_TOOL_REQUIRED",
+                    }
+                    return
                 answered = True
                 # Si el modelo se corto por limite de tokens (finish_reason=='length'),
                 # continuar la generacion hasta completar el informe, sin repetir.
@@ -216,12 +233,23 @@ def nvidia_chat_stream(
                     yield {"type": "thought", "chunk": f"\n[\U0001F50D Buscando {label}: '{query}']\n"}
                 elif fn_name == "rename_chat_session":
                     yield {"type": "thought", "chunk": "\n[Actualizando el nombre de la sesión]\n"}
+                elif fn_name == "get_selected_market_data":
+                    provider = (
+                        "yahoo"
+                        if indicator_data and indicator_data.get("market") == "stock"
+                        else (indicator_data or {}).get("provider", "desconocido")
+                    )
+                    yield {
+                        "type": "thought",
+                        "chunk": f"\n[Verificando el feed de mercado seleccionado mediante MCP: {provider}]\n",
+                    }
                 else:
                     yield {"type": "thought", "chunk": f"\n[Accediendo a memoria MCP: '{query}']\n"}
 
                 result, meta = _run_tool_call(
                     fn_name, args,
                     prompt=prompt, owner_id=owner_id, current_session_id=current_session_id,
+                    indicator_data=indicator_data,
                 )
                 tools_used.append(meta)
 
@@ -238,6 +266,14 @@ def nvidia_chat_stream(
                         }
                     else:
                         yield {"type": "thought", "chunk": f"\n[No se pudo actualizar el título: {result.get('error')}]\n"}
+                elif fn_name == "get_selected_market_data":
+                    yield {
+                        "type": "tool",
+                        "name": "get_selected_market_data",
+                        "provider": result.get("provider"),
+                        "symbol": result.get("symbol"),
+                        "available": result.get("available"),
+                    }
                 else:
                     yield {
                         "type": "tool",

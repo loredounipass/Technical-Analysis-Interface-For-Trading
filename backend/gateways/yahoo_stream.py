@@ -150,7 +150,7 @@ class YahooStreamThread:
     def handle_quote(self, symbol, price):
         now_ms = int(time.time() * 1000)
         for interval in self.intervals:
-            room = f'stock:{symbol}:{interval}'
+            room = f'stock:yahoo:{symbol}:{interval}'
             if not self.hooks['has_subscribers'](room):
                 continue
             bars = self.ensure_seeded(symbol, interval)
@@ -190,7 +190,7 @@ class YahooStreamThread:
 
     def recompute_and_emit(self, symbol, interval, bars):
         now = time.time()
-        room = f'stock:{symbol}:{interval}'
+        room = f'stock:yahoo:{symbol}:{interval}'
         if now - self.last_recompute.get(room, 0) < MIN_RECOMPUTE_GAP:
             return
         self.last_recompute[room] = now

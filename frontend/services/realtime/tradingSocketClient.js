@@ -5,7 +5,7 @@
  * los nombres de eventos) del hook React. El hook solo mantiene estado y
  * reacciona a los callbacks; aquí vive TODO lo relativo al transporte.
  *
- * Room: `${market}:${symbol}:${interval}`  (ver backend/common/sockets.py).
+ * Room: `${market}:${provider}:${symbol}:${interval}`.
  * Devuelve la función de limpieza para cerrarla conexión.
  */
 import { io } from "socket.io-client"
@@ -15,6 +15,7 @@ export function connectTradingRoom({
   symbol,
   interval,
   market,
+  provider,
   onConnected,
   onDataUpdate,
   onConnectError,
@@ -25,7 +26,7 @@ export function connectTradingRoom({
     timeout: 10000,
   })
 
-  const room = `${market}:${symbol}:${interval}`
+  const room = `${market}:${provider}:${symbol}:${interval}`
 
   socket.on("connect", () => {
     console.log(`[Socket] Connected. Joining room: ${room}`)

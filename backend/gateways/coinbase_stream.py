@@ -132,7 +132,7 @@ class CoinbaseStreamThread:
         ts = _parse_trade_ts(data.get('time', ''))
 
         for interval in self.intervals:
-            room = f'crypto:{symbol}:{interval}'
+            room = f'crypto:coinbase:{symbol}:{interval}'
             if not self.hooks['has_subscribers'](room):
                 continue
             bars = self.ensure_seeded(symbol, interval)
@@ -155,12 +155,16 @@ class CoinbaseStreamThread:
             except Exception:
                 vol_24h = None
             try:
-                payload = self.hooks['build_payload'](symbol, interval, 'crypto', list(bars), vol_24h)
+                payload = self.hooks['build_payload'](
+                    symbol, interval, 'crypto', list(bars), vol_24h, 'coinbase'
+                )
             except Exception as e:
                 logger.warning(f"[Stream] build_payload fallo para {room}: {e}")
                 continue
 
-            self.hooks['store_payload'](f'crypto:{symbol}_{interval}', payload)
+            self.hooks['store_payload'](
+                f'crypto:coinbase:{symbol}_{interval}', payload
+            )
 
             sig = json.dumps(payload, sort_keys=True, default=str)
             if self.last_emitted.get(room) == sig:

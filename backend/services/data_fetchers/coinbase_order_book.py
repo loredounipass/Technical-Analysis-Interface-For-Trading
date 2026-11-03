@@ -1,4 +1,4 @@
-"""Libro de ordenes real (Coinbase Advanced Trade, fallback Binance depth)."""
+"""Libro de ordenes real aislado por proveedor."""
 
 import time
 import logging
@@ -22,34 +22,39 @@ _depth_cache = {}
 _depth_lock = threading.Lock()
 
 
-def fetch_order_book_depth(symbol):
+def fetch_order_book_depth(symbol, provider='coinbase'):
     """Devuelve el libro de órdenes real:
     {'bids': [[price, qty], ...], 'asks': [[price, qty], ...]}.
-    Fuente primaria: Coinbase Advanced Trade (público, limit configurable).
-    Fallback: Binance depth. None si ambos fallan (proxy de volumen)."""
+    Coinbase Advanced Trade o Binance depth, según el proveedor elegido."""
+    if provider not in ('coinbase', 'binance'):
+        raise ValueError(f"Proveedor no soportado para order book: {provider}")
     now = time.time()
+    cache_key = (provider, symbol)
     with _depth_lock:
-        cached = _depth_cache.get(symbol)
+        cached = _depth_cache.get(cache_key)
         if cached and now - cached[0] <= DEPTH_TTL:
             return cached[1]
     data = None
-    try:
-        product = coinbase_product_id(symbol)
-        resp = requests.get(
-            f'{COINBASE_ADV_BASE}/product_book',
-            params={'product_id': product, 'limit': 50},
-            headers=COINBASE_HEADERS,
-            timeout=10,
-        )
-        resp.raise_for_status()
-        book = resp.json().get('pricebook', {})
-        bids = [[b['price'], b['size']] for b in book.get('bids', [])]
-        asks = [[a['price'], a['size']] for a in book.get('asks', [])]
-        if bids and asks:
-            data = {'bids': bids, 'asks': asks}
-    except Exception as e:
-        logger.warning(f"[TradingData] Coinbase book fallo para {symbol}: {e}")
-    if data is None:
+    if provider == 'coinbase':
+        try:
+            product = coinbase_product_id(symbol)
+            resp = requests.get(
+                f'{COINBASE_ADV_BASE}/product_book',
+                params={'product_id': product, 'limit': 50},
+                headers=COINBASE_HEADERS,
+                timeout=10,
+            )
+            resp.raise_for_status()
+            book = resp.json().get('pricebook', {})
+            bids = [[b['price'], b['size']] for b in book.get('bids', [])]
+            asks = [[a['price'], a['size']] for a in book.get('asks', [])]
+            if bids and asks:
+                data = {'bids': bids, 'asks': asks}
+        except Exception as e:
+            logger.warning(f"[TradingData] Coinbase book fallo para {symbol}: {e}")
+        if data is None:
+            return None
+    else:
         try:
             resp = requests.get(
                 'https://data-api.binance.vision/api/v3/depth',
@@ -61,14 +66,10 @@ def fetch_order_book_depth(symbol):
         except Exception as e:
             logger.warning(f"[TradingData] Binance depth fallo para {symbol}: {e}")
             return None
-    # Orden explicito y defensivo: el contrato de Coinbase Advanced Trade
-    # product_book NO garantiza el orden de bids/asks, y aguas abajo
-    # (payload_builder best_bid/best_ask + LiquidityBubbleMap groupLevels)
-    # se asume bids DESC / asks ASC. Ordenar aqui elimina el bug latente de
-    # tomar bids[0]/asks[0] como mejor nivel cuando el origen viene barajado.
+    # Coinbase product_book no garantiza el orden de bids/asks.
     bids = sorted(data.get('bids') or [], key=lambda lv: float(lv[0]), reverse=True)
     asks = sorted(data.get('asks') or [], key=lambda lv: float(lv[0]))
     data = {'bids': bids, 'asks': asks}
     with _depth_lock:
-        _depth_cache[symbol] = (time.time(), data)
+        _depth_cache[cache_key] = (time.time(), data)
     return data

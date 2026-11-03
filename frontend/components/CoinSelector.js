@@ -121,7 +121,7 @@ export default function CoinSelector({ monedas, acciones, indices, onSelect }) {
           </div>
 
           <h1 className="text-3xl md:text-4xl font-extrabold mb-2 tracking-wider font-mono text-white">
-            SYNAPSE TERMINAL
+            SYNAPSE
           </h1>
 
           <p className="text-slate-400 text-xs font-mono tracking-widest uppercase mb-4">

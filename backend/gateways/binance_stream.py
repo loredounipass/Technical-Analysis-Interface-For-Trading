@@ -99,6 +99,14 @@ class BinanceStreamThread:
         return closed
 
     def handle_message(self, stream_name, data):
+        if '@trade' in stream_name:
+            symbol = stream_name.split('@')[0].upper()
+            try:
+                self.hooks['record_trade'](symbol, data)
+            except Exception as e:
+                logger.warning(f"[Stream] order flow Binance fallo para {symbol}: {e}")
+            return
+
         if '@ticker' in stream_name:
             symbol = stream_name.split('@')[0].upper()
             try:
@@ -116,7 +124,7 @@ class BinanceStreamThread:
         if interval not in self.intervals:
             return
 
-        room = f'crypto:{symbol}:{interval}'
+        room = f'crypto:binance:{symbol}:{interval}'
         if not self.hooks['has_subscribers'](room):
             return
 
@@ -141,12 +149,16 @@ class BinanceStreamThread:
         except Exception:
             vol_24h = None
         try:
-            payload = self.hooks['build_payload'](symbol, interval, 'crypto', list(bars), vol_24h)
+            payload = self.hooks['build_payload'](
+                symbol, interval, 'crypto', list(bars), vol_24h, 'binance'
+            )
         except Exception as e:
             logger.warning(f"[Stream] build_payload fallo para {room}: {e}")
             return
 
-        self.hooks['store_payload'](f'crypto:{symbol}_{interval}', payload)
+        self.hooks['store_payload'](
+            f'crypto:binance:{symbol}_{interval}', payload
+        )
 
         sig = json.dumps(payload, sort_keys=True, default=str)
         if self.last_emitted.get(room) == sig:
@@ -166,6 +178,7 @@ class BinanceStreamThread:
                 streams = []
                 for s in self.symbols:
                     streams.append(f"{s.lower()}@ticker")
+                    streams.append(f"{s.lower()}@trade")
                     for iv in self.intervals:
                         streams.append(f"{s.lower()}@kline_{iv}")
                 url = STREAM_URLS[url_index] + '?streams=' + '/'.join(streams)

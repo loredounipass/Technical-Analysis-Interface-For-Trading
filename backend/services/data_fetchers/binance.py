@@ -35,24 +35,20 @@ def fetch_klines(symbol, interval='15m', limit=100, end_time=None):
             raise
 
 
-# VOLUMEN 24H EXACTO AL DE BINANCE (quoteVolume del ticker oficial), con
-# sub-cache propia: el ticker pesa 40 weight y el volumen cambia lento.
-# Sub-cache del volumen 24h (ticker de Binance pesa 40 weight): el volumen
-# cambia lento y no necesita refrescarse con cada ciclo de indicadores.
+# Cache independiente por proveedor para el volumen 24h.
 TICKER_TTL = 120
 _ticker_cache = {}
 _ticker_lock = threading.Lock()
 
 
-def fetch_quote_volume_24h(symbol):
+def fetch_quote_volume_24h(symbol, provider='coinbase'):
     now = time.time()
+    cache_key = (provider, symbol)
     with _ticker_lock:
-        cached = _ticker_cache.get(symbol)
+        cached = _ticker_cache.get(cache_key)
         if cached and now - cached[0] <= TICKER_TTL:
             return cached[1]
-    quote_volume = None
-    try:
-        # Coinbase ticker: volume = volumen BASE 24h; quote ~ base * precio
+    if provider == 'coinbase':
         product = coinbase_product_id(symbol)
         resp = requests.get(
             f'{COINBASE_BASE}/products/{product}/ticker',
@@ -61,9 +57,7 @@ def fetch_quote_volume_24h(symbol):
         resp.raise_for_status()
         td = resp.json()
         quote_volume = float(td['volume']) * float(td['price'])
-    except Exception as e:
-        logger.warning(f"[TradingData] Coinbase ticker 24h fallo para {symbol}: {e}")
-    if quote_volume is None:
+    elif provider == 'binance':
         resp = requests.get(
             'https://data-api.binance.vision/api/v3/ticker/24hr',
             params={'symbol': symbol},
@@ -71,12 +65,14 @@ def fetch_quote_volume_24h(symbol):
         )
         resp.raise_for_status()
         quote_volume = float(resp.json()['quoteVolume'])
+    else:
+        raise ValueError(f"Proveedor no soportado para volumen crypto: {provider}")
     with _ticker_lock:
-        _ticker_cache[symbol] = (time.time(), quote_volume)
+        _ticker_cache[cache_key] = (time.time(), quote_volume)
     return quote_volume
 
 
-def update_ticker_cache(symbol, quote_volume):
-    """Permite al stream de Binance actualizar el sub-cache del ticker."""
+def update_ticker_cache(symbol, quote_volume, provider='coinbase'):
+    """Permite a los streams actualizar el volumen de su proveedor."""
     with _ticker_lock:
-        _ticker_cache[symbol] = (time.time(), float(quote_volume))
+        _ticker_cache[(provider, symbol)] = (time.time(), float(quote_volume))

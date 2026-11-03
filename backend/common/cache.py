@@ -138,13 +138,21 @@ STOCK_SYMBOLS = {"AAPL", "MSFT", "NVDA", "TSLA", "AMZN", "GOOGL", "META", "NFLX"
 
 
 def get_trading_cached(symbol, interval_str='15m', market='crypto', force=False,
-                       fetch_fn=None):
+                       fetch_fn=None, provider='coinbase'):
     """Retorna datos de trading cacheados con stale-while-revalidate.
 
-    ``fetch_fn`` debe ser una callable(symbol, interval_str, market) que devuelve
-    el payload completo (se inyecta desde app.py para evitar imports circulares).
+    ``fetch_fn`` debe ser una callable(symbol, interval_str, market, provider)
+    que devuelve el payload completo (se inyecta desde app.py).
     """
-    cache_key = f"{market}:{symbol}_{interval_str}"
+    if market == 'stock':
+        provider = 'yahoo'
+    elif provider not in ('binance', 'coinbase'):
+        raise ValueError(f"Proveedor no soportado: {provider}")
+    cache_key = (
+        f"{market}:{symbol}_{interval_str}"
+        if market == 'stock'
+        else f"{market}:{provider}:{symbol}_{interval_str}"
+    )
     now = time.time()
     entry = cache.get(cache_key)
 
@@ -168,7 +176,7 @@ def get_trading_cached(symbol, interval_str='15m', market='crypto', force=False,
                 return flight_result
             event, result_container = set_in_flight(cache_key)
             try:
-                data = fetch_fn(symbol, interval_str, market)
+                data = fetch_fn(symbol, interval_str, market, provider)
                 cache[cache_key] = {'data': data, 'ts': time.time(), 'last_refresh': time.time()}
                 clear_in_flight(cache_key, {'data': data})
                 return data
@@ -199,7 +207,7 @@ def get_trading_cached(symbol, interval_str='15m', market='crypto', force=False,
                     entry['last_refresh'] = now
                     def refresh():
                         try:
-                            data = fetch_fn(symbol, interval_str, market)
+                            data = fetch_fn(symbol, interval_str, market, provider)
                             with cache_lock:
                                 cache[cache_key] = {'data': data, 'ts': time.time(), 'last_refresh': time.time()}
                             logger.info(f"[StaleRefresh] {cache_key} refrescado en background")
@@ -225,7 +233,7 @@ def get_trading_cached(symbol, interval_str='15m', market='crypto', force=False,
 
         event, result_container = set_in_flight(cache_key)
         try:
-            data = fetch_fn(symbol, interval_str, market)
+            data = fetch_fn(symbol, interval_str, market, provider)
             cache[cache_key] = {'data': data, 'ts': time.time(), 'last_refresh': time.time()}
             clear_in_flight(cache_key, {'data': data})
             return data

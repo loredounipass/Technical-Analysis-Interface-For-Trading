@@ -10,12 +10,13 @@
  * (NEXT_PUBLIC_API_BASE_URL), por lo que no repiten el prefijo `/api`.
  */
 export const ENDPOINTS = {
-  // GET /api/trading/<symbol>?interval=&market=
+  // GET /api/trading/<symbol>?interval=&market=&provider=
   // El symbol va en la ruta: se codifica para soportar indices (^NDX) y
   // futuros de materias primas (GC=F), cuyos caracteres ^ y = no son seguros
   // en un path. Werkzeug decodifica %5E/%3D de vuelta al symbol original.
-  trading: (symbol, interval, market) =>
-    `/trading/${encodeURIComponent(symbol)}?interval=${interval}&market=${market}`,
+  trading: (symbol, interval, market, provider) =>
+    `/trading/${encodeURIComponent(symbol)}?interval=${interval}&market=${market}&provider=${provider}`,
+  tradingProviderPreference: () => `/trading/provider-preference`,
 
   // GET /api/news/<symbol>?market=
   news: (symbol, market) => `/news/${encodeURIComponent(symbol)}?market=${market}`,

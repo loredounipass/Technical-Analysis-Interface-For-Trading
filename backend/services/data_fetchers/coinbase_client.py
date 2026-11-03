@@ -1,4 +1,4 @@
-"""Configuracion e identidad de Coinbase (fuente primaria de crypto).
+"""Configuracion e identidad del proveedor Coinbase.
 
 Contiene las URLs base, headers y granularidades compartidas por los fetchers
 de Coinbase, junto con el mapeo de simbolo USDT -> product id en USD.

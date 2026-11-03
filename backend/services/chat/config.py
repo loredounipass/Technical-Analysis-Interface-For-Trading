@@ -104,6 +104,18 @@ CHAT_TOOLS = [
     {
         "type": "function",
         "function": {
+            "name": "get_selected_market_data",
+            "description": "Consulta el snapshot de mercado del proveedor seleccionado por el usuario para el activo y timeframe de esta solicitud. Debes usarlo antes de responder cualquier análisis de mercado. El resultado procede del feed de mercado elegido por el backend; no acepta un proveedor alternativo.",
+            "parameters": {
+                "type": "object",
+                "properties": {},
+                "additionalProperties": False,
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "search_chat_history",
             "description": "Busca en TODOS los mensajes de TODAS las sesiones guardadas del usuario, sin límite de sesiones, mensajes ni resultados. Úsala para encontrar mensajes exactos, detalles, niveles, recomendaciones o conversaciones pasadas. Puedes filtrar por ID de sesión o por parte de su nombre; también puedes filtrar por símbolo. Devuelve cada mensaje encontrado con su sesión, ID, autor, fecha y contenido completo. NO la uses para noticias o información externa: para eso existe web_search.",
             "parameters": {

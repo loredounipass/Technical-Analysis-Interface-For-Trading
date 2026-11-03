@@ -73,9 +73,12 @@ def compute_order_flow_proxy(opens, highs, lows, closes, quote_volumes,
     }
 
 
-def compute_order_flow(trades, sample_limit=200):
+def compute_order_flow(trades, sample_limit=200, provider='coinbase'):
+    """Calcula el delta del tape e identifica el exchange de origen."""
     if not trades:
         return None
+    if provider not in ('coinbase', 'binance'):
+        raise ValueError(f"Proveedor no soportado para order flow: {provider}")
     sample = trades[-sample_limit:]
     buy_volume = sum(t['price'] * t['size'] for t in sample if t['side'] == 'buy')
     sell_volume = sum(t['price'] * t['size'] for t in sample if t['side'] == 'sell')
@@ -92,9 +95,14 @@ def compute_order_flow(trades, sample_limit=200):
         'size': t['size'],
         'quoteVolume': t['price'] * t['size'],
     } for t in reversed(sample[-25:])]
+    side_classification = {
+        'coinbase': 'aggressor_inferred_from_coinbase_maker_side',
+        'binance': 'aggressor_inferred_from_binance_isBuyerMaker',
+    }[provider]
     return {
-        'source': 'coinbase_exchange_executed_trades',
-        'sideClassification': 'aggressor_inferred_from_maker_side',
+        'provider': provider,
+        'source': f'{provider}_executed_trades',
+        'sideClassification': side_classification,
         'scope': f'latest_{len(sample)}_executed_trades',
         'tradeCount': len(sample),
         'buyTradeCount': sum(1 for t in sample if t['side'] == 'buy'),

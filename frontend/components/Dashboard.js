@@ -6,7 +6,11 @@ import RecommendationCard from "@/components/indicators/RecommendationCard"
 import IndicatorGrid from "@/components/indicators/IndicatorGrid"
 import AiChat from "@/components/AiChat"
 import { getRecommendation } from "@/utils/dataUtils"
-import { fetchTradingData } from "@/services/api/tradingApi"
+import {
+  fetchTradingData,
+  fetchTradingProviderPreference,
+  saveTradingProviderPreference,
+} from "@/services/api/tradingApi"
 import { useState, useEffect, useRef } from "react"
 import useTradingSocket from "@/hooks/useTradingSocket"
 
@@ -15,12 +19,16 @@ export default function Dashboard({ moneda, market = "crypto", onCambiarMoneda }
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [timeframe, setTimeframe] = useState("15m")
+  const [provider, setProvider] = useState("coinbase")
+  const [providerReady, setProviderReady] = useState(false)
+  const [providerPreferenceError, setProviderPreferenceError] = useState(null)
   const [time, setTime] = useState("")
   const [mounted, setMounted] = useState(false)
   const [woodyScanning, setWoodyScanning] = useState(false)
 
   const fetchCounterRef = useRef(0)
-  const { liveData } = useTradingSocket(moneda.symbol, timeframe, market)
+  const providerSaveCounterRef = useRef(0)
+  const { liveData } = useTradingSocket(moneda.symbol, timeframe, market, provider)
 
   useEffect(() => {
     setMounted(true)
@@ -33,10 +41,43 @@ export default function Dashboard({ moneda, market = "crypto", onCambiarMoneda }
     return () => clearInterval(interval)
   }, [])
 
-  const fetchData = async (selectedTimeframe = timeframe) => {
+  useEffect(() => {
+    let cancelled = false
+    fetchTradingProviderPreference()
+      .then((preference) => {
+        if (!cancelled) {
+          setProvider(preference.crypto_provider)
+          setProviderPreferenceError(null)
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setProviderPreferenceError(
+            `No se pudo cargar el proveedor guardado: ${err.message}`,
+          )
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setProviderReady(true)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const fetchData = async (
+    selectedTimeframe = timeframe,
+    selectedProvider = provider,
+  ) => {
     const currentFetch = ++fetchCounterRef.current
     try {
-      const nuevoDatos = await fetchTradingData(moneda.symbol, selectedTimeframe, market)
+      const selectedMarketProvider = market === "stock" ? "yahoo" : selectedProvider
+      const nuevoDatos = await fetchTradingData(
+        moneda.symbol,
+        selectedTimeframe,
+        market,
+        selectedMarketProvider,
+      )
       if (currentFetch === fetchCounterRef.current) {
         setDatos(nuevoDatos)
         setError(null)
@@ -59,18 +100,43 @@ export default function Dashboard({ moneda, market = "crypto", onCambiarMoneda }
     fetchData(newTimeframe)
   }
 
-  useEffect(() => {
+  const handleProviderChange = (event) => {
+    const newProvider = event.target.value
+    const previousProvider = provider
+    const saveRequest = ++providerSaveCounterRef.current
+    fetchCounterRef.current++
+    setProvider(newProvider)
+    setDatos(null)
     setLoading(true)
-    fetchData()
-  }, [moneda.symbol, market])
+    setError(null)
+    setProviderPreferenceError(null)
+    saveTradingProviderPreference(newProvider).catch((err) => {
+      if (saveRequest === providerSaveCounterRef.current) {
+        setProvider(previousProvider)
+        setProviderPreferenceError(
+          `No se pudo guardar el proveedor seleccionado: ${err.message}`,
+        )
+      }
+    })
+  }
 
   useEffect(() => {
-    if (liveData) {
+    if (!providerReady) return
+    setLoading(true)
+    fetchData(timeframe, provider)
+  }, [moneda.symbol, market, provider, providerReady])
+
+  useEffect(() => {
+    if (
+      providerReady
+      && liveData
+      && liveData.provider === (market === "stock" ? "yahoo" : provider)
+    ) {
       fetchCounterRef.current++
       setDatos(liveData)
       setLoading(false)
     }
-  }, [liveData])
+  }, [liveData, market, provider, providerReady])
 
   // Cyberpunk Loading State
   if (loading) {
@@ -92,7 +158,7 @@ export default function Dashboard({ moneda, market = "crypto", onCambiarMoneda }
             <span className="w-3 h-3 rounded-full bg-[#00f5c4] animate-ping" />
           </div>
           <div className="text-white text-xs sm:text-sm font-bold tracking-[0.2em] sm:tracking-[0.25em] animate-pulse text-center w-full flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1">
-            <span>SYNAPSE TERMINAL</span>
+            <span>SYNAPSE</span>
             <span className="text-[#00f5c4]">•</span>
             <span className="text-[#00f5c4]">SYNCHRONIZING TELEMETRY PIPELINE...</span>
           </div>
@@ -165,7 +231,11 @@ export default function Dashboard({ moneda, market = "crypto", onCambiarMoneda }
         onCambiarMoneda={onCambiarMoneda}
         timeframe={timeframe}
         onTimeframeChange={handleTimeframeChange}
-        time={time}
+        market={market}
+        provider={provider}
+        providerReady={providerReady}
+        onProviderChange={handleProviderChange}
+        providerPreferenceError={providerPreferenceError}
       />
 
       {/* Main Dashboard Layout */}
@@ -184,13 +254,16 @@ export default function Dashboard({ moneda, market = "crypto", onCambiarMoneda }
         )}
         {/* Top Row: Current Price Card & Market Signal Card */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          <PriceCard
-            precio={datos.precio}
-            decimales={datos.decimales}
-            symbol={moneda.symbol}
-            history={datos.history}
-            volumen={datos.volumen}
-          />
+          <div>
+            <PriceCard
+              precio={datos.precio}
+              decimales={datos.decimales}
+              symbol={moneda.symbol}
+              history={datos.history}
+              volumen={datos.volumen}
+              time={time}
+            />
+          </div>
           <RecommendationCard
             recomendacion={recomendacion}
             buySignals={datos.buySignals}
@@ -200,7 +273,10 @@ export default function Dashboard({ moneda, market = "crypto", onCambiarMoneda }
         </div>
 
         {/* Candlestick & Technical Indicators Grid */}
-        <IndicatorGrid key={`${datos.symbol}-${datos.timeframe}`} datos={datos} />
+        <IndicatorGrid
+          key={`${datos.symbol}-${datos.provider}-${datos.timeframe}`}
+          datos={datos}
+        />
       </main>
 
       {/* Woody scanning animation */}
@@ -227,6 +303,7 @@ export default function Dashboard({ moneda, market = "crypto", onCambiarMoneda }
         datos={datos}
         interval={timeframe}
         market={market}
+        provider={provider}
         onAnalysisChange={setWoodyScanning}
       />
     </div>

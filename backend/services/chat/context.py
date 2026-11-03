@@ -105,6 +105,11 @@ def resolve_request_context(
     request_tools = list(CHAT_TOOLS)
     if web_search_enabled:
         request_tools.append(WEB_SEARCH_TOOL)
+    required_initial_tool = (
+        "get_selected_market_data"
+        if intent in ("analysis", "ambiguous") and indicator_data is not None
+        else None
+    )
 
     initial_messages = build_messages(prompt, system_prompt, history)
 
@@ -120,5 +125,6 @@ def resolve_request_context(
         "url": url,
         "headers": headers,
         "request_tools": request_tools,
+        "required_initial_tool": required_initial_tool,
         "initial_messages": initial_messages,
     }

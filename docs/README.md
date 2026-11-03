@@ -94,3 +94,20 @@ pnpm run dev
 
 The frontend uses `frontend/.env` for its API and Socket.IO URLs. The backend
 loads `backend/.env` when it starts.
+
+## Market data providers
+
+The trading dashboard lets you choose Binance or Coinbase for crypto. The
+selected provider supplies the candles, live price, 24-hour volume, order book,
+order flow, indicators, and real-time socket room. The backend keeps provider
+caches and socket rooms separate so switching exchanges does not mix values.
+The selected crypto provider is stored in the `market_data_preferences`
+PostgreSQL table per anonymous browser ID, so it remains selected after a
+reload.
+Stocks, indices, and other non-crypto instruments continue to use Yahoo Finance;
+the crypto selector is hidden for those markets.
+
+The trading endpoint accepts `provider=binance` or `provider=coinbase` for
+crypto, for example `/api/trading/BTCUSDT?interval=15m&market=crypto&provider=binance`.
+If omitted, crypto continues to default to Coinbase. Stock requests always use
+Yahoo Finance regardless of the provider parameter.

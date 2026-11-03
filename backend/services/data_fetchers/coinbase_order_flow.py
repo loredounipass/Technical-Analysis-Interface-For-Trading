@@ -57,13 +57,30 @@ def _normalize_order_flow_trade(trade):
         return None
 
 
-def record_order_flow_trade(symbol, trade):
+def _normalize_binance_trade(trade):
+    normalized = _normalize_order_flow_trade({
+        'price': trade.get('price', trade.get('p')),
+        'size': trade.get('qty', trade.get('q')),
+        'side': 'buy' if trade.get('isBuyerMaker', trade.get('m')) else 'sell',
+        'time': trade.get('time', trade.get('T')),
+        'trade_id': trade.get('id', trade.get('t')),
+    })
+    return normalized
+
+
+def record_order_flow_trade(symbol, trade, provider='coinbase'):
     """Agrega un trade real del WebSocket sin duplicar `last_match`."""
-    normalized = _normalize_order_flow_trade(trade)
+    if provider == 'coinbase':
+        normalized = _normalize_order_flow_trade(trade)
+    elif provider == 'binance':
+        normalized = _normalize_binance_trade(trade)
+    else:
+        raise ValueError(f"Proveedor no soportado para order flow: {provider}")
     if normalized is None:
         return False
+    cache_key = (provider, symbol)
     with _order_flow_lock:
-        entry = _order_flow_cache.setdefault(symbol, {
+        entry = _order_flow_cache.setdefault(cache_key, {
             'trades': [], 'ids': set(), 'updated': time.time(), 'seeded': False,
         })
         if normalized['id'] in entry['ids']:
@@ -77,11 +94,14 @@ def record_order_flow_trade(symbol, trade):
     return True
 
 
-def get_order_flow_trades(symbol, limit=200):
+def get_order_flow_trades(symbol, limit=200, provider='coinbase'):
     """Devuelve trades reales ordenados; siembra por REST y actualiza por WS."""
+    if provider not in ('coinbase', 'binance'):
+        raise ValueError(f"Proveedor no soportado para order flow: {provider}")
     now = time.time()
+    cache_key = (provider, symbol)
     with _order_flow_lock:
-        cached = _order_flow_cache.get(symbol)
+        cached = _order_flow_cache.get(cache_key)
         is_stale = (
             not cached or not cached.get('seeded')
             or now - cached['updated'] > ORDER_FLOW_TTL
@@ -89,35 +109,44 @@ def get_order_flow_trades(symbol, limit=200):
 
     if is_stale:
         try:
-            product = coinbase_product_id(symbol)
-            resp = requests.get(
-                f'{COINBASE_BASE}/products/{product}/trades',
-                params={'limit': 500},
-                headers=COINBASE_HEADERS,
-                timeout=10,
-            )
+            if provider == 'coinbase':
+                product = coinbase_product_id(symbol)
+                resp = requests.get(
+                    f'{COINBASE_BASE}/products/{product}/trades',
+                    params={'limit': 500},
+                    headers=COINBASE_HEADERS,
+                    timeout=10,
+                )
+            else:
+                resp = requests.get(
+                    'https://data-api.binance.vision/api/v3/trades',
+                    params={'symbol': symbol, 'limit': 500},
+                    timeout=10,
+                )
             resp.raise_for_status()
             rows = resp.json()
-            normalized = [
-                trade for trade in (_normalize_order_flow_trade(row) for row in rows)
-                if trade is not None
-            ] if isinstance(rows, list) else []
+            normalizer = (
+                _normalize_order_flow_trade
+                if provider == 'coinbase'
+                else _normalize_binance_trade
+            )
+            normalized = [trade for trade in map(normalizer, rows) if trade is not None] if isinstance(rows, list) else []
             with _order_flow_lock:
-                existing = _order_flow_cache.get(symbol, {}).get('trades', [])
+                existing = _order_flow_cache.get(cache_key, {}).get('trades', [])
                 merged = {trade['id']: trade for trade in existing}
                 merged.update({trade['id']: trade for trade in normalized})
                 trades = sorted(
                     merged.values(), key=lambda trade: (trade['time'], trade['id'])
                 )[-ORDER_FLOW_CACHE_SIZE:]
-                _order_flow_cache[symbol] = {
+                _order_flow_cache[cache_key] = {
                     'trades': trades,
                     'ids': {trade['id'] for trade in trades},
                     'updated': time.time(),
                     'seeded': True,
                 }
         except Exception as e:
-            logger.warning(f"[TradingData] order flow fallo para {symbol}: {e}")
+            logger.warning(f"[TradingData] order flow {provider} fallo para {symbol}: {e}")
 
     with _order_flow_lock:
-        entry = _order_flow_cache.get(symbol)
+        entry = _order_flow_cache.get(cache_key)
         return list(entry['trades'][-limit:]) if entry else []

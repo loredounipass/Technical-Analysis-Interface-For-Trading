@@ -29,7 +29,8 @@ def init_chat_routes(get_trading_cached_fn):
     _get_cached_fn = get_trading_cached_fn
 
 
-def _build_multi_timeframe_context(symbol, current_interval, market):
+def _build_multi_timeframe_context(symbol, current_interval, market,
+                                   provider='coinbase'):
     """Snapshots compactos del MISMO activo en TODAS las temporalidades para
     que el agente compare alineacion de tendencias entre marcos. Lee de la
     cache de get_trading_cached (throttle REFRESH_MIN_GAP): la primera llamada
@@ -39,7 +40,7 @@ def _build_multi_timeframe_context(symbol, current_interval, market):
         if tf == current_interval:
             continue
         try:
-            d = _get_cached_fn(symbol, tf, market)
+            d = _get_cached_fn(symbol, tf, market, provider=provider)
         except Exception as e:
             logger.warning(f"[Chat] MTF fallo {symbol} {tf} ({market}): {e}")
             continue
@@ -104,10 +105,15 @@ def chat_endpoint():
     symbol = data.get('symbol', 'BTCUSDT')
     interval = data.get('interval', '15m')
     market = data.get('market', 'crypto')
+    provider = data.get('provider', 'coinbase')
     if not isinstance(symbol, str) or not symbol or not isinstance(interval, str):
         return jsonify({'error': 'symbol and interval must be strings.'}), 400
     if market not in ('crypto', 'stock'):
         market = 'crypto'
+    if market == 'stock':
+        provider = 'yahoo'
+    elif provider not in ('binance', 'coinbase'):
+        return jsonify({'error': 'Unsupported market data provider.'}), 400
     history = [
         {'role': message['role'], 'content': message['content']}
         for index, message in enumerate(current_session['messages'])
@@ -133,15 +139,23 @@ def chat_endpoint():
     if intent in ('analysis', 'ambiguous'):
         try:
             frontend_data = data.get('indicator_data')
-            cached_data = _get_cached_fn(symbol, interval, market) if _get_cached_fn else {}
+            cached_data = (
+                _get_cached_fn(symbol, interval, market, provider=provider)
+                if _get_cached_fn else {}
+            )
 
-            # Merge: usar datos cacheados/frescos del backend y sobreescribir con datos en vivo del frontend
+            # Only merge frontend values when they identify the same selected feed.
             if cached_data and isinstance(cached_data, dict):
                 indicator_data = dict(cached_data)
             else:
                 indicator_data = {}
 
-            if frontend_data and isinstance(frontend_data, dict) and frontend_data.get('precio'):
+            if (
+                frontend_data
+                and isinstance(frontend_data, dict)
+                and frontend_data.get('provider') == provider
+                and frontend_data.get('precio') is not None
+            ):
                 for k, v in frontend_data.items():
                     if v is not None:
                         indicator_data[k] = v
@@ -149,10 +163,25 @@ def chat_endpoint():
             indicator_data['symbol'] = symbol
             indicator_data['timeframe'] = interval
             indicator_data['market'] = market
+            indicator_data['provider'] = provider
+
+            if market == 'crypto':
+                order_flow = indicator_data.get('orderFlow')
+                if (
+                    isinstance(order_flow, dict)
+                    and order_flow.get('provider') != provider
+                ):
+                    logger.warning(
+                        "[Chat] Omitiendo order flow de %s para solicitud del proveedor %s (%s)",
+                        order_flow.get('provider', 'desconocido'),
+                        provider,
+                        symbol,
+                    )
+                    indicator_data['orderFlow'] = None
 
             # Multi-timeframe context
             indicator_data['multi_timeframe'] = _build_multi_timeframe_context(
-                symbol, interval, market
+                symbol, interval, market, provider
             )
         except Exception as e:
             logger.warning(f"[Chat] Error obteniendo indicator_data: {e}")
