@@ -119,13 +119,17 @@ const MomentumOscillatorsPanel = ({ datos = {} }) => {
             </span>
           </div>
           <div className="w-full bg-[#08111a] rounded-full h-1.5 relative overflow-hidden flex items-center">
-            {/* Reference markers at 20% and 80% */}
+            {/* Barra divergente alrededor de la mediana 50 (mismo patron que CCI):
+                el largo = desviacion del neutro y el lado/direccion = senal, asi
+                rojo y verde dejan de compartir una unica barra de relleno. */}
             <div className="absolute left-[20%] top-0 bottom-0 w-[1px] bg-slate-600 z-10" />
+            <div className="absolute left-1/2 top-0 bottom-0 w-[1px] bg-slate-500 z-20" />
             <div className="absolute left-[80%] top-0 bottom-0 w-[1px] bg-slate-600 z-10" />
             <div
               className={`h-full transition-all duration-300 ${mfiBarCls}`}
               style={{
-                width: hasMfi ? `${Math.min(100, Math.max(0, mfiVal))}%` : "0%",
+                width: hasMfi ? `${Math.abs(mfiVal - 50)}%` : "0%",
+                marginLeft: hasMfi ? (mfiVal >= 50 ? "50%" : `${mfiVal}%`) : "50%",
               }}
             />
           </div>
