@@ -10,13 +10,19 @@ import { Droplets } from "lucide-react"
  * al volumen (price × qty) en ese nivel. Bids = cyan (compradores),
  * Asks = rosa (vendedores). El precio actual está al centro.
  *
- * La dominancia (BID DOM / ASK DOM) NO se recalcula aquí con los 40 niveles
- * dibujados: se usa la que calcula el backend, que agrega el notional dentro de
- * una banda de precio alrededor del mid. Sumar "los N niveles más cercanos"
- * cubre ~0.01% del precio, donde una sola orden decide el porcentaje (medido:
- * ese número recorría 76 puntos en 100 s, frente a 20 de la banda). Recalcularlo
- * localmente sería una segunda definición distinta del mismo concepto, y el
- * panel no coincidiría con lo que lee el modelo.
+ * La dominancia (BID DOM / ASK DOM) NO se recalcula aquí: se usa la que calcula
+ * el backend, que agrega el notional dentro de una banda de precio alrededor del
+ * mid. Sumar "los N niveles más cercanos" cubre ~0,01% del precio, donde una sola
+ * orden decide el porcentaje (medido: ese número recorría 76 puntos en 100 s,
+ * frente a 20 de la banda). Recalcularlo localmente sería una segunda definición
+ * distinta del mismo concepto, y el panel no coincidiría con lo que lee el modelo.
+ *
+ * Y las burbujas ya no son "los 40 niveles más cercanos": el backend manda los
+ * niveles AGRUPADOS DE ESA MISMA BANDA, conservando el notional (precio del balde
+ * = notional/cantidad). Antes el mapa pintaba 0,021% del precio y el porcentaje
+ * venía de 0,10%, así que la misma tarjeta mostraba 47,8% por un camino y 44,1%
+ * por el otro. Si `orderBookSource` no es el libro real, el mapa es un perfil de
+ * volumen de velas y se dice: no son órdenes reposando.
  *
  * El libro es un snapshot REST que se renueva cada ~12 s, así que se muestra su
  * edad real junto al mapa en vez de sugerir una lectura del instante.
@@ -28,6 +34,7 @@ export default function LiquidityBubbleMap({
   buyerPercent = null,
   bookAgeSeconds = null,
   orderBookBandPercent = null,
+  orderBookSource = null,
 }) {
   const hasBids = depthRaw?.bids?.length > 0
   const hasAsks = depthRaw?.asks?.length > 0
@@ -36,7 +43,9 @@ export default function LiquidityBubbleMap({
   const { bids, asks, maxVol, totalBid, totalAsk } = useMemo(() => {
     if (!hasData) return { bids: [], asks: [], maxVol: 1, totalBid: 0, totalAsk: 0 }
 
-    // Agrupar niveles cercanos para crear burbujas más legibles
+    // Agrupar niveles cercanos solo para que el mapa sea legible. La suma de
+    // los baldes conserva el notional, así que totalBid/totalAsk siguen siendo
+    // el bidVolume/askVolume del backend.
     const groupLevels = (levels, bucketCount = 12) => {
       if (levels.length === 0) return []
       const minP = levels[levels.length - 1][0]
@@ -46,7 +55,7 @@ export default function LiquidityBubbleMap({
 
       const buckets = []
       for (let i = 0; i < bucketCount; i++) {
-        buckets.push({ priceSum: 0, vol: 0, count: 0 })
+        buckets.push({ priceSum: 0, vol: 0, count: 0, pmin: Infinity, pmax: -Infinity })
       }
 
       levels.forEach(([p, q]) => {
@@ -54,6 +63,8 @@ export default function LiquidityBubbleMap({
         buckets[idx].priceSum += p
         buckets[idx].vol += p * q
         buckets[idx].count += 1
+        buckets[idx].pmin = Math.min(buckets[idx].pmin, p)
+        buckets[idx].pmax = Math.max(buckets[idx].pmax, p)
       })
 
       return buckets
@@ -62,6 +73,8 @@ export default function LiquidityBubbleMap({
           price: b.priceSum / b.count,
           vol: b.vol,
           count: b.count,
+          pmin: b.pmin,
+          pmax: b.pmax,
         }))
     }
 
@@ -102,11 +115,31 @@ export default function LiquidityBubbleMap({
       : totalBid + totalAsk > 0
         ? ((totalBid / (totalBid + totalAsk)) * 100).toFixed(1)
         : "50.0"
-  const isBidDominant = Number(bidDominance) >= 50
-  const bandLabel = orderBookBandPercent != null
-    ? `BAND ±${(Number(orderBookBandPercent) / 2).toFixed(3)}% OF MID`
+  const bidShare = Number(bidDominance)
+  const isBidDominant = bidShare >= 50
+  // El badge nombra el lado dominante y muestra el porcentaje DE ESE LADO. Con
+  // 44,1% comprador decía "ASK DOM: 44.1%": elegía la palabra por el umbral pero
+  // imprimía el número del bid sin complementarlo, contradiciendo a su propia
+  // barra (que pinta 44,1% de cyan). ASK DOM solo puede decir 55,9% aquí.
+  const domBadge = isBidDominant
+    ? `BID DOM: ${bidShare.toFixed(1)}%`
+    : `ASK DOM: ${(100 - bidShare).toFixed(1)}%`
+
+  // Origen real de lo pintado: el libro (órdenes reposando) o el perfil de
+  // volumen de las velas (volumen NEGOCIADO, no interest waiting).
+  const obSource = depthRaw?.source || orderBookSource || null
+  const isProxy =
+    obSource === "volume_profile" ||
+    obSource === "synthetic_profile" ||
+    obSource === "volume_proxy"
+  const bandPct = isProxy ? null : depthRaw?.bandPct ?? orderBookBandPercent
+  const bandLabel = bandPct != null
+    ? `BAND ±${(Number(bandPct) / 2).toFixed(3)}% OF MID`
     : null
-  const ageLabel = bookAgeSeconds != null ? `BOOK ${Math.round(Number(bookAgeSeconds))}s OLD` : null
+  const levelsLabel = depthRaw?.levels != null ? `${depthRaw.levels} LEVELS` : null
+  const ageLabel = !isProxy && bookAgeSeconds != null
+    ? `BOOK ${Math.round(Number(bookAgeSeconds))}s OLD`
+    : null
 
   // Renderizar una burbuja individual
   const renderBubble = (item, idx, side) => {
@@ -160,7 +193,7 @@ export default function LiquidityBubbleMap({
             <div style={{ color }}>
               {isBid ? "BID" : "ASK"}: ${fmtVol(item.vol)}
             </div>
-            <div className="text-slate-400">{item.count} levels</div>
+            <div className="text-slate-400">{fmt(item.pmin)} – {fmt(item.pmax)}</div>
           </div>
         </div>
       </div>
@@ -185,7 +218,7 @@ export default function LiquidityBubbleMap({
               : "bg-[#ff3b69]/15 border border-[#ff3b69]/40 text-[#ff3b69]"
             }`}
         >
-          {hasData ? `${isBidDominant ? "BID" : "ASK"} DOM: ${bidDominance}%` : "NO BOOK DATA"}
+          {hasData ? domBadge : "NO BOOK DATA"}
         </div>
       </div>
 
@@ -259,11 +292,15 @@ export default function LiquidityBubbleMap({
         </span>
         <span className="text-slate-500">
           {hasData
-            ? depthRaw?.source === "volume_profile"
-              ? "VOLUME PROFILE LIQUIDITY"
-              : bookAgeSeconds != null
-                ? `DEPTH: 40 LEVELS · ${Math.round(Number(bookAgeSeconds))}s`
-                : "DEPTH: 40 LEVELS"
+            ? isProxy
+              ? "VOLUME PROFILE · NOT RESTING ORDERS"
+              : [
+                  levelsLabel || "DEPTH",
+                  bandLabel,
+                  ageLabel ? `${Math.round(Number(bookAgeSeconds))}s` : null,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")
             : "\u2014"}
         </span>
         <span>

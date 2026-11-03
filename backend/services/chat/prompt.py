@@ -570,8 +570,16 @@ def get_trading_system_prompt(indicator_data=None, global_context=None, model_na
         if best_bid is not None and best_ask is not None:
             data_block += f"| Best Bid / Best Ask | ${_fmt(best_bid)} / ${_fmt(best_ask)} | Spread: {abs(float(best_ask) - float(best_bid)):.4f} USDT |\n"
         if liquidity_walls:
-            data_block += f"| Top Bid Liquidity Walls | {liquidity_walls['top_bids']} | Potential bid liquidity; orders may be canceled |\n"
-            data_block += f"| Top Ask Liquidity Walls | {liquidity_walls['top_asks']} | Potential ask liquidity; orders may be canceled |\n"
+            # Las burbujas del mapa son ahora los niveles AGRUPADOS DENTRO DE LA
+            # BANDA medida, no los niveles mas cercanos al mid. Decir "top walls" a
+            # secas seria sugerir que son las mas grandes del libro: en Coinbase se
+            # midio que el interes mas grande (13.7% del libro) queda fuera de la
+            # banda, asi que el alcance hay que declararlo.
+            _scope = (f"largest clusters inside the same +/-{float(ob_band) / 2:.3f}% "
+                      f"band; interest resting farther from mid is not listed"
+                      if ob_band else "largest clusters of the liquidity map")
+            data_block += f"| Top Bid Liquidity Walls | {liquidity_walls['top_bids']} | Potential bid liquidity ({_scope}); orders may be canceled |\n"
+            data_block += f"| Top Ask Liquidity Walls | {liquidity_walls['top_asks']} | Potential ask liquidity ({_scope}); orders may be canceled |\n"
         of = indicator_data.get('orderFlow')
         if isinstance(of, dict):
             order_flow_provider = of.get('provider', 'N/A')

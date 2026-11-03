@@ -26,17 +26,18 @@ logger = logging.getLogger(__name__)
 DEPTH_BAND_PCT = 0.10          # ancho TOTAL (+/- 0.05% alrededor del mid)
 DEPTH_BAND_MIN_LEVELS = 20     # por debajo de esto la lectura es ruido
 DEPTH_BAND_APERTURAS = (1, 5, 20)   # 0.10% -> 0.50% -> 2.00% en pares iliquidos
+DEPTH_MAP_BUCKETS = 40         # baldes por lado que viajan para el bubble map
 
 
 # SUMA EL NOTIONAL DENTRO DE LA BANDA de precio alrededor del mid. Devuelve
-# (bid_notional, ask_notional, niveles_usados, ancho_usado_pct). Si la banda
-# captura menos de DEPTH_BAND_MIN_LEVELS niveles (par iliquido) se abre hasta
-# 20x antes de aceptar la lectura: el ancho realmente usado viaja en el payload
-# para que el panel y el modelo digan lo que se midio, no lo que se queria.
+# (bid_notional, ask_notional, niveles_usados, ancho_usado_pct, sel_bids, sel_asks).
+# Si la banda captura menos de DEPTH_BAND_MIN_LEVELS niveles (par iliquido) se
+# abre hasta 20x antes de aceptar la lectura: el ancho realmente usado viaja en el
+# payload para que el panel y el modelo digan lo que se midio, no lo que se queria.
 def _sumar_banda(bids, asks, banda_pct=DEPTH_BAND_PCT):
     mid = (bids[0][0] + asks[0][0]) / 2
     if mid <= 0:
-        return None, None, 0, None
+        return None, None, 0, None, [], []
     intentos = [banda_pct * f for f in DEPTH_BAND_APERTURAS]
     for ancho in intentos:
         tol = ancho / 200.0
@@ -45,8 +46,36 @@ def _sumar_banda(bids, asks, banda_pct=DEPTH_BAND_PCT):
         niveles = len(sel_b) + len(sel_a)
         if niveles >= DEPTH_BAND_MIN_LEVELS or ancho == intentos[-1]:
             return (sum(p * q for p, q in sel_b),
-                    sum(p * q for p, q in sel_a), niveles, round(ancho, 4))
-    return None, None, 0, None
+                    sum(p * q for p, q in sel_a), niveles, round(ancho, 4),
+                    sel_b, sel_a)
+    return None, None, 0, None, [], []
+
+
+# CONDensa los niveles de la banda en <= max_baldes SIN cambiar el notional.
+# Cada balde se publica como [precio, cantidad] con precio = notional/cantidad
+# (promedio ponderado), asi precio * cantidad reproduce el notional del balde.
+# Se hace aqui y no en el panel porque el mapa y la dominancia tienen que ser el
+# MISMO instrumento: antes el mapa pintaba los 40 niveles mas cercanos (0.021%
+# del precio en ETHUSDT, medido 2288.19..2288.67) mientras la dominancia sumaba
+# la banda de 0.10% (~175 niveles), y la misma tarjeta mostraba 47.8% por un
+# camino y 44.1% por el otro.
+def _agrupar_banda(niveles, max_baldes=DEPTH_MAP_BUCKETS):
+    if not niveles:
+        return []
+    n = len(niveles)
+    if n <= max_baldes:
+        return [[p, q] for p, q in niveles]
+    out = []
+    for i in range(max_baldes):
+        tramo = niveles[(i * n) // max_baldes:((i + 1) * n) // max_baldes]
+        if not tramo:
+            continue
+        qty = sum(q for _p, q in tramo)
+        if qty <= 0:
+            continue
+        notional = sum(p * q for p, q in tramo)
+        out.append([round(notional / qty, 8), round(qty, 6)])
+    return out
 
 
 def compute_liquidity(symbol, market, precio, opens, highs, lows, closes,
@@ -56,8 +85,11 @@ def compute_liquidity(symbol, market, precio, opens, highs, lows, closes,
 
     Crypto: profundidad del LIBRO DEL PROVEEDOR SELECCIONADO (bids/asks reales).
     La dominancia se agrega por banda de precio (_sumar_banda), no por numero de
-    niveles. Se expone tambien book_age (segundos del snapshot) y ob_band (ancho
-    realmente usado), para que nada del libro se presente como instantaneo.
+    niveles, y el mapa que se pinta son LOS MISMOS niveles de esa banda
+    (_agrupar_banda): lo que se ve y el porcentaje que lee el modelo miden el
+    mismo trozo del libro. Se expone tambien book_age (segundos del snapshot) y
+    ob_band (ancho realmente usado), para que nada del libro se presente como
+    instantaneo.
     No hay fallback cruzado: si Coinbase no responde, el libro queda vacio y se
     usa el perfil de volumen de las velas; nunca se toma el libro del otro
     exchange (auditado con datos reales: con Coinbase bloqueado por red, el feed
@@ -82,17 +114,20 @@ def compute_liquidity(symbol, market, precio, opens, highs, lows, closes,
             if depth and depth.get('bids') and depth.get('asks'):
                 bids = [(float(p), float(q)) for p, q in depth['bids']]
                 asks = [(float(p), float(q)) for p, q in depth['asks']]
-                bid_vol, ask_vol, _niveles, ob_band = _sumar_banda(bids, asks)
+                bid_vol, ask_vol, _niveles, ob_band, sel_b, sel_a = _sumar_banda(bids, asks)
                 best_bid = bids[0][0]
                 best_ask = asks[0][0]
                 ob_source = 'order_book'
                 # El libro se baja cada DEPTH_TTL; la edad real del que sirve la
                 # cache es lo que hay que mostrar, no "live".
                 book_age = order_book_age(symbol, provider)
-                # Guardar depth raw para el bubble map de liquidez
+                # El bubble map pinta la banda medida, no los 40 mas cercanos.
                 depth_raw = {
-                    'bids': [[p, q] for p, q in bids[:40]],
-                    'asks': [[p, q] for p, q in asks[:40]],
+                    'bids': _agrupar_banda(sel_b),
+                    'asks': _agrupar_banda(sel_a),
+                    'source': 'order_book',
+                    'levels': _niveles,
+                    'bandPct': ob_band,
                 }
         except Exception as e:
             logger.warning(f"[TradingData] order book fallo para {symbol}: {e}")
@@ -150,6 +185,8 @@ def compute_liquidity(symbol, market, precio, opens, highs, lows, closes,
                 'bids': bids_profile,
                 'asks': asks_profile,
                 'source': 'volume_profile' if market == 'stock' else 'synthetic_profile',
+                'levels': len(bids_profile) + len(asks_profile),
+                'bandPct': None,
             }
 
             if best_bid is None and bids_profile:

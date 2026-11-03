@@ -121,6 +121,7 @@ const IndicatorGrid = ({ datos = {} }) => {
           buyerPercent={datos.buyerPercent}
           bookAgeSeconds={datos.bookAgeSeconds}
           orderBookBandPercent={datos.orderBookBandPercent}
+          orderBookSource={datos.orderBookSource}
         />
       </div>
 
