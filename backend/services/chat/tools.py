@@ -5,8 +5,8 @@ herramienta correspondiente (memoria o búsqueda web) y devuelve una tupla
 (resultado_para_el_modelo, meta_de_telemetria).
 """
 
-from services.chat_memory import search_chat_history
-from services.web_search import web_search
+from services.chat.memory import search_chat_history
+from services.chat.web_search import web_search
 
 
 def _run_tool_call(fn_name, args, *, prompt, all_sessions, current_session_id):

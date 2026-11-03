@@ -2,7 +2,7 @@
 
 Contiene constantes de la API, catálogo de modelos, esquemas de las
 herramientas expuestas al modelo (MCP de memoria + búsqueda web), la excepción
-de error y el lector de la API key. Separado de nvidia_chat.py (orquestador)
+de error y el lector de la API key. Separado de agent.py (orquestador)
 para mantener el módulo principal enfocado en el loop de llamadas.
 """
 
@@ -126,7 +126,7 @@ CHAT_TOOLS = [
 
 
 # Herramienta de busqueda web (solo se expone al modelo cuando el usuario la
-# activa desde la barra de Acciones Rapidas). Backed by services.web_search.
+# activa desde la barra de Acciones Rapidas). Backed by services.chat.web_search.
 WEB_SEARCH_TOOL = {
     "type": "function",
     "function": {

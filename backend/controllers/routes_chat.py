@@ -7,7 +7,7 @@ import logging
 
 import json
 from flask import Blueprint, jsonify, request, Response, stream_with_context
-from services.nvidia_chat import nvidia_chat, nvidia_chat_stream, NvidiaChatError, AVAILABLE_MODELS, classify_intent
+from services.chat import nvidia_chat, nvidia_chat_stream, NvidiaChatError, AVAILABLE_MODELS, classify_intent
 from common.cache import rate_limited
 
 logger = logging.getLogger(__name__)
@@ -241,7 +241,7 @@ def search_health():
     """
     import time as _t
     from urllib.parse import unquote
-    import services.web_search as ws
+    import services.chat.web_search as ws
 
     q = unquote(request.args.get('q', 'Binance hack'))
     src = (request.args.get('source') or 'all').lower()

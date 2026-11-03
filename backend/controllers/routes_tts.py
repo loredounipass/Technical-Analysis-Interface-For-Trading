@@ -1,6 +1,6 @@
 """Blueprint de rutas de TTS: /api/tts
 
-Expone la síntesis de voz (NVIDIA Riva, ver services/tts_nvidia.py) al frontend.
+Expone la síntesis de voz (NVIDIA Riva, ver services/tts/) al frontend.
 Recibe JSON {text, voice?, lang?}, extrae SOLO la conclusión del informe y
 devuelve el audio en WAV. Rate limiting por IP igual que el resto de rutas.
 """
@@ -9,7 +9,7 @@ import logging
 
 from flask import Blueprint, jsonify, request, Response
 from common.cache import rate_limited
-from services.tts_nvidia import synthesize_speech, build_speech_text
+from services.tts import synthesize_speech, build_speech_text
 
 logger = logging.getLogger(__name__)
 

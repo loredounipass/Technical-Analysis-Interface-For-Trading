@@ -1,7 +1,7 @@
 """Herramienta MCP de memoria: búsqueda en el historial de sesiones pasadas.
 
-Se expone al modelo como `search_chat_history` (ver chat_config.CHAT_TOOLS) y
-es despachada por services.chat_tools._run_tool_call.
+Se expone al modelo como `search_chat_history` (ver chat/config.CHAT_TOOLS) y
+es despachada por services.chat.tools._run_tool_call.
 """
 
 import datetime
