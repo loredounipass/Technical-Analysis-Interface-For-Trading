@@ -101,6 +101,7 @@ La app tiene 2 servicios (frontend y backend), cada uno con su propio `Dockerfil
 4. En **Environment** agrega:
    - `ALLOWED_ORIGINS`: la URL de tu frontend, ej. `https://trading-frontend.onrender.com`
    - `NVIDIA_API_KEY` (opcional, para el chat IA)
+   - `NVIDIA_TTS_FUNCTION_ID` (requerido si se usa síntesis de voz)
    - `CRYPTOCOMPARE_API_KEY` (opcional, para noticias)
 5. **Create Web Service**. Espera el deploy y copia la URL asignada, ej. `https://trading-backend.onrender.com`.
 
@@ -158,6 +159,5 @@ MIT
 ## 👥 Contributing
 
 Contributions are welcome. Please open an issue first to discuss what you would like to change.
-
 
 

@@ -32,6 +32,8 @@ def synthesize_speech(text, voice=None, lang=None):
     api_key = os.getenv("NVIDIA_API_KEY")
     if not api_key:
         raise RuntimeError("NVIDIA_API_KEY not set")
+    if not TTS_FUNCTION_ID:
+        raise RuntimeError("NVIDIA_TTS_FUNCTION_ID not set")
 
     if not text or not text.strip():
         raise ValueError("TTS text cannot be empty")

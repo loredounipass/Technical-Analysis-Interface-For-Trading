@@ -11,10 +11,7 @@ TTS_SERVER = "grpc.nvcf.nvidia.com:443"
 TTS_SAMPLE_RATE = 22050
 
 # function-id del cloud endpoint de NVIDIA para los modelos magpie TTS
-TTS_FUNCTION_ID = os.getenv(
-    "NVIDIA_TTS_FUNCTION_ID",
-    "877104f7-e885-42b9-8de8-f6e4c6303969",
-)
+TTS_FUNCTION_ID = os.getenv("NVIDIA_TTS_FUNCTION_ID", "").strip()
 
 # Voces multilingual conocidas (del `list_voices` documentado). No todas
 # existen en cada despliegue cloud; usamos fallback a EN-US.Aria que SÍ está.
