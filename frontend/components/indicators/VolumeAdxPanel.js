@@ -53,6 +53,18 @@ const VolumeAdxPanel = ({ datos = {}, volumeChartData = [] }) => {
   // de indicadores. Fallback stocks: dominancia compradora del proxy de
   // volumen de velas (buyerPercent). Si no hay dato real, se muestra vacío.
   const orderFlow = datos.orderFlow
+  // Tres instrumentos distintos pueden caer en esta posicion, y se nombran
+  // distinto:
+  //   {provider}_executed_trades  -> share del notional EJECUTADO en la cinta
+  //   candle_volume_direction_proxy -> volumen de VELES repartido por la
+  //                                      direccion de cada vela (acciones: no
+  //                                      hay cinta publica). tradeCount ahi son
+  //                                      velas, NO trades.
+  //   buyerPercent del libro      -> interes comprador REPOSANDO en la banda
+  const ofSource = orderFlow?.source || null
+  const buyerFromTape =
+    orderFlow && orderFlow.buyPercent != null && /_executed_trades$/.test(ofSource || "")
+  const buyerFromCandleProxy = ofSource === "candle_volume_direction_proxy"
   const buyerVolRaw =
     orderFlow && orderFlow.buyPercent != null
       ? Number(orderFlow.buyPercent)
@@ -62,6 +74,22 @@ const VolumeAdxPanel = ({ datos = {}, volumeChartData = [] }) => {
   const buyerRatio = buyerVolRaw != null && Number.isFinite(buyerVolRaw)
     ? buyerVolRaw.toFixed(1)
     : "\u2014"
+  const buyerLabel =
+    buyerVolRaw == null
+      ? "Buyer Vol"
+      : buyerFromTape
+        ? "Buyer Vol (tape)"
+        : buyerFromCandleProxy
+          ? "Buyer Vol (candle proxy)"
+          : "Buyer Dominance (book)"
+  const buyerScope =
+    buyerVolRaw == null
+      ? "no executed-trade data"
+      : buyerFromTape
+        ? `${orderFlow.tradeCount ?? "?"} executed trades; share of traded notional`
+        : buyerFromCandleProxy
+          ? `${orderFlow.tradeCount ?? "?"} candles; volume split by candle direction, NOT executed trades`
+          : "resting buy orders in the book band; NOT executed volume"
 
   return (
     <div className="synapse-card p-3.5 flex flex-col justify-between">
@@ -151,8 +179,8 @@ const VolumeAdxPanel = ({ datos = {}, volumeChartData = [] }) => {
             </span>
           )}
         </span>
-        <span>
-          Buyer Vol:{" "}
+        <span title={buyerScope}>
+          {buyerLabel}:{" "}
           <span
             className={`font-medium ${
               buyerRatio === "\u2014"

@@ -38,15 +38,48 @@ const MacdIndicatorChart = ({ title, datos = {} }) => {
   const histBarSize = Math.min(Math.max((win.plotWidth / win.effCount) * 0.5, 1), 10)
 
   const macdVal = Number(datos.macdValue)
-  const hasMacd = Number.isFinite(macdVal)
-  const histVal = Number(datos.macdHistogram ?? (datos.macdValue - (datos.macdSignal || 0)))
-  const hasHist = Number.isFinite(histVal)
-  const isBull = macdVal > 0
-  const badgeColor = !hasMacd
+  // Number(null) es 0, no NaN: sin el guardado explicito un MACD ausente se
+  // pintaba como "Bearish" (valor 0) en lugar de "NO DATA".
+  const hasMacd = datos.macdValue != null && Number.isFinite(macdVal)
+  const histCrudo =
+    datos.macdHistogram != null
+      ? datos.macdHistogram
+      : datos.macdValue != null && datos.macdSignal != null
+        ? datos.macdValue - datos.macdSignal
+        : null
+  const histVal = Number(histCrudo)
+  const hasHist = histCrudo != null && Number.isFinite(histVal)
+
+  // El nivel del MACD (linea sobre cero) y su momentum (histograma) miden cosas
+  // distintas. Derivar "Bullish" solo del signo de la linea fazia que la tarjeta
+  // se contradijera: "1.06 Bullish" con histograma -0.57. El badge ahora nombra la
+  // combinacion de ambas; cuando se contradicen dice Cooling / Recovering.
+  const histSube = hasHist ? histVal >= 0 : macdVal >= 0
+  const estado = !hasMacd
+    ? null
+    : macdVal > 0
+    ? histSube
+      ? "Bullish"
+      : "Cooling"
+    : histSube
+    ? "Recovering"
+    : "Bearish"
+  const badgeColor = !estado
     ? "bg-slate-500/15 border border-slate-500/40 text-slate-400"
-    : isBull
+    : estado === "Bullish"
     ? "bg-[#00f5c4]/15 border border-[#00f5c4]/40 text-[#00f5c4]"
-    : "bg-[#ff3b69]/15 border border-[#ff3b69]/40 text-[#ff3b69]"
+    : estado === "Bearish"
+    ? "bg-[#ff3b69]/15 border border-[#ff3b69]/40 text-[#ff3b69]"
+    : "bg-amber-400/15 border border-amber-400/40 text-amber-300"
+
+  // Distancia MACD-vs-senal relativa al precio. El umbral absoluto (0.05) no es
+  // comparable entre activos: en ETH 2288 eso es 0,0022% del precio y en un token
+  // de cuatro decimales no significa nada. Y "Divergence" estaba mal nombrado:
+  // divergencia es precio contra indicador, no lineas separadas.
+  const precioRef = Number(datos.precio) || 0
+  const gapPct = hasHist && precioRef > 0 ? (Math.abs(histVal) / precioRef) * 100 : null
+  const gapLabel =
+    gapPct == null ? "\u2014" : gapPct < 0.01 ? "NEAR SIGNAL" : "APART FROM SIGNAL"
 
   return (
     <div className="synapse-card p-3.5 flex flex-col justify-between">
@@ -59,7 +92,7 @@ const MacdIndicatorChart = ({ title, datos = {} }) => {
           <span>{title || "MACD (12, 26, 9)"}</span>
         </div>
         <div className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold font-mono tracking-wider ${badgeColor}`}>
-          {hasMacd ? safeToFixed(macdVal, 2) : "\u2014"} {hasMacd ? (isBull ? "Bullish" : "Bearish") : "NO DATA"}
+          {hasMacd ? safeToFixed(macdVal, 2) : "\u2014"} {estado || "NO DATA"}
         </div>
       </div>
 
@@ -137,10 +170,11 @@ const MacdIndicatorChart = ({ title, datos = {} }) => {
             {hasHist ? safeToFixed(histVal, 2) : "\u2014"}
           </span>
         </span>
-        <span>
-          Signal:{" "}
+        <span title="Distance between the MACD line and its signal, as % of price">
+          Gap:{" "}
           <span className="text-white font-medium">
-            {Math.abs(histVal) < 0.05 ? "Convergence" : "Divergence"}
+            {gapLabel}
+            {gapPct != null ? ` (${gapPct.toFixed(3)}% of price)` : ""}
           </span>
         </span>
       </div>
