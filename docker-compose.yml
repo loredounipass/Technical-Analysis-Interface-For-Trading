@@ -3,14 +3,14 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    env_file:
+      - ./backend/.env
     container_name: trading-backend
     ports:
       - "5000:5000"
     environment:
       - PORT=5000
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:3000}
-      - NVIDIA_API_KEY=${NVIDIA_API_KEY:-}
-      - CRYPTOCOMPARE_API_KEY=${CRYPTOCOMPARE_API_KEY:-}
     restart: unless-stopped
 
   frontend:
