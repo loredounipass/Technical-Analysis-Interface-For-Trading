@@ -197,10 +197,10 @@ export default function Header({
             </button>
           </div>
   
-          {/* Timeframe selector: mismas dimensiones que el boton Change Pair. */}
+          {/* Timeframe selector: un poco mas ancho que Change Pair y con la misma altura. */}
           {onTimeframeChange && (
             <div
-              style={tfSize ? { width: tfSize.width, height: tfSize.height } : undefined}
+              style={tfSize ? { width: tfSize.width + 24, height: tfSize.height } : undefined}
               className="flex flex-shrink-0 min-w-0 items-center gap-1"
             >
               <button
