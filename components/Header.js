@@ -61,13 +61,11 @@ export default function Header({
 
   const timeframes = ["1m", "5m", "15m", "1h", "6h", "1d"]
 
-  // Selector de temporalidades: caja con scroll horizontal garantizado en
-  // cualquier dispositivo (flechas para paginar, rueda del mouse convertida a
-  // scroll horizontal y centrado automatico de la activa). Su ancho se iguala al
-  // del boton Change Pair midiendo el boton real y sincronizandolo en resize.
+  // Selector de temporalidades: iguala las dimensiones de Change Pair; las
+  // opciones se desplazan horizontalmente cuando no caben.
   const tfScrollRef = useRef(null)
   const changePairRef = useRef(null)
-  const [tfWidth, setTfWidth] = useState(undefined)
+  const [tfSize, setTfSize] = useState(null)
   const scrollTf = (dir) => {
     const el = tfScrollRef.current
     if (el) el.scrollBy({ left: dir * 64, behavior: "smooth" })
@@ -76,7 +74,7 @@ export default function Header({
   useEffect(() => {
     const el = changePairRef.current
     if (!el) return
-    const measure = () => setTfWidth(el.offsetWidth)
+    const measure = () => setTfSize({ width: el.offsetWidth, height: el.offsetHeight })
     measure()
     window.addEventListener("resize", measure)
     return () => window.removeEventListener("resize", measure)
@@ -199,11 +197,12 @@ export default function Header({
             </button>
           </div>
   
-          {/* Timeframe pill selector: caja compacta del tamano del boton Change
-              Pair (~140px) con flechas laterales para hacer scroll y ver las 6
-              temporalidades (1m..1d) aunque no quepan todas. */}
+          {/* Timeframe selector: mismas dimensiones que el boton Change Pair. */}
           {onTimeframeChange && (
-            <div className="flex flex-shrink-0 items-center gap-1">
+            <div
+              style={tfSize ? { width: tfSize.width, height: tfSize.height } : undefined}
+              className="flex flex-shrink-0 min-w-0 items-center gap-1"
+            >
               <button
                 type="button"
                 onClick={() => scrollTf(-1)}
@@ -215,8 +214,7 @@ export default function Header({
 
               <div
                 ref={tfScrollRef}
-                style={tfWidth ? { width: tfWidth } : undefined}
-                className="flex w-[8.75rem] items-center gap-0.5 px-1 rounded-full bg-[#09111b] border border-[#16283d] overflow-x-auto overscroll-contain [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+                className="flex h-full min-w-0 flex-1 items-center gap-0.5 px-1 rounded-full bg-[#09111b] border border-[#16283d] overflow-x-auto overscroll-contain [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
               >
                 {timeframes.map((tf) => {
                   const isActive = timeframe.toLowerCase() === tf.toLowerCase()
@@ -225,7 +223,7 @@ export default function Header({
                       key={tf}
                       data-active={isActive ? "true" : "false"}
                       onClick={() => onTimeframeChange(tf)}
-                      className={`flex-shrink-0 whitespace-nowrap px-2.5 py-1 rounded-full text-xs font-semibold tracking-wide transition-all uppercase text-center ${isActive
+                      className={`flex h-full flex-shrink-0 items-center whitespace-nowrap px-2.5 rounded-full text-xs font-semibold tracking-wide transition-all uppercase text-center ${isActive
                         ? "bg-[#00f5c4]/15 border border-[#00f5c4] text-[#00f5c4] shadow-[0_0_12px_rgba(0,245,196,0.35)]"
                         : "text-slate-300 hover:text-white border border-transparent"
                         }`}
