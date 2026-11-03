@@ -6,3 +6,6 @@ venv
 .env*.local
 *.md
 Dockerfile
+vercel.json
+api
+.vercel

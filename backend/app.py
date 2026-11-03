@@ -29,7 +29,7 @@ from gateways.stream_manager import init_market_streams
 # ─────────────────────────────────────────────────────────────────────
 app = Flask(__name__)
 
-# Confia en X-Forwarded-For/Proto de Render para ver la IP real del cliente.
+# Confia en X-Forwarded-For/Proto de Render o Vercel para ver la IP real del cliente.
 # Sin esto, request.remote_addr es siempre 127.0.0.1 (el proxy de Render)
 # y el rate limiting se aplica a TODOS los usuarios como si fueran uno solo.
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -54,6 +54,11 @@ CORS(app, resources={
 
 # Initialize SocketIO
 socketio = SocketIO(app, cors_allowed_origins=ALLOWED_ORIGINS, async_mode='threading')
+
+# Entorno serverless (Vercel): no hay WebSockets ni hilos de fondo entre
+# invocaciones. Las rutas HTTP /api/* funcionan igual; el frontend hace
+# fallback a polling HTTP. En Docker/Render esto no se ejecuta.
+IS_VERCEL = os.getenv("VERCEL", "").lower() in ("1", "true")
 
 
 
@@ -108,9 +113,14 @@ app.register_blueprint(tts_bp)
 
 # ─────────────────────────────────────────────────────────────────────
 # SOCKETS & REAL-TIME STREAMING
+# (omitido en Vercel: el runtime serverless no mantiene conexiones
+#  WebSocket ni streams de mercado entre invocaciones)
 # ─────────────────────────────────────────────────────────────────────
-init_sockets(socketio, _get_trading_cached)
-init_market_streams(socketio)
+if not IS_VERCEL:
+    init_sockets(socketio, _get_trading_cached)
+    init_market_streams(socketio)
+else:
+    logger.info("VERCEL=1 detectado: SocketIO y streams de mercado deshabilitados")
 
 
 if __name__ == '__main__':

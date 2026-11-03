@@ -1,3 +1,6 @@
+# Runtime de Python usado por Vercel (@vercel/python). Docker ignora este comentario.
+# runtime:python-3.12
+
 flask==3.0.0
 flask-cors==4.0.0
 flask-socketio==5.3.6
@@ -5,5 +8,4 @@ requests==2.31.0
 python-dotenv==1.0.1
 websocket-client==1.7.0
 nvidia-riva-client==2.26.0
-pandas==2.2.0
 
