@@ -71,6 +71,9 @@ pnpm run dev
 
 Requisito: Docker Desktop instalado y corriendo.
 
+Para instrucciones de estructura del proyecto y configuración local, consulta
+la [guía de documentación](docs/README.md).
+
 ```bash
 # 1. Copia los ejemplos de variables del frontend, backend y PostgreSQL
 cp frontend/.env.example frontend/.env
