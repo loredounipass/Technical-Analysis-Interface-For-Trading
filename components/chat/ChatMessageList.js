@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState, useRef } from "react"
 import { User, CheckCircle2, Circle, Bot, ChevronDown, ChevronUp, Brain, Globe, ExternalLink } from "lucide-react"
-import { renderMarkdown } from "./MarkdownRenderer"
+import { renderMarkdown, StreamingMarkdown } from "./MarkdownRenderer"
 import DiagnosticCard from "./DiagnosticCard"
 import { INTERVAL_LABELS } from "./useChatSession"
 
@@ -356,7 +356,7 @@ export default function ChatMessageList({
             )}
 
             <div className="text-[15.5px] sm:text-[17px] font-sans leading-[1.68] text-slate-100 break-words tracking-[-0.01em]">
-              {renderMarkdown(msg.content, symbol, intervalLabel)}
+              <StreamingMarkdown text={msg.content} currentSymbol={symbol} currentInterval={intervalLabel} />
             </div>
 
             {/* Diagnóstico Cuantitativo con datos reales */}
@@ -369,17 +369,17 @@ export default function ChatMessageList({
         )
       }), [messages, symbol, interval, intervalLabel])}
 
-      {/* Efecto de Escritura en Vivo: pipeline en etapa INFORME + texto plano.
-          Durante el stream se pinta TEXTO PLANO (no markdown): renderMarkdown
-          re-parsearia todo el texto acumulado en cada flush (~8fps), lo que da
-          un costo O(n^2) y bloquea el hilo (el texto se ve 'de golpe' y sube la
-          CPU). El markdown se aplica UNA vez, al finalizar, cuando el mensaje
-          pasa a `messages` (ver renderMarkdown de los mensajes arriba). */}
+      {/* Efecto de Escritura en Vivo: pipeline en etapa INFORME + markdown EN
+          VIVO. StreamingMarkdown parsea por bloques y memoiza los sellados, así
+          que cada frame solo re-renderiza el bloque activo (bajo CPU, sin el O(n^2)
+          de re-parsing completo y sin 'temblor'). Usa el MISMO renderizador que el
+          mensaje final, por lo que no hay salto de formato al pasar de stream a
+          mensaje terminado. */}
       {isTyping && typingText && (
         <div className="w-full my-2">
           <AgentPanel statusLabel="REDACTANDO INFORME" statusPulse steps={pipelineSteps}>
-            <div className="text-[13.5px] sm:text-[14.5px] font-sans leading-[1.68] text-slate-100 break-words tracking-[-0.01em] whitespace-pre-wrap">
-              {typingText}
+            <div className="text-[13.5px] sm:text-[14.5px] font-sans leading-[1.68] text-slate-100 break-words tracking-[-0.01em]">
+              <StreamingMarkdown text={typingText} currentSymbol={symbol} currentInterval={intervalLabel} />
               <span className="inline-block w-1.5 h-4 ml-1 bg-emerald-400 animate-pulse align-middle" />
             </div>
           </AgentPanel>

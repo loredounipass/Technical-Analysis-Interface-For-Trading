@@ -505,38 +505,24 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
       let accumulatedContent = ""
       let memoryMeta = []
 
-      // Throttle del pintado en vivo: los tokens llegan a decenas por segundo y
-      // cada setTypingText/setStreamingThought re-renderiza la ventana y
-      // re-parsea (renderMarkdown) TODO el texto acumulado, cuyo costo crece con
-      // la longitud (O(n^2) en total). Coalescemos el setState a UN flush cada
-      // FLUSH_INTERVAL_MS (~120ms => ~8fps), con un flush 'trailing' para que el
-      // ultimo tramo nunca quede mas de un intervalo sin pintarse. El resultado
-      // final se fija exacto al cerrar el stream (la respuesta pasa a messages).
-      // El scroll lo gobierna un unico efecto (ver useEffect de auto-scroll).
-      const FLUSH_INTERVAL_MS = 120
+      // Throttle del pintado en vivo: los tokens llegan a decenas por segundo.
+      // Coalescemos el setState a UN paint por animation frame (requestAnimation
+      // Frame, ~60fps max, alineado al refresco real del navegador). El pintado ya
+      // es barato (StreamingMarkdown solo re-parsea el bloque activo), asi que un
+      // flush por frame da un goteo suave sin el 'de golpe' de un parseo costoso.
+      // El resultado final se fija exacto al cerrar el stream (la respuesta pasa a
+      // messages). El scroll lo gobierna un unico efecto (ver useEffect de autoscroll).
       let streamEnded = false
-      let flushTimer = null
-      let lastFlushAt = 0
+      let rafId = null
       const doFlush = () => {
-        lastFlushAt = performance.now()
+        rafId = null
+        if (streamEnded) return
         setStreamingThought(accumulatedThought)
         setTypingText(accumulatedContent)
       }
       const scheduleFlush = () => {
-        if (streamEnded) return
-        const elapsed = performance.now() - lastFlushAt
-        if (elapsed >= FLUSH_INTERVAL_MS) {
-          if (flushTimer) {
-            clearTimeout(flushTimer)
-            flushTimer = null
-          }
-          doFlush()
-        } else if (!flushTimer) {
-          flushTimer = setTimeout(() => {
-            flushTimer = null
-            if (!streamEnded) doFlush()
-          }, FLUSH_INTERVAL_MS - elapsed)
-        }
+        if (streamEnded || rafId != null) return
+        rafId = requestAnimationFrame(doFlush)
       }
 
       resetStall()
@@ -584,9 +570,9 @@ export function useChatSession({ symbol, datos, interval = "15m", market = "cryp
       // Detenemos el batching y cancelamos cualquier flush pendiente antes de
       // fijar el estado final (la respuesta ya se pasa a messages debajo).
       streamEnded = true
-      if (flushTimer) {
-        clearTimeout(flushTimer)
-        flushTimer = null
+      if (rafId != null) {
+        cancelAnimationFrame(rafId)
+        rafId = null
       }
 
       // Finalizar mensaje con el pensamiento y respuesta completas

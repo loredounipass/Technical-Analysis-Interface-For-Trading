@@ -15,6 +15,17 @@ const HEADING_COLORS = [
   "#f0abfc", // fuchsia
 ]
 
+// Color de acento DETERMINISTA segun el texto: la misma cadena siempre recibe
+// el mismo tono, sin importar el orden ni desde donde se re-parsea. Esto evita
+// que los encabezados "salten" de color durante el streaming (render por bloques)
+// y que el formato cambie al sellar un bloque (previene el 'temblor' visual).
+function accentFor(str) {
+  const s = str || ""
+  let h = 0
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0
+  return HEADING_COLORS[h % HEADING_COLORS.length]
+}
+
 // Convierte enlaces markdown [texto](http...) en <a> clicables (nueva pestana).
 const LINK_RE = /\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g
 
@@ -59,8 +70,6 @@ export function renderMarkdown(text, currentSymbol, currentInterval) {
   let inCodeBlock = false
   let codeBlockLines = []
   let codeBlockLang = ""
-  let headingIdx = 0
-  let labelIdx = 0
 
   const flushList = () => {
     if (listItems.length > 0) {
@@ -143,7 +152,7 @@ export function renderMarkdown(text, currentSymbol, currentInterval) {
           if (bPart.startsWith("**") && bPart.endsWith("**") && bPart.length >= 4) {
             const rawBold = bPart.slice(2, -2)
             if (rawBold.endsWith(":")) {
-              const accent = HEADING_COLORS[labelIdx++ % HEADING_COLORS.length]
+              const accent = accentFor(rawBold)
               result.push(
                 <strong key={`${keyPrefix}-label-${keyIdx++}`} style={{ color: accent }} className="font-semibold tracking-wide">
                   {rawBold}
@@ -246,7 +255,7 @@ export function renderMarkdown(text, currentSymbol, currentInterval) {
     if (trimmed.startsWith("### ")) {
       flushList()
       elements.push(
-        <h4 key={i} style={{ color: HEADING_COLORS[headingIdx++ % HEADING_COLORS.length] }} className="font-semibold text-[16px] mt-4 mb-2 flex items-center gap-2 font-sans tracking-tight">
+        <h4 key={i} style={{ color: accentFor(trimmed) }} className="font-semibold text-[16px] mt-4 mb-2 flex items-center gap-2 font-sans tracking-tight">
           <span className="inline-block w-1 h-3.5 rounded-sm bg-current opacity-70" />
           {formatInline(trimmed.slice(4), i)}
         </h4>
@@ -254,14 +263,14 @@ export function renderMarkdown(text, currentSymbol, currentInterval) {
     } else if (trimmed.startsWith("## ")) {
       flushList()
       elements.push(
-        <h3 key={i} style={{ color: HEADING_COLORS[headingIdx++ % HEADING_COLORS.length] }} className="font-bold text-[17px] mt-5 mb-2.5 border-b border-[#16283d] pb-1.5 tracking-tight font-sans">
+        <h3 key={i} style={{ color: accentFor(trimmed) }} className="font-bold text-[17px] mt-5 mb-2.5 border-b border-[#16283d] pb-1.5 tracking-tight font-sans">
           {formatInline(trimmed.slice(3), i)}
         </h3>
       )
     } else if (trimmed.startsWith("# ")) {
       flushList()
       elements.push(
-        <h2 key={i} style={{ color: HEADING_COLORS[headingIdx++ % HEADING_COLORS.length] }} className="font-bold text-[19px] mt-6 mb-3 tracking-tight font-sans">
+        <h2 key={i} style={{ color: accentFor(trimmed) }} className="font-bold text-[19px] mt-6 mb-3 tracking-tight font-sans">
           {formatInline(trimmed.slice(2), i)}
         </h2>
       )
@@ -313,3 +322,58 @@ export function renderMarkdown(text, currentSymbol, currentInterval) {
   flushTable()
   return elements
 }
+
+/**
+ * Divide el texto en BLOQUES de markdown de alto nivel (separados por linea en
+ * blanco), manteniendo un fenced code block (``` ... ```) como UN solo bloque.
+ * El ultimo bloque es el 'activo' (el que aun crece durante el stream); los
+ * demas quedan 'sellados' y su contenido ya no cambia.
+ */
+export function splitMarkdownBlocks(text) {
+  if (!text) return []
+  const lines = text.split("\n")
+  const blocks = []
+  let cur = []
+  let inFence = false
+  for (const line of lines) {
+    const t = line.trim()
+    if (t.startsWith("```")) {
+      inFence = !inFence
+      cur.push(line)
+      continue
+    }
+    if (!inFence && t === "") {
+      if (cur.length) {
+        blocks.push(cur.join("\n"))
+        cur = []
+      }
+      continue
+    }
+    cur.push(line)
+  }
+  if (cur.length) blocks.push(cur.join("\n"))
+  return blocks
+}
+
+// Un bloque ya sellado: React.memo evita re-parsearlo/re-renderizarlo cuando
+// cambia solo el bloque activo, de modo que el DOM dibujado queda estable y no
+// 'tiembla'. El costo por frame pasa a ser O(bloque activo), no O(documento).
+const MemoBlock = React.memo(function MemoBlock({ text, currentSymbol, currentInterval }) {
+  return <>{renderMarkdown(text, currentSymbol, currentInterval)}</>
+})
+
+/**
+ * Renderizador INCREMENTAL para streaming con formato EN VIVO (estilo ChatGPT):
+ * parsea por bloques, memoiza los sellados y solo re-renderiza el ultimo. Da
+ * markdown formateado mientras escriben, con bajo CPU y sin saltos de layout.
+ */
+export const StreamingMarkdown = React.memo(function StreamingMarkdown({ text, currentSymbol, currentInterval }) {
+  const blocks = React.useMemo(() => splitMarkdownBlocks(text), [text])
+  return (
+    <>
+      {blocks.map((block, i) => (
+        <MemoBlock key={i} text={block} currentSymbol={currentSymbol} currentInterval={currentInterval} />
+      ))}
+    </>
+  )
+})
