@@ -89,6 +89,16 @@ def _format_recent_volume(history):
     return ', '.join(_format_compact(v) for v in vals[-10:])
 
 
+# Serie compacta del estado de squeeze ('on'|'off'|'no') de las ultimas 10
+# velas (oldest -> newest). Es texto, no numerico, asi que NO usa
+# _format_recent (que haria float() y reventaria).
+def _format_recent_squeeze_state(history):
+    vals = history.get('squeezeState')
+    if not vals:
+        return 'N/A'
+    return ', '.join((v if v is not None else 'N/A') for v in vals[-10:])
+
+
 # Valor None-safe para la tabla: 'N/A' en vez de 'None'
 def _val(data, key):
     v = data.get(key)
@@ -538,6 +548,13 @@ def get_trading_system_prompt(indicator_data=None, global_context=None, model_na
         data_block += f"| MACD Histogram (12, 26, 9)| {_fmt(indicator_data.get('macdHistogram'))} | Momentum acceleration (>0 Bullish, <0 Bearish) |\n"
         data_block += f"| ADX (14) Trend Strength | {_fmt(indicator_data.get('adx'))} | Trend Strength (>25 Trend, <25 Consolidation) |\n"
         data_block += f"| ADX Directional Force | +DI: {_fmt(indicator_data.get('plusDi'))} / -DI: {_fmt(indicator_data.get('minusDi'))} | Directional Movement Index |\n"
+        _sqz_state = indicator_data.get('squeezeState')
+        _sqz_label = {
+            'on': 'SQUEEZE ON (Bollinger inside Keltner: volatility coiled, expansion pending)',
+            'off': 'SQUEEZE RELEASED (Bollinger outside Keltner: expansion underway)',
+            'no': 'PARTIAL / TRANSITION (bands overlapping)',
+        }.get(_sqz_state, 'N/A')
+        data_block += f"| Squeeze Momentum (20,2,1.5) | Momentum: {_fmt(indicator_data.get('squeezeMomentum'))} | {_sqz_label} | TTM/LazyBear: histogram bars = momentum (sign+direction); dots = squeeze state. Positive & rising = bullish; negative & falling = bearish. A squeeze ON right after release flags a potential explosive move |\n"
         data_block += f"| Bollinger Bands (20, 2σ) | Upper: ${_fmt(indicator_data.get('bbUpper'))} | Mid: ${_fmt(indicator_data.get('bbMiddle'))} | Lower: ${_fmt(indicator_data.get('bbLower'))} | Volatility envelope |\n"
         data_block += f"| Moving Averages | EMA50: ${_fmt(indicator_data.get('ema50'))} | EMA100: ${_fmt(indicator_data.get('ema100'))} | EMA200: ${_fmt(indicator_data.get('ema200'))} | Trend bias & dynamic S/R |\n"
         data_block += f"| Support Levels (Pivots) | S1: ${_fmt(indicator_data.get('s1'))} | S2: ${_fmt(indicator_data.get('s2'))} | S3: ${_fmt(indicator_data.get('s3'))} | Key dynamic support floors |\n"
@@ -582,6 +599,8 @@ def get_trading_system_prompt(indicator_data=None, global_context=None, model_na
             base += f"STOCH RSI K (14,3,3): {_format_recent(hist, 'rsiStoch')}\n"
             base += f"CCI (20): {_format_recent(hist, 'cci')} | MFI (14): {_format_recent(hist, 'mfi')}\n"
             base += f"ADX (14): {_format_recent(hist, 'adx')}\n"
+            base += f"SQUEEZE MOMENTUM (20,2,1.5): {_format_recent(hist, 'squeezeMomentum')}\n"
+            base += f"SQUEEZE STATE (on/off/no): {_format_recent_squeeze_state(hist)}\n"
             base += f"BB (20,2σ) UPPER: {_format_recent(hist, 'bb_upper')} | MIDDLE: {_format_recent(hist, 'bb_middle')} | LOWER: {_format_recent(hist, 'bb_lower')}\n"
             base += f"EMA 50: {_format_recent(hist, 'ema50')} | EMA 100: {_format_recent(hist, 'ema100')} | EMA 200: {_format_recent(hist, 'ema200')}\n"
             base += "\nUse these series to confirm trends, spot crossovers, divergences, and momentum shifts. They are the source of truth for the exact numbers above.\n"
