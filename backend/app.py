@@ -16,6 +16,8 @@ load_dotenv()
 # Modulos internos
 # ─────────────────────────────────────────────────────────────────────
 from common.cache import get_trading_cached
+from common import market_store
+from common.redis_client import redis_url, market_backend, is_feeder_role
 from services.payload_builder import fetch_trading_data
 from controllers.routes_trading import trading_bp, init_trading_routes
 from controllers.routes_news import news_bp
@@ -25,6 +27,7 @@ from controllers.routes_tts import tts_bp
 from database.chat_store import initialize_database
 from common.sockets import init_sockets
 from gateways.stream_manager import init_market_streams
+from services.chat.tools import set_market_data_source
 
 # ─────────────────────────────────────────────────────────────────────
 # Flask app + CORS + SocketIO
@@ -56,7 +59,17 @@ CORS(app, resources={
 })
 
 # Initialize SocketIO
-socketio = SocketIO(app, cors_allowed_origins=ALLOWED_ORIGINS, async_mode='threading')
+# Con Redis activo, el manager de salas tambien vive en Redis: cualquier replica
+# de la API puede emitir a una sala aunque la conexion del cliente este en otra.
+socketio_kwargs = {}
+if market_store.redis_active():
+    socketio_kwargs['message_queue'] = redis_url()
+logger.info(
+    f"[App] MARKET_BACKEND={market_backend()} redis_available={market_store.redis_active()} "
+    f"role={'feeder' if is_feeder_role() else 'api'}"
+)
+socketio = SocketIO(app, cors_allowed_origins=ALLOWED_ORIGINS,
+                    async_mode='threading', **socketio_kwargs)
 
 # Entorno serverless (Vercel): no hay WebSockets ni hilos de fondo entre
 # invocaciones. Las rutas HTTP /api/* funcionan igual; el frontend hace
@@ -100,6 +113,11 @@ def _get_trading_cached(symbol, interval_str='15m', market='crypto', force=False
                               fetch_fn=fetch_trading_data, provider=provider)
 
 
+# La tool MCP get_selected_market_data consulta el feed por su cuenta en vez de
+# depender solo del snapshot del request (evita el falso "sin datos").
+set_market_data_source(_get_trading_cached)
+
+
 # ─────────────────────────────────────────────────────────────────────
 # Registrar blueprints (trading + news + chat/AI)
 # ─────────────────────────────────────────────────────────────────────
@@ -125,7 +143,14 @@ initialize_database()
 # ─────────────────────────────────────────────────────────────────────
 if not IS_VERCEL:
     init_sockets(socketio, _get_trading_cached)
-    init_market_streams(socketio)
+    if market_store.redis_active() and not market_store.is_feeder_role():
+        # El unico cliente de los exchanges es el feeder worker (feeder.py).
+        # La API no abre WebSockets a Binance/Coinbase ni polla REST: solo lee
+        # Redis y reenvia a los clientes.
+        logger.info("[App] Redis activo: streams deshabilitados en la API "
+                    "(el feeder es el unico escritor del feed).")
+    else:
+        init_market_streams(socketio)
 else:
     logger.info("VERCEL=1 detectado: SocketIO y streams de mercado deshabilitados")
 

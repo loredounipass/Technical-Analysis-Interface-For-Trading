@@ -26,6 +26,16 @@ function buildUrl(path) {
 }
 
 /**
+ * Estatus que sí valen la pena reintentar.
+ * El 503 del backend es determinista: significa "el feeder no publico esta sala
+ * en Redis" y llega despues de esperar el seed completo (STORE_SEED_WAIT_SECONDS,
+ * ~20 s). Reintentarlo sumaria otra espera igual (3 intentos = ~60 s de pantalla
+ * de carga) sin cambiar el resultado, asi que se reporta directo al usuario.
+ * 500/502/504 y rate-limit siguen siendo transitorios: esos si se reintentan.
+ */
+const isRetryableStatus = (status) => status >= 500 && status !== 503
+
+/**
  * Petición JSON con timeout y reintentos (5xx / rate-limit / abort).
  * Devuelve el cuerpo ya parseado (u objeto con `.error`) o lanza Error.
  */
@@ -66,8 +76,8 @@ export async function httpRequest(
         err.status = data && data.status ? data.status : res.status !== 200 ? res.status : 400
         err.body = data
 
-        // retry on 5xx or rate limit
-        if ((err.status >= 500 || isRateLimit) && attempt < retries) {
+        // retry on 5xx or rate limit (503 incluido explicitamente arriba)
+        if ((isRetryableStatus(err.status) || isRateLimit) && attempt < retries) {
           const delay = isRateLimit ? 2000 * (attempt + 1) : 2 ** attempt * 100
           await new Promise((r) => setTimeout(r, delay))
           continue
@@ -79,7 +89,9 @@ export async function httpRequest(
     } catch (err) {
       clearTimeout(id)
       const isAbort = err.name === "AbortError"
-      const shouldRetry = (isAbort || err.status >= 500 || !err.status) && attempt < retries
+      // Sin estatus = fallo de red/DNS del fetch mismo, si conviene reintentar.
+      const retryableStatus = !err.status || isRetryableStatus(err.status)
+      const shouldRetry = (isAbort || retryableStatus) && attempt < retries
       if (shouldRetry) {
         await new Promise((r) => setTimeout(r, 2 ** attempt * 100))
         continue

@@ -34,14 +34,53 @@ DEFAULT_MAX_TOKENS = 8192
 CASUAL_MAX_TOKENS = 512
 
 
-def build_messages(prompt: str, system_prompt: str, history: list | None = None) -> list[dict]:
-    """Arma la lista de mensajes: system + historial filtrado + prompt actual."""
+def _feed_provenance(msg: dict, active_provider: str | None) -> str:
+    """Etiqueta el analisis pasado con el feed que lo produjo.
+
+    Cada respuesta del agente se guarda con su proveedor (metadata del mensaje),
+    asi que al repetir el historial se le dice al modelo de donde salio cada
+    numero. Sin esto, un analisis hecho con Coinbase vuelve al prompt como texto
+    suelto y, tras cambiar a Binance, el modelo lo presenta como si fuera el feed
+    activo (mezcla de exchanges en la misma sesion).
+    """
+    provider = msg.get("provider")
+    if not isinstance(provider, str) or not provider:
+        return ""
+    parts = [provider.upper()]
+    if msg.get("symbol"):
+        parts.append(str(msg["symbol"]))
+    if msg.get("timeframe"):
+        parts.append(str(msg["timeframe"]))
+    tag = " · ".join(parts)
+    if active_provider and provider.lower() != str(active_provider).lower():
+        return (
+            f"[Analisis previo con feed {tag}. El feed ACTIVO es "
+            f"{str(active_provider).upper()}: NO reutilices estos valores como si "
+            f"vinieran del feed actual, vuelve a la herramienta "
+            "`get_selected_market_data`.]\n"
+        )
+    return f"[Analisis previo con feed {tag}]\n"
+
+
+def build_messages(
+    prompt: str,
+    system_prompt: str,
+    history: list | None = None,
+    active_provider: str | None = None,
+) -> list[dict]:
+    """Arma la lista de mensajes: system + historial filtrado + prompt actual.
+
+    `active_provider` (opcional) es el feed seleccionado en esta request; se usa
+    solo para marcar las respuestas guardadas que provenian de OTRO exchange.
+    """
     messages = [{"role": "system", "content": system_prompt}]
     if history:
         for msg in history:
             role = msg.get("role", "user")
             content = msg.get("content", "")
             if role in ("user", "assistant") and content:
+                if role == "assistant":
+                    content = _feed_provenance(msg, active_provider) + content
                 messages.append({"role": role, "content": content})
     messages.append({"role": "user", "content": prompt})
     return messages
@@ -111,7 +150,10 @@ def resolve_request_context(
         else None
     )
 
-    initial_messages = build_messages(prompt, system_prompt, history)
+    initial_messages = build_messages(
+        prompt, system_prompt, history,
+        active_provider=(indicator_data or {}).get("provider"),
+    )
 
     return {
         "api_key": api_key,

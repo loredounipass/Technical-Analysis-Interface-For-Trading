@@ -1,4 +1,38 @@
 services:
+  redis:
+    image: redis:7-alpine
+    container_name: trading-redis
+    # Datos de mercado efimeros: se re-siembran en segundos, la persistencia
+    # completa no justifica escribir en disco cada tick.
+    command: ["redis-server", "--save", "", "--appendonly", "no", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru", "--loglevel", "warning"]
+    ports:
+      - "127.0.0.1:6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  # Unico cliente de los exchanges: abre los WebSockets, calcula indicadores
+  # y publica en Redis. La API nunca consulta Binance/Coinbase directamente.
+  feeder:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    env_file:
+      - ./backend/.env
+    container_name: trading-feeder
+    command: ["python", "feeder.py"]
+    environment:
+      - MARKET_BACKEND=redis
+      - MARKET_ROLE=feeder
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
   postgres:
     image: postgres:16-alpine
     env_file:
@@ -28,9 +62,16 @@ services:
       - PORT=5000
       - POSTGRES_HOST=postgres
       - POSTGRES_PORT=5432
+      - MARKET_BACKEND=redis
+      - MARKET_ROLE=api
+      - REDIS_URL=redis://redis:6379/0
     depends_on:
       postgres:
         condition: service_healthy
+      redis:
+        condition: service_healthy
+      feeder:
+        condition: service_started
     restart: unless-stopped
 
   frontend:
@@ -50,3 +91,5 @@ services:
 
 volumes:
   postgres_data:
+  redis_data:
+    driver: local

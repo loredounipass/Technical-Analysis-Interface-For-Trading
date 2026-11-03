@@ -28,7 +28,17 @@ export default function Dashboard({ moneda, market = "crypto", onCambiarMoneda }
 
   const fetchCounterRef = useRef(0)
   const providerSaveCounterRef = useRef(0)
-  const { liveData } = useTradingSocket(moneda.symbol, timeframe, market, provider)
+  // El socket no se abre hasta saber que proveedor mostrar: en modo Redis cada
+  // 'join' registra un lease y el feeder empieza a calcular esa sala, asi que
+  // conectarse con el default (coinbase) para luego cambiarse a binance costaba
+  // un seed y un leave inutil.
+  const { liveData } = useTradingSocket(
+    moneda.symbol,
+    timeframe,
+    market,
+    // Las acciones siempre son 'yahoo': ahi no hay nada que esperar.
+    market === "stock" || providerReady ? provider : null,
+  )
 
   useEffect(() => {
     setMounted(true)
@@ -85,7 +95,14 @@ export default function Dashboard({ moneda, market = "crypto", onCambiarMoneda }
     } catch (err) {
       if (currentFetch === fetchCounterRef.current) {
         console.error("Error:", err)
-        setError("Error al obtener datos de trading")
+        // 503 = el feeder no publico la sala en Redis; 400 = simbolo/proveedor no
+        // soportado. Son los dos casos donde el mensaje del backend dice al
+        // usuario que hacer; para red o timeout se mantiene el texto generico.
+        setError(
+          (err.status === 503 || err.status === 400) && err.message
+            ? err.message
+            : "Error al obtener datos de trading",
+        )
       }
     } finally {
       if (currentFetch === fetchCounterRef.current) {
@@ -262,6 +279,7 @@ export default function Dashboard({ moneda, market = "crypto", onCambiarMoneda }
               history={datos.history}
               volumen={datos.volumen}
               time={time}
+              provider={datos.provider}
             />
           </div>
           <RecommendationCard

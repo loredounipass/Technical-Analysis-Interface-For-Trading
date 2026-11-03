@@ -9,3 +9,5 @@ python-dotenv==1.0.1
 websocket-client==1.7.0
 nvidia-riva-client==2.26.0
 psycopg[binary]==3.2.3
+# Capa de datos de mercado compartida (feeder -> Redis -> API/sockets/agente).
+redis==5.2.0

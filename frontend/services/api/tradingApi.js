@@ -13,9 +13,14 @@ export const fetchTradingData = async (
   provider = "coinbase",
 ) => {
   if (!symbol) throw new Error("symbol is required")
+  // Con MARKET_BACKEND=redis, la primera peticion de una sala (cambiar de
+  // proveedor o de timeframe) puede tardar 10-17 s: la API espera al feeder que
+  // siembra Redis. Si el timeout del cliente es menor, la peticion se aborta y
+  // los reintentos vuelven a pedir el mismo seed. 30 s > STORE_SEED_WAIT_SECONDS
+  // (20 s) y menos reintentos = un solo seed por sala.
   return httpRequest(
     ENDPOINTS.trading(symbol, interval, market, provider),
-    { retries: 4 },
+    { timeout: 30000, retries: 2 },
   )
 }
 

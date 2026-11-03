@@ -13,10 +13,11 @@ from services.data_fetchers.coinbase_client import (
 logger = logging.getLogger(__name__)
 
 
-# LIBRO DE ÓRDENES REAL (Binance depth). El endpoint devuelve hasta 100 niveles
-# de bids/asks; se suman los 20 primeros niveles de cada lado para calcular la
-# dominancia compradora real. Tiene sub-cache propia: el depth pesa 5 weight y
-# los ciclos de streaming lo consultan muy seguido.
+# LIBRO DE ÓRDENES REAL, por proveedor: Coinbase Advanced Trade (limit 50) o
+# Binance depth (hasta 100 niveles). Se suman los 20 primeros niveles de cada
+# lado para la dominancia compradora, siempre del exchange seleccionado. Tiene
+# sub-cache propia keyed por (provider, symbol): el depth pesa 5 weight y los
+# ciclos de streaming lo consultan muy seguido.
 DEPTH_TTL = 12
 _depth_cache = {}
 _depth_lock = threading.Lock()

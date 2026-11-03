@@ -6,6 +6,8 @@ import json
 from flask import request
 from flask_socketio import emit, join_room, leave_room
 
+from common import market_store
+
 logger = logging.getLogger(__name__)
 
 subscriber_rooms = {}
@@ -40,12 +42,22 @@ def data_signature(data):
 
 def init_sockets(socketio, fetch_data_func):
     def parse_room(room):
+        """(market, provider, symbol, interval) desde la sala del frontend.
+
+        Formato actual: `${market}:${provider}:${symbol}:${interval}`.
+        Una sala crypto SIN proveedor se RECHAZA en vez de asumir 'coinbase':
+        ese default hacia que un cliente viejo de Binance terminara mirando el
+        feed de Coinbase sin que nadie lo notara. Las salas de acciones de 3
+        partes si son validas (Yahoo es el unico proveedor de stocks).
+        """
         parts = room.split(':')
         if len(parts) == 4:
             market, provider, symbol, interval = parts
         elif len(parts) == 3:
             market, symbol, interval = parts
-            provider = 'yahoo' if market == 'stock' else 'coinbase'
+            if market != 'stock':
+                raise ValueError(f"Sala crypto sin proveedor: {room}")
+            provider = 'yahoo'
         else:
             raise ValueError(f"Invalid trading room: {room}")
         return market, provider, symbol, interval
@@ -63,9 +75,13 @@ def init_sockets(socketio, fetch_data_func):
                 with room_errors_lock:
                     room_errors.pop(room, None)
                 logger.info(f"[Socket] Room destroyed (no subscribers): {room}")
+                # Solo se suelta el lease cuando este nodo ya no tiene NADIE
+                # mirando la sala; si queda otro cliente local, el heartbeat la
+                # mantiene viva.
+                if market_store.redis_active():
+                    market_store.room_release(room)
 
-    @socketio.on('join')
-    def on_join(data):
+    def _on_join(data):
         room = data.get('room')
         if not room: return
         join_room(room)
@@ -77,10 +93,13 @@ def init_sockets(socketio, fetch_data_func):
             rooms.add(room)
         with subscriber_lock:
             subscriber_rooms[room] = subscriber_rooms.get(room, 0) + 1
+        # En modo Redis el registro de salas es compartido: el feeder solo
+        # recalcula lo que alguien esta mirando.
+        if market_store.redis_active():
+            market_store.room_register(room)
         logger.info(f"[Socket] Client joined room: {room} (Total subscribers: {subscriber_rooms[room]})")
 
-    @socketio.on('leave')
-    def on_leave(data):
+    def _on_leave(data):
         room = data.get('room')
         if not room: return
         leave_room(room)
@@ -94,8 +113,7 @@ def init_sockets(socketio, fetch_data_func):
         remove_room_subscriber(room)
         logger.info(f"[Socket] Client left room: {room} (Remaining: {subscriber_rooms.get(room, 0)})")
 
-    @socketio.on('disconnect')
-    def on_disconnect():
+    def _on_disconnect():
         sid = request.sid
         with sid_rooms_lock:
             rooms = list(sid_rooms.pop(sid, set()))
@@ -106,8 +124,7 @@ def init_sockets(socketio, fetch_data_func):
         else:
             logger.info(f"[Socket] Client disconnected: {sid} (no subscribed rooms)")
 
-    @socketio.on('request_refresh')
-    def on_request_refresh(data):
+    def _on_request_refresh(data):
         room = data.get('room')
         if not room: return
         try:
@@ -118,6 +135,14 @@ def init_sockets(socketio, fetch_data_func):
             socketio.emit('trading_data_update', data, room=room)
         except Exception as e:
             logger.error(f"[Socket] Manual refresh error for {room}: {e}")
+
+    # Registro explicito en lugar del decorador @socketio.on: el despacho lo hace
+    # Flask-SocketIO por nombre de evento, y esta linea deja una referencia real
+    # al handler (con el decorador el analizador lo reporta como "not accessed").
+    socketio.on_event('join', _on_join)
+    socketio.on_event('leave', _on_leave)
+    socketio.on_event('disconnect', _on_disconnect)
+    socketio.on_event('request_refresh', _on_request_refresh)
 
     def get_room_error_count(room):
         with room_errors_lock:
@@ -147,6 +172,62 @@ def init_sockets(socketio, fetch_data_func):
                 return False
             last_emitted[room] = sig
         return True
+
+    def parse_update_identifiers(message):
+        """(provider, symbol, interval) desde el mensaje de ta:updates."""
+        provider = message.get('provider')
+        symbol = (message.get('symbol') or '').upper()
+        interval = message.get('interval')
+        if not (provider and symbol and interval):
+            return None
+        return provider, symbol, interval
+
+    def start_redis_emitter():
+        """En modo Redis no se pollinga a los exchanges: el feeder publica y aqui
+        se lee el snapshot completo y se emite a la sala correspondiente."""
+        def on_update(message):
+            room = message.get('room')
+            identifiers = parse_update_identifiers(message)
+            if not room or not identifiers:
+                return
+            with subscriber_lock:
+                if subscriber_rooms.get(room, 0) <= 0:
+                    return
+            provider, symbol, interval = identifiers
+            try:
+                # Se lee el payload COMPLETO (snapshot + historico): el frontend
+                # reemplaza todo `datos` en cada update, y dentro del historico
+                # viven la vela en formacion y las series de indicadores que usan
+                # los graficos. Excluirlo dejaria los graficos congelados.
+                payload = market_store.read_payload(provider, symbol, interval)
+            except Exception as e:
+                logger.error(f"[Socket] lectura Redis fallo para {room}: {e}")
+                return
+            if payload is None:
+                return
+            market_store.strip_internal(payload)
+            if emit_if_changed(room, payload):
+                socketio.emit('trading_data_update', payload, room=room)
+
+        market_store.subscribe_updates(on_update)
+        logger.info("[Socket] Modo Redis: emits alimentados por el canal ta:updates "
+                    "(sin polling a los exchanges).")
+
+    def start_room_heartbeat():
+        """Renueva el lease Redis de las salas propias.
+
+        El registro es un lease con expiracion: si este proceso deja de latir
+        (reinicio, deploy, OOM) la sala expira sola y el feeder deja de
+        recalcularla, en vez de quedar contada para siempre.
+        """
+        def loop():
+            while True:
+                time.sleep(market_store.ROOM_HEARTBEAT_SECONDS)
+                with subscriber_lock:
+                    rooms = [r for r, c in subscriber_rooms.items() if c > 0]
+                market_store.room_heartbeat(rooms)
+
+        threading.Thread(target=loop, daemon=True).start()
 
     def background_data_fetcher():
         logger.info("[Socket] Adaptive background data fetcher thread started.")
@@ -189,5 +270,9 @@ def init_sockets(socketio, fetch_data_func):
             else:
                 socketio.sleep(MIN_CYCLE_SLEEP)
 
-    bg_thread = threading.Thread(target=background_data_fetcher, daemon=True)
-    bg_thread.start()
+    if market_store.redis_active():
+        start_redis_emitter()
+        start_room_heartbeat()
+    else:
+        bg_thread = threading.Thread(target=background_data_fetcher, daemon=True)
+        bg_thread.start()

@@ -501,6 +501,17 @@ export function useChatSession({
     })
   }
 
+  // Identidad del feed que se le envia al backend en cada request. Se guarda como
+  // metadata de la respuesta para que al reconstruir el historial el agente sepa
+  // de QUE exchange salio cada analisis previo: sin esa etiqueta, un numero tomado
+  // de Coinbase se relanza como texto suelto y, tras cambiar a Binance, el modelo
+  // lo presenta como si fuera el feed activo (mezcla de exchanges en la sesion).
+  const activeFeed = {
+    provider: market === "stock" ? "yahoo" : provider,
+    symbol,
+    timeframe: interval,
+  }
+
   const sendMessage = async (customPrompt, meta = null) => {
     const textToSend = typeof customPrompt === "string" ? customPrompt : ""
     const trimmed = textToSend.trim()
@@ -560,7 +571,7 @@ export function useChatSession({
           symbol: symbol,
           interval: interval,
           market: market,
-          provider: market === "stock" ? "yahoo" : provider,
+          provider: activeFeed.provider,
           indicator_data: datos,
           stream: true,
         },
@@ -678,6 +689,7 @@ export function useChatSession({
           timestamp: Date.now(),
           model: selectedModel,
           memoryAccessed: hasMeta ? memoryMeta : null,
+          ...activeFeed,
         }
         await saveChatMessage(activeSessionId, responseMessage)
         setMessages((prev) => [
@@ -700,6 +712,7 @@ export function useChatSession({
           timestamp: Date.now(),
           model: selectedModel,
           memoryAccessed: hasMeta ? memoryMeta : null,
+          ...activeFeed,
         }
         await saveChatMessage(activeSessionId, responseMessage)
         setMessages((prev) => [
@@ -763,6 +776,7 @@ export function useChatSession({
         timestamp: Date.now(),
         model: activeModelRef.current,
         interrupted: true,
+        ...activeFeed,
       }
       setMessages((prev) => [...prev, partialMessage])
       if (activeSessionId) {

@@ -6,9 +6,12 @@ principal de Flask, los hilos de polling del socket y los streams de Binance/Yah
 NO depende de Flask (excepto para rate_limited que recibe la IP como string).
 """
 
+import os
 import time
 import threading
 import logging
+
+from common import market_store
 
 logger = logging.getLogger(__name__)
 
@@ -53,35 +56,51 @@ in_flight_lock = threading.Lock()
 
 
 def wait_for_in_flight(cache_key, timeout=30):
+    """Espera la peticion en vuelo de `cache_key` y devuelve su dato si termino.
+
+    Devuelve None cuando no hay nada en vuelo, cuando el dueno fallo o cuando
+    vencio el timeout: en esos casos el llamador sigue su camino normal (re-check
+    del cache / fetch propio). Despues del wait NO se vuelve a leer `in_flight`
+    porque podria contener el registro de OTRA peticion distinta a la esperada.
+    """
     with in_flight_lock:
         if cache_key not in in_flight:
             return None
         event, result_container = in_flight[cache_key]
     event.wait(timeout)
-    with in_flight_lock:
-        entry = in_flight.get(cache_key)
-        if entry:
-            _, result_container = entry
-            return result_container.get('data')
-    return None
+    return result_container.get('data')
 
 
 def set_in_flight(cache_key):
+    """Registra la peticion en vuelo de `cache_key`.
+
+    No devuelve nada a proposito: el event y el contenedor viven en `in_flight`,
+    y es desde alli desde donde `clear_in_flight` los usa para entregar el dato a
+    los esperantes (el contenedor se muta en el sitio, no se reemplaza). El que
+    hace el fetch no necesita ninguna referencia local.
+    """
     event = threading.Event()
     result_container = {}
     with in_flight_lock:
         in_flight[cache_key] = (event, result_container)
-    return event, result_container
 
 
-def clear_in_flight(cache_key, result_container=None):
+def clear_in_flight(cache_key, payload=None):
+    """Cierra la peticion en vuelo y le entrega el dato a los esperantes.
+
+    `payload` llega como {'data': ...} (la forma que guarda el cache). El
+    contenedor registrado esta VACIO hasta aqui, por eso se escribe sin mirar su
+    verdad: con un `if container` anterior nunca se escribia, los esperantes
+    recibian None y vuelta a ir al exchange (el refresh manual se duplicaba).
+    """
     with in_flight_lock:
-        if cache_key in in_flight:
-            evt, container = in_flight[cache_key]
-            if result_container and container:
-                container['data'] = result_container.get('data')
-            evt.set()
-            del in_flight[cache_key]
+        entry = in_flight.pop(cache_key, None)
+        if not entry:
+            return
+        evt, container = entry
+        if payload is not None:
+            container['data'] = payload.get('data')
+        evt.set()
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -137,17 +156,70 @@ CRYPTO_SYMBOLS = {"BTCUSDT", "ETHUSDT", "SOLUSDT", "PEPEUSDT", "BNBUSDT", "DOGEU
 STOCK_SYMBOLS = {"AAPL", "MSFT", "NVDA", "TSLA", "AMZN", "GOOGL", "META", "NFLX", "AMD", "INTC", "LMT", "^NDX", "GC=F", "EURUSD=X"}
 
 
+# Cuanto espera la API al feeder cuando la clave aun no esta sembrada en Redis.
+# Medido contra Binance en vivo: el seed en frio de ETHUSDT 15m tardó
+# 16.3 s (klines + libro + indicadores), el mismo trabajo sincronico que la API
+# ya hacia sola en modo memory. El default cubre ese peor caso, ajustable.
+STORE_SEED_WAIT = float(os.getenv('STORE_SEED_WAIT_SECONDS', '20'))
+STORE_SEED_STEP = 0.2
+
+
+def _read_from_store(symbol, interval_str, market, provider, force=False):
+    """Ruta de lectura Redis: la API nunca consulta el exchange.
+
+    El unico escritor es el feeder worker. Si la clave falta (sala recien abierta
+    o arranque en frio), se le pide por pub/sub que siembre y se espera un maximo
+    de STORE_SEED_WAIT antes de reportar la indisponibilidad.
+    """
+    payload = market_store.read_payload(provider, symbol, interval_str)
+    if payload is None or force:
+        market_store.publish_refresh(
+            symbol, interval_str, market, provider,
+            reason='manual' if force else 'cold',
+        )
+        if payload is not None:
+            market_store.strip_internal(payload)
+            return payload
+        deadline = time.time() + STORE_SEED_WAIT
+        while time.time() < deadline:
+            time.sleep(STORE_SEED_STEP)
+            payload = market_store.read_payload(provider, symbol, interval_str)
+            if payload is not None:
+                market_store.strip_internal(payload)
+                return payload
+        raise RuntimeError(
+            f"El feeder no ha publicado {provider}:{symbol} {interval_str} en Redis. "
+            "Verifica que el servicio feeder este corriendo y conectado al exchange."
+        )
+    # Marcas internas de frescura: no deben filtrarse a la API ni al prompt.
+    market_store.strip_internal(payload)
+    return payload
+
+
 def get_trading_cached(symbol, interval_str='15m', market='crypto', force=False,
                        fetch_fn=None, provider='coinbase'):
     """Retorna datos de trading cacheados con stale-while-revalidate.
 
     ``fetch_fn`` debe ser una callable(symbol, interval_str, market, provider)
     que devuelve el payload completo (se inyecta desde app.py).
+
+    Con MARKET_BACKEND=redis (y rol API) la lectura viene de Redis, escrita por
+    el feeder; el cache en memoria y fetch_fn siguen vigentes en modo memory.
     """
     if market == 'stock':
         provider = 'yahoo'
     elif provider not in ('binance', 'coinbase'):
         raise ValueError(f"Proveedor no soportado: {provider}")
+
+    # Validar simbolo ANTES de tocar las fuentes de datos: un par invalido
+    # (p.ej. USDTUSDT) quema rate limit y puede tumbar los demas pares
+    allowed = STOCK_SYMBOLS if market == 'stock' else CRYPTO_SYMBOLS
+    if symbol not in allowed:
+        raise ValueError(f"Simbolo no soportado: {symbol}")
+
+    if market_store.redis_active() and not market_store.is_feeder_role():
+        return _read_from_store(symbol, interval_str, market, provider, force=force)
+
     cache_key = (
         f"{market}:{symbol}_{interval_str}"
         if market == 'stock'
@@ -155,12 +227,6 @@ def get_trading_cached(symbol, interval_str='15m', market='crypto', force=False,
     )
     now = time.time()
     entry = cache.get(cache_key)
-
-    # Validar simbolo ANTES de tocar las fuentes de datos: un par invalido
-    # (p.ej. USDTUSDT) quema rate limit y puede tumbar los demas pares
-    allowed = STOCK_SYMBOLS if market == 'stock' else CRYPTO_SYMBOLS
-    if symbol not in allowed:
-        raise ValueError(f"Simbolo no soportado: {symbol}")
 
     # Refresco MANUAL (boton Refresh Data): ignora la cache fresca y vuelve a
     # consultar las fuentes. Respeta la dedup en vuelo para no duplicar llamadas.
@@ -174,7 +240,7 @@ def get_trading_cached(symbol, interval_str='15m', market='crypto', force=False,
             flight_result = wait_for_in_flight(cache_key)
             if flight_result:
                 return flight_result
-            event, result_container = set_in_flight(cache_key)
+            set_in_flight(cache_key)
             try:
                 data = fetch_fn(symbol, interval_str, market, provider)
                 cache[cache_key] = {'data': data, 'ts': time.time(), 'last_refresh': time.time()}
@@ -231,7 +297,7 @@ def get_trading_cached(symbol, interval_str='15m', market='crypto', force=False,
         if entry and 'data' in entry and now - entry['ts'] <= STALE_TTL:
             return entry['data']
 
-        event, result_container = set_in_flight(cache_key)
+        set_in_flight(cache_key)
         try:
             data = fetch_fn(symbol, interval_str, market, provider)
             cache[cache_key] = {'data': data, 'ts': time.time(), 'last_refresh': time.time()}

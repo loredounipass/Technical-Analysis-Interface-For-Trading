@@ -10,6 +10,7 @@ export default function PriceCard({
   history = {},
   volumen = null,
   time = "",
+  provider = "",
 }) {
   const parsePrecio = (p) => {
     const n = Number(p)
@@ -102,6 +103,13 @@ export default function PriceCard({
             <span className="w-1.5 h-1.5 rounded-full bg-[#00f5c4] animate-ping" />
             <span className="text-[9px] font-bold tracking-widest uppercase">LIVE MARKET PRICE</span>
           </div>
+          {/* Unica fuente del feed: todo el terminal (velas, indicadores, libro y
+              tape) sale del proveedor seleccionado, nunca de dos mezclados. */}
+          {provider && (
+            <span className="px-2 py-0.5 rounded-full bg-slate-500/10 border border-slate-500/30 text-slate-300 text-[9px] font-bold tracking-widest uppercase whitespace-nowrap">
+              Fuente: {provider}
+            </span>
+          )}
           {time && (
             <span className="text-[10px] text-slate-400 font-semibold tabular-nums whitespace-nowrap">
               UTC {time}

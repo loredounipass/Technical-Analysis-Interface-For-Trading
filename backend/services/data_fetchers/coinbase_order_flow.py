@@ -1,4 +1,9 @@
-"""Order flow: cache rolling de trades ejecutados de Coinbase (tape real)."""
+"""Order flow: tape real de trades ejecutados, aislado por proveedor.
+
+El archivo conserva el nombre historico, pero el tape vive indexado por
+(provider, symbol): Coinbase invierte el lado del maker y Binance usa
+isBuyerMaker, asi el delta de un exchange nunca se contamina con el otro.
+"""
 
 import time
 import math
@@ -8,6 +13,7 @@ from datetime import datetime, timezone
 
 import requests
 
+from common import market_store
 from services.data_fetchers.coinbase_client import (
     coinbase_product_id, COINBASE_BASE, COINBASE_HEADERS,
 )
@@ -69,7 +75,12 @@ def _normalize_binance_trade(trade):
 
 
 def record_order_flow_trade(symbol, trade, provider='coinbase'):
-    """Agrega un trade real del WebSocket sin duplicar `last_match`."""
+    """Agrega un trade real del WebSocket sin duplicar `last_match`.
+
+    Con Redis activo el tape vive en una Redis Stream compartida (el feeder es
+    el unico escritor), de modo que la API y el agente ven el mismo tape sin
+    depender de la memoria del proceso que recibe el WebSocket.
+    """
     if provider == 'coinbase':
         normalized = _normalize_order_flow_trade(trade)
     elif provider == 'binance':
@@ -78,6 +89,8 @@ def record_order_flow_trade(symbol, trade, provider='coinbase'):
         raise ValueError(f"Proveedor no soportado para order flow: {provider}")
     if normalized is None:
         return False
+    if market_store.redis_active():
+        return market_store.tape_append(provider, symbol, [normalized])
     cache_key = (provider, symbol)
     with _order_flow_lock:
         entry = _order_flow_cache.setdefault(cache_key, {
@@ -94,11 +107,64 @@ def record_order_flow_trade(symbol, trade, provider='coinbase'):
     return True
 
 
+def _fetch_recent_trades_rest(symbol, provider):
+    """Seed REST de los ultimos trades ejecutados, normalizados (agresor)."""
+    try:
+        if provider == 'coinbase':
+            product = coinbase_product_id(symbol)
+            resp = requests.get(
+                f'{COINBASE_BASE}/products/{product}/trades',
+                params={'limit': 500},
+                headers=COINBASE_HEADERS,
+                timeout=10,
+            )
+        else:
+            resp = requests.get(
+                'https://data-api.binance.vision/api/v3/trades',
+                params={'symbol': symbol, 'limit': 500},
+                timeout=10,
+            )
+        resp.raise_for_status()
+        rows = resp.json()
+        normalizer = (
+            _normalize_order_flow_trade
+            if provider == 'coinbase'
+            else _normalize_binance_trade
+        )
+        if not isinstance(rows, list):
+            return []
+        return [trade for trade in map(normalizer, rows) if trade is not None]
+    except Exception as e:
+        logger.warning(f"[TradingData] seed REST de order flow {provider} fallo para {symbol}: {e}")
+        return []
+
+
 def get_order_flow_trades(symbol, limit=200, provider='coinbase'):
-    """Devuelve trades reales ordenados; siembra por REST y actualiza por WS."""
+    """Devuelve trades reales ordenados; siembra por REST y actualiza por WS.
+
+    En modo Redis el tape es una Redis Stream compartida: se lee de alli y el
+    seed REST solo se dispara cuando esta vacio o vencido, deduplicando por id
+    para no sesgar el delta con trades repetidos.
+    """
     if provider not in ('coinbase', 'binance'):
         raise ValueError(f"Proveedor no soportado para order flow: {provider}")
     now = time.time()
+
+    if market_store.redis_active():
+        tape = market_store.tape_read(provider, symbol, limit=ORDER_FLOW_CACHE_SIZE)
+        # trade['time'] viene en milisegundos epoch.
+        last_ms = max((trade['time'] for trade in tape), default=0)
+        if tape and (now * 1000 - last_ms) <= ORDER_FLOW_TTL * 1000:
+            return tape[-limit:]
+        known = {trade['id'] for trade in tape}
+        fresh = [
+            trade for trade in _fetch_recent_trades_rest(symbol, provider)
+            if trade['id'] not in known
+        ]
+        if fresh:
+            market_store.tape_append(provider, symbol, fresh)
+        return market_store.tape_read(provider, symbol, limit=limit)
+
     cache_key = (provider, symbol)
     with _order_flow_lock:
         cached = _order_flow_cache.get(cache_key)
@@ -108,29 +174,8 @@ def get_order_flow_trades(symbol, limit=200, provider='coinbase'):
         )
 
     if is_stale:
-        try:
-            if provider == 'coinbase':
-                product = coinbase_product_id(symbol)
-                resp = requests.get(
-                    f'{COINBASE_BASE}/products/{product}/trades',
-                    params={'limit': 500},
-                    headers=COINBASE_HEADERS,
-                    timeout=10,
-                )
-            else:
-                resp = requests.get(
-                    'https://data-api.binance.vision/api/v3/trades',
-                    params={'symbol': symbol, 'limit': 500},
-                    timeout=10,
-                )
-            resp.raise_for_status()
-            rows = resp.json()
-            normalizer = (
-                _normalize_order_flow_trade
-                if provider == 'coinbase'
-                else _normalize_binance_trade
-            )
-            normalized = [trade for trade in map(normalizer, rows) if trade is not None] if isinstance(rows, list) else []
+        normalized = _fetch_recent_trades_rest(symbol, provider)
+        if normalized:
             with _order_flow_lock:
                 existing = _order_flow_cache.get(cache_key, {}).get('trades', [])
                 merged = {trade['id']: trade for trade in existing}
@@ -144,8 +189,6 @@ def get_order_flow_trades(symbol, limit=200, provider='coinbase'):
                     'updated': time.time(),
                     'seeded': True,
                 }
-        except Exception as e:
-            logger.warning(f"[TradingData] order flow {provider} fallo para {symbol}: {e}")
 
     with _order_flow_lock:
         entry = _order_flow_cache.get(cache_key)

@@ -114,12 +114,21 @@ def chat_endpoint():
         provider = 'yahoo'
     elif provider not in ('binance', 'coinbase'):
         return jsonify({'error': 'Unsupported market data provider.'}), 400
-    history = [
-        {'role': message['role'], 'content': message['content']}
-        for index, message in enumerate(current_session['messages'])
-        if not message.get('isError')
-        and not (index == 0 and message['role'] == 'assistant')
-    ]
+    history = []
+    for index, message in enumerate(current_session['messages']):
+        if message.get('isError'):
+            continue
+        # El analisis de una respuesta previa pierde su sentido si se reenvia sin
+        # decir de que exchange salio: se conservan los campos de procedencia que
+        # el terminal guarda como metadata (provider/symbol/timeframe) para que
+        # build_messages los etiquete.
+        entry = {'role': message['role'], 'content': message['content']}
+        for key in ('provider', 'symbol', 'timeframe'):
+            if message.get(key) is not None:
+                entry[key] = message[key]
+        if index == 0 and entry['role'] == 'assistant':
+            continue
+        history.append(entry)
     if history and history[-1]['role'] == 'user' and history[-1]['content'] == prompt:
         history.pop()
     global_context = ' | '.join(
@@ -134,59 +143,68 @@ def chat_endpoint():
     intent = classify_intent(prompt)
     logger.info(f"[Chat] Intent: {intent} | web_search={web_search_enabled} | model={model_key} | Prompt: {prompt[:80]}")
 
-    # Only fetch indicator data for analysis / ambiguous intents
-    indicator_data = None
-    if intent in ('analysis', 'ambiguous'):
-        try:
-            frontend_data = data.get('indicator_data')
-            cached_data = (
-                _get_cached_fn(symbol, interval, market, provider=provider)
-                if _get_cached_fn else {}
-            )
+    # Snapshot del feed seleccionado: SIEMPRE se construye, sin depender de la
+    # intencion. La tool MCP get_selected_market_data lo usa como fuente, y el
+    # clasificador de intencion es un regex de palabras clave que clasifica como
+    # 'casual' follow-ups legitimos ("y estos datos son reales?", "ETHUSDT 15m
+    # — Lectura rapida"). Atar el snapshot a la intencion producia un falso
+    # "sin datos" que hacia al agente retractarse de un analisis correcto.
+    # El prompt sigue gateado por intencion (context.py resuelve effective_data),
+    # asi que las charlas casuales no se inflan con indicadores.
+    indicator_data = {}
+    try:
+        frontend_data = data.get('indicator_data')
+        cached_data = (
+            _get_cached_fn(symbol, interval, market, provider=provider)
+            if _get_cached_fn else {}
+        )
 
-            # Only merge frontend values when they identify the same selected feed.
-            if cached_data and isinstance(cached_data, dict):
-                indicator_data = dict(cached_data)
-            else:
-                indicator_data = {}
+        # Only merge frontend values when they identify the same selected feed.
+        if cached_data and isinstance(cached_data, dict):
+            indicator_data = dict(cached_data)
 
+        if (
+            frontend_data
+            and isinstance(frontend_data, dict)
+            and frontend_data.get('provider') == provider
+            and frontend_data.get('precio') is not None
+        ):
+            for k, v in frontend_data.items():
+                if v is not None:
+                    indicator_data[k] = v
+
+        if market == 'crypto':
+            order_flow = indicator_data.get('orderFlow')
             if (
-                frontend_data
-                and isinstance(frontend_data, dict)
-                and frontend_data.get('provider') == provider
-                and frontend_data.get('precio') is not None
+                isinstance(order_flow, dict)
+                and order_flow.get('provider') != provider
             ):
-                for k, v in frontend_data.items():
-                    if v is not None:
-                        indicator_data[k] = v
+                logger.warning(
+                    "[Chat] Omitiendo order flow de %s para solicitud del proveedor %s (%s)",
+                    order_flow.get('provider', 'desconocido'),
+                    provider,
+                    symbol,
+                )
+                indicator_data['orderFlow'] = None
 
-            indicator_data['symbol'] = symbol
-            indicator_data['timeframe'] = interval
-            indicator_data['market'] = market
-            indicator_data['provider'] = provider
-
-            if market == 'crypto':
-                order_flow = indicator_data.get('orderFlow')
-                if (
-                    isinstance(order_flow, dict)
-                    and order_flow.get('provider') != provider
-                ):
-                    logger.warning(
-                        "[Chat] Omitiendo order flow de %s para solicitud del proveedor %s (%s)",
-                        order_flow.get('provider', 'desconocido'),
-                        provider,
-                        symbol,
-                    )
-                    indicator_data['orderFlow'] = None
-
-            # Multi-timeframe context
+        # Multi-timeframe context: caro (6 temporalidades) y solo aporta al
+        # informe tecnico, no a una conversacion casual.
+        if intent in ('analysis', 'ambiguous'):
             indicator_data['multi_timeframe'] = _build_multi_timeframe_context(
                 symbol, interval, market, provider
             )
-        except Exception as e:
-            logger.warning(f"[Chat] Error obteniendo indicator_data: {e}")
-            if not indicator_data:
-                indicator_data = data.get('indicator_data') or {'symbol': symbol, 'error': str(e)}
+    except Exception as e:
+        logger.warning(f"[Chat] Error obteniendo indicator_data: {e}")
+        if not isinstance(indicator_data, dict):
+            indicator_data = {}
+    finally:
+        # La identidad del feed NUNCA se pierde, ni siquiera cuando el fetch
+        # fallo: sin estos campos la tool reportaria 'sin datos' aunque Binance
+        # estuviera respondiendo perfectamente.
+        indicator_data['symbol'] = symbol
+        indicator_data['timeframe'] = interval
+        indicator_data['market'] = market
+        indicator_data['provider'] = provider
 
     # Si el cliente solicita streaming (SSE en tiempo real con pensamientos)
     if data.get('stream', False):

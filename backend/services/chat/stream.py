@@ -17,7 +17,7 @@ from urllib.request import Request, urlopen
 
 from services.chat.config import NvidiaChatError
 from services.chat.context import resolve_request_context
-from services.chat.tools import _run_tool_call
+from services.chat.tools import run_tool_call
 
 logger = logging.getLogger(__name__)
 
@@ -246,7 +246,7 @@ def nvidia_chat_stream(
                 else:
                     yield {"type": "thought", "chunk": f"\n[Accediendo a memoria MCP: '{query}']\n"}
 
-                result, meta = _run_tool_call(
+                result, meta = run_tool_call(
                     fn_name, args,
                     prompt=prompt, owner_id=owner_id, current_session_id=current_session_id,
                     indicator_data=indicator_data,

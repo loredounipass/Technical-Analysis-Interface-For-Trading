@@ -5,24 +5,74 @@ herramienta correspondiente (memoria o búsqueda web) y devuelve una tupla
 (resultado_para_el_modelo, meta_de_telemetria).
 """
 
+import logging
+
 from services.chat.memory import search_chat_history
 from services.chat.web_search import web_search
 from database import chat_store
 
+logger = logging.getLogger(__name__)
 
-def _run_tool_call(
+# Fuente autoritativa del feed (se inyecta desde app.py con la funcion de cache).
+# Sin ella la tool era un mero espejo del snapshot del request: si el snapshot
+# venia vacio o sin 'provider', reportaba "sin datos" aunque el exchange
+# estuviera respondiendo, y el agente retractaba un analisis correcto.
+_market_data_source = None
+
+
+def set_market_data_source(fetch_fn):
+    """Inyecta fetch_fn(symbol, interval, market, provider=...) -> payload."""
+    global _market_data_source
+    _market_data_source = fetch_fn
+
+
+def _resolve_feed_snapshot(data):
+    """Devuelve (data, provider, available) consultando el feed cuando el
+    snapshot del request no lo trae. La tool es la fuente de verdad."""
+    market = data.get("market", "crypto")
+    provider = "yahoo" if market == "stock" else data.get("provider")
+    available = (
+        provider in ("binance", "coinbase", "yahoo")
+        and data.get("precio") is not None
+    )
+    if available or _market_data_source is None or not data.get("symbol"):
+        return data, provider, available
+
+    try:
+        fetched = _market_data_source(
+            data["symbol"],
+            data.get("timeframe") or "15m",
+            market,
+            provider=provider if provider in ("binance", "coinbase", "yahoo") else (
+                "yahoo" if market == "stock" else "coinbase"
+            ),
+        )
+    except Exception as error:
+        logger.warning(
+            f"[Chat] Feed propio de la tool fallo para {data.get('symbol')}: {error}"
+        )
+        return data, provider, False
+
+    if not isinstance(fetched, dict) or fetched.get("precio") is None:
+        return data, provider, False
+
+    # El feed prevalece; la identidad del request (symbol/timeframe/market)
+    # del snapshot original no se pisa con el payload del exchange.
+    data = {**fetched, **{k: v for k, v in data.items() if v is not None}}
+    market = data.get("market", "crypto")
+    provider = "yahoo" if market == "stock" else data.get("provider")
+    return data, provider, provider in ("binance", "coinbase", "yahoo")
+
+
+def run_tool_call(
     fn_name, args, *, prompt, owner_id, current_session_id, indicator_data=None
 ):
     """Ejecuta una tool-call del modelo. Devuelve (resultado_para_el_modelo, meta_de_telemetria)."""
     args = args if isinstance(args, dict) else {}
     if fn_name == "get_selected_market_data":
         data = indicator_data if isinstance(indicator_data, dict) else {}
+        data, selected_provider, available = _resolve_feed_snapshot(data)
         market = data.get("market", "crypto")
-        selected_provider = "yahoo" if market == "stock" else data.get("provider")
-        available = (
-            selected_provider in ("binance", "coinbase", "yahoo")
-            and data.get("precio") is not None
-        )
         history = data.get("history")
         times = history.get("times") if isinstance(history, dict) else None
         order_flow = data.get("orderFlow")

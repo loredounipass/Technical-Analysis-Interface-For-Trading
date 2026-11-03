@@ -136,7 +136,11 @@ const OrderFlowSwingsPanel = ({ datos = {}, dec = 2 }) => {
               {orderFlow.recentTrades && orderFlow.recentTrades.length > 0 && (
                 <div className="space-y-0.5">
                   <div className="text-[9px] text-slate-400 uppercase tracking-wider px-1">
-                    {orderFlow.source === "candle_volume_direction_proxy" ? "Volume Events (Candles)" : "Live Trade Tape"}
+                    {/* Se nombra el exchange del tape: el usuario ve que la cinta
+                        viene del proveedor elegido, no de ambos mezclados. */}
+                    {orderFlow.source === "candle_volume_direction_proxy"
+                      ? "Volume Events (Candles)"
+                      : `${orderFlow.provider ? `${String(orderFlow.provider).toUpperCase()} \u00b7 ` : ""}Live Trade Tape`}
                   </div>
                   {orderFlow.recentTrades.slice(0, 8).map((trade, idx) => {
                     const isBuy = trade.side === "buy"

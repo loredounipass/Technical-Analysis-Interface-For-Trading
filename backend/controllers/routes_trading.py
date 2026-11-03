@@ -7,6 +7,8 @@ con soporte para crypto y stocks, rate limiting y cache.
 import logging
 from flask import Blueprint, jsonify, request
 from common.cache import rate_limited
+from common import market_store
+from common.redis_client import is_feeder_role
 from database import chat_store, market_preferences
 
 logger = logging.getLogger(__name__)
@@ -60,6 +62,29 @@ def update_provider_preference():
         return jsonify({'error': 'No se pudo guardar la preferencia del proveedor.'}), 500
 
 
+@trading_bp.get('/api/trading/feed-health')
+def get_feed_health():
+    """Diagnostico del feed: quien escribe, que salas hay y que tan fresco esta.
+
+    Sirve para distinguir un simbolo malo de un feeder caido sin tener que leer
+    logs: en modo Redis la API no consulta el exchange, asi que un snapshot
+    ausente o viejo es un problema del worker, no del frontend.
+    """
+    health = market_store.feed_health()
+    health['role'] = 'feeder' if is_feeder_role() else 'api'
+    symbol = (request.args.get('symbol') or '').upper()
+    interval = request.args.get('interval', '15m')
+    market = request.args.get('market', 'crypto')
+    provider = 'yahoo' if market == 'stock' else request.args.get('provider', 'coinbase')
+    if symbol:
+        health['requested'] = {
+            'feed': f'{market}:{provider}:{symbol}:{interval}',
+            'snapshot_age_seconds': market_store.snapshot_age(provider, symbol, interval),
+            'tape_last_trade_ms': market_store.tape_last_time(provider, symbol),
+        }
+    return jsonify(health)
+
+
 @trading_bp.route('/api/trading/<symbol>')
 def get_trading_data(symbol):
     """ENDPOINT: OBTIENE DATOS DE TRADING PARA UN SIMBOLO, APLICANDO RATE LIMIT POR IP."""
@@ -84,6 +109,10 @@ def get_trading_data(symbol):
         return jsonify(data)
     except ValueError as e:
         return jsonify({'error': str(e)}), 400
+    except RuntimeError as e:
+        # El feeder no publico la clave: el servicio esta caido o desconectado.
+        logger.warning(f"[TradingData] feed indisponible para {symbol} {interval}: {e}")
+        return jsonify({'error': str(e)}), 503
     except Exception as e:
         if '429' in str(e):
             return jsonify({'error': 'TradingView Rate Limit Exceeded'}), 429

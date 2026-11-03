@@ -18,8 +18,10 @@ def fetch_trading_data(symbol, interval_str='15m', market='crypto',
     payload = build_payload(
         symbol, interval_str, market, klines, vol_24h, provider
     )
-    # Precio principal: ticker EN VIVO. Crypto: Coinbase (el cierre de la ultima
-    # vela REST puede llevar unos segundos de retraso por la paginacion).
+    # Precio principal: ticker EN VIVO del PROVEEDOR SELECCIONADO (el cierre de la
+    # ultima vela REST puede llevar unos segundos de retraso por la paginacion).
+    # Nunca se toma el ticker del otro exchange: mezclar precios de dos feeds en
+    # un mismo payload es lo que hacia dudar al agente de sus propios numeros.
     # Stocks/indices/oro: Yahoo regularMarketPrice (el cierre de la vela viva del
     # chart puede atrasarse unos minutos respecto al quote actual).
     if klines:

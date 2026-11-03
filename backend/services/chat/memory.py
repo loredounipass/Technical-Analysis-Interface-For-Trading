@@ -1,7 +1,7 @@
 """Herramienta MCP de memoria: búsqueda en el historial de sesiones pasadas.
 
 Se expone al modelo como `search_chat_history` (ver chat/config.CHAT_TOOLS) y
-es despachada por services.chat.tools._run_tool_call.
+es despachada por services.chat.tools.run_tool_call.
 """
 
 import datetime
@@ -96,7 +96,7 @@ def search_chat_history(
                 score += len(query_tokens) + 1
 
             if score > 0:
-                matches.append({
+                record = {
                     "message_id": msg.get("message_id"),
                     "session_id": s_id,
                     "session_name": s_title,
@@ -106,7 +106,17 @@ def search_chat_history(
                     "date": date_str or None,
                     "content": content,
                     "score": score,
-                })
+                }
+                # Procedencia del feed: las respuestas se guardan con el proveedor
+                # que tenia el terminal. Sin esto el modelo recupera precios de un
+                # exchange antiguo y los cita como si vinieran del feed elegido
+                # hoy, mezclando Binance y Coinbase en la misma conclusion.
+                msg_provider = msg.get("provider")
+                if isinstance(msg_provider, str) and msg_provider:
+                    record["market_provider"] = msg_provider.upper()
+                if msg.get("timeframe"):
+                    record["timeframe"] = str(msg["timeframe"])
+                matches.append(record)
 
     matches.sort(key=lambda x: x["score"], reverse=True)
 
@@ -124,5 +134,11 @@ def search_chat_history(
         "query": query,
         "session_id": session_id,
         "session_name": session_name,
+        "note": (
+            "Cada resultado puede traer `market_provider`: el exchange del que "
+            "salieron esos valores en ese momento. Un proveedor distinto al activo "
+            "en la request significa datos de otro feed; no los presentes como "
+            "lectura actual."
+        ),
         "results": matches,
     }

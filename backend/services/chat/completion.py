@@ -14,7 +14,7 @@ from urllib.error import URLError, HTTPError
 
 from services.chat.config import NvidiaChatError
 from services.chat.context import resolve_request_context
-from services.chat.tools import _run_tool_call
+from services.chat.tools import run_tool_call
 
 logger = logging.getLogger(__name__)
 
@@ -105,7 +105,7 @@ def nvidia_chat(
                     args = json.loads(raw_args) if isinstance(raw_args, str) else raw_args
                 except Exception:
                     args = {"query": str(raw_args)}
-                result, meta = _run_tool_call(
+                result, meta = run_tool_call(
                     fn_name, args,
                     prompt=prompt, owner_id=owner_id, current_session_id=current_session_id,
                     indicator_data=indicator_data,

@@ -17,8 +17,12 @@ def compute_liquidity(symbol, market, precio, opens, highs, lows, closes,
     """Devuelve el bloque de liquidez: bid_vol, ask_vol, best_bid, best_ask,
     buyer_percent, ob_source y depth_raw.
 
-    Crypto: profundidad de Coinbase (bids/asks reales, 20 niveles; fallback
-    Binance). Stocks: Yahoo no expone depth publico → proxy direccional con el
+    Crypto: profundidad del LIBRO DEL PROVEEDOR SELECCIONADO (bids/asks reales).
+    No hay fallback cruzado: si Coinbase no responde, el libro queda vacio y se
+    usa el perfil de volumen de las velas; nunca se toma el libro del otro
+    exchange (auditado con datos reales: con Coinbase bloqueado por red, el feed
+    de Binance arma su propio libro sin una sola peticion al otro proveedor).
+    Stocks: Yahoo no expone depth publico → proxy direccional con el
     volumen real de las ultimas velas (alcistas = comprador, bajistas = vendedor)
     y volume profile como mapa de liquidez.
     """
