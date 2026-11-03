@@ -86,7 +86,10 @@ def build_payload(symbol, interval_str, market, klines, vol_24h=None,
         stoch_k, stoch_d = compute_stoch_series(highs, lows, closes)
         stoch_rsi_k, stoch_rsi_d = compute_stoch_rsi_series(rsi_series)
         cci_series = compute_cci_series(highs, lows, closes, period=20)
-        mfi_series = compute_mfi_series(highs, lows, closes, quote_volumes if quote_volumes else [1.0] * len(closes), period=14)
+        # MFI canonico: tp * volumen EN UNIDADES BASE. Con quote_volumes se
+        # esta multiplicando dos veces por el precio (el quote ya lo incluye),
+        # y en Coinbase el quote es estimado (base x close), no real.
+        mfi_series = compute_mfi_series(highs, lows, closes, base_volumes if base_volumes else [1.0] * len(closes), period=14)
         macd_line, macd_signal = compute_macd_series(closes, fast=12, slow=26, signal=9)
         bb_upper, bb_middle, bb_lower = compute_bollinger_series(closes, period=20)
         ema50 = compute_ema_series(closes, 50)

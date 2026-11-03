@@ -1,8 +1,15 @@
 """Squeeze Momentum (TTM Squeeze / LazyBear): compresion de volatilidad + momentum.
 
 Deteccion de "squeeze": las Bandas de Bollinger (20, 2) quedan DENTRO de los
-Canales de Keltner (20, 1.5ATR). Mientras mas apretada la Bollinger respecto a
-Keltner, mas energia almacenada (baja volatilidad) y mas probable una expansion.
+Canales de Keltner (20, 1.5 x promedio de True Range). Mientras mas apretada la
+Bollinger respecto a Keltner, mas energia almacenada (baja volatilidad) y mas
+probable una expansion.
+
+Variante implementada: el "Squeeze Momentum Indicator" de LazyBear (el que
+usan los charts de los exchanges), NO el "TTM Squeeze" oficial de TradingView.
+La diferencia es la base de Keltner: LazyBear centra en SMA(close) y usa
+SMA(True Range); la version oficial usa EMA(close) y ATR de Wilder. Se elige
+LazyBear porque es el que el usuario contrasta visualmente contra el exchange.
 
 El histograma de momentum es la misma linea que dibuja TradingView/exchanges:
     momentum = linreg(close - mid2, mom_period, 0)
@@ -41,17 +48,20 @@ def _rolling_min(series, period):
     return out
 
 
-# DESVIACION ESTANDAR MUESTRAL (ddof=1) rodante, igual que ta.stdev de Pine /
-# TradingView. Se usa para las Bollinger del squeeze para que la condicion
-# BB-dentro-de-KC coincida con la del indicador original de los exchanges.
-def _rolling_stdev_sample(series, period):
+# DESVIACION ESTANDAR POBLACIONAL (ddof=0) rodante. `ta.stdev(source, length,
+# biased)` de Pine/TradingView tiene `biased=true` por defecto, o sea divide
+# entre n; por eso aca va pstdev y no stdev, y asi la Bollinger del squeeze es
+# la MISMA que la del panel de Bollinger (oscillators) y que la del chart del
+# exchange. Con ddof=1 las bandas salen sqrt(20/19) = +2,63% mas anchas y el
+# squeeze se enciende de menos.
+def _rolling_stdev_population(series, period):
     out = []
     for i in range(len(series)):
         if i + 1 < period:
             out.append(None)
         else:
             window = series[i + 1 - period:i + 1]
-            out.append(statistics.stdev(window) if len(window) > 1 else 0.0)
+            out.append(statistics.pstdev(window) if len(window) > 1 else 0.0)
     return out
 
 
@@ -113,15 +123,17 @@ def compute_squeeze_momentum_series(highs, lows, closes,
     if n < max(bb_period, kc_period, mom_period) + 1:
         return momentum, sqz_state
 
-    # Bollinger (20, 2) con desviacion muestral, igual que TradingView.
+    # Bollinger (20, 2) con desviacion poblacional, igual que Pine/TradingView
+    # y que el panel de Bollinger de esta misma app.
     bb_basis = compute_sma(closes, bb_period)
-    bb_dev = _rolling_stdev_sample(closes, bb_period)
+    bb_dev = _rolling_stdev_population(closes, bb_period)
     bb_upper = [b + bb_mult * d if b is not None and d is not None else None
                 for b, d in zip(bb_basis, bb_dev)]
     bb_lower = [b - bb_mult * d if b is not None and d is not None else None
                 for b, d in zip(bb_basis, bb_dev)]
 
-    # Keltner (20, 1.5 * SMA(True Range)) centrado en SMA(close).
+    # Keltner (20, 1.5 * SMA(True Range)) centrado en SMA(close): fiel a
+    # LazyBear, que no usa EMA ni ATR de Wilder.
     kc_mid = compute_sma(closes, kc_period)
     kc_range = compute_sma(_true_range(highs, lows, closes), kc_period)
     kc_upper = [m + kc_mult * r if m is not None and r is not None else None
