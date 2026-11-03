@@ -8,8 +8,45 @@ import logging
 
 from services.indicators import price_decimals
 from services.data_fetchers import fetch_order_book_depth
+from services.data_fetchers.coinbase_order_book import order_book_age
 
 logger = logging.getLogger(__name__)
+
+
+# La dominancia compradora se mide sobre una BANDA de precio alrededor del mid,
+# no sobre los N niveles mas cercanos. Medido contra el exchange real (24
+# lecturas de ETHUSDT en 100 s, misma peticion para las dos definiciones):
+#   top-20 niveles : recorre 75.8 pts, salta 15.21 pts entre lecturas (p90 36.3)
+#   banda 0.10%    : recorre 20.3 pts, salta  3.22 pts entre lecturas (p90  6.8)
+# Un top-20 crudo cubre apenas 0.009%-0.02% del precio (3.31 USD sobre 77.900 en
+# BTCUSDT): en esa lamina decide una sola orden y el numero se movia 46 pts en
+# los 12 s que tarda el libro en renovarse. La banda sigue siendo 100% ordenes
+# reales (178 niveles y 2.25 M USDT en ETHUSDT), solo contados en un ancho que
+# significa algo, y da una definicion comparable entre Binance y Coinbase.
+DEPTH_BAND_PCT = 0.10          # ancho TOTAL (+/- 0.05% alrededor del mid)
+DEPTH_BAND_MIN_LEVELS = 20     # por debajo de esto la lectura es ruido
+DEPTH_BAND_APERTURAS = (1, 5, 20)   # 0.10% -> 0.50% -> 2.00% en pares iliquidos
+
+
+# SUMA EL NOTIONAL DENTRO DE LA BANDA de precio alrededor del mid. Devuelve
+# (bid_notional, ask_notional, niveles_usados, ancho_usado_pct). Si la banda
+# captura menos de DEPTH_BAND_MIN_LEVELS niveles (par iliquido) se abre hasta
+# 20x antes de aceptar la lectura: el ancho realmente usado viaja en el payload
+# para que el panel y el modelo digan lo que se midio, no lo que se queria.
+def _sumar_banda(bids, asks, banda_pct=DEPTH_BAND_PCT):
+    mid = (bids[0][0] + asks[0][0]) / 2
+    if mid <= 0:
+        return None, None, 0, None
+    intentos = [banda_pct * f for f in DEPTH_BAND_APERTURAS]
+    for ancho in intentos:
+        tol = ancho / 200.0
+        sel_b = [(p, q) for p, q in bids if p >= mid * (1 - tol)]
+        sel_a = [(p, q) for p, q in asks if p <= mid * (1 + tol)]
+        niveles = len(sel_b) + len(sel_a)
+        if niveles >= DEPTH_BAND_MIN_LEVELS or ancho == intentos[-1]:
+            return (sum(p * q for p, q in sel_b),
+                    sum(p * q for p, q in sel_a), niveles, round(ancho, 4))
+    return None, None, 0, None
 
 
 def compute_liquidity(symbol, market, precio, opens, highs, lows, closes,
@@ -18,6 +55,9 @@ def compute_liquidity(symbol, market, precio, opens, highs, lows, closes,
     buyer_percent, ob_source y depth_raw.
 
     Crypto: profundidad del LIBRO DEL PROVEEDOR SELECCIONADO (bids/asks reales).
+    La dominancia se agrega por banda de precio (_sumar_banda), no por numero de
+    niveles. Se expone tambien book_age (segundos del snapshot) y ob_band (ancho
+    realmente usado), para que nada del libro se presente como instantaneo.
     No hay fallback cruzado: si Coinbase no responde, el libro queda vacio y se
     usa el perfil de volumen de las velas; nunca se toma el libro del otro
     exchange (auditado con datos reales: con Coinbase bloqueado por red, el feed
@@ -32,6 +72,8 @@ def compute_liquidity(symbol, market, precio, opens, highs, lows, closes,
     best_ask = None
     buyer_percent = None
     ob_source = None
+    ob_band = None
+    book_age = None
 
     depth_raw = None
     if market == 'crypto':
@@ -40,11 +82,13 @@ def compute_liquidity(symbol, market, precio, opens, highs, lows, closes,
             if depth and depth.get('bids') and depth.get('asks'):
                 bids = [(float(p), float(q)) for p, q in depth['bids']]
                 asks = [(float(p), float(q)) for p, q in depth['asks']]
-                bid_vol = sum(q * p for p, q in bids[:20])
-                ask_vol = sum(q * p for p, q in asks[:20])
+                bid_vol, ask_vol, _niveles, ob_band = _sumar_banda(bids, asks)
                 best_bid = bids[0][0]
                 best_ask = asks[0][0]
                 ob_source = 'order_book'
+                # El libro se baja cada DEPTH_TTL; la edad real del que sirve la
+                # cache es lo que hay que mostrar, no "live".
+                book_age = order_book_age(symbol, provider)
                 # Guardar depth raw para el bubble map de liquidez
                 depth_raw = {
                     'bids': [[p, q] for p, q in bids[:40]],
@@ -146,5 +190,7 @@ def compute_liquidity(symbol, market, precio, opens, highs, lows, closes,
         'best_ask': best_ask,
         'buyer_percent': buyer_percent,
         'ob_source': ob_source,
+        'ob_band': ob_band,
+        'book_age': book_age,
         'depth_raw': depth_raw,
     }

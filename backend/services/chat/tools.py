@@ -99,6 +99,12 @@ def run_tool_call(
             "best_bid": data.get("bestBid"),
             "best_ask": data.get("bestAsk"),
             "order_book_source": data.get("orderBookSource"),
+            # La dominancia se agrega en una banda de precio y el libro es un
+            # snapshot: sin estos dos campos el modelo no puede decir de cuando es
+            # ni con que ancho se midio.
+            "buyer_percent": data.get("buyerPercent"),
+            "order_book_band_percent": data.get("orderBookBandPercent"),
+            "book_age_seconds": data.get("bookAgeSeconds"),
             "order_flow": order_flow if order_flow_matches_provider else None,
             "order_flow_provider": order_flow_provider,
             "order_flow_matches_selected_provider": order_flow_matches_provider,

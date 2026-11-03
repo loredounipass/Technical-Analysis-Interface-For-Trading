@@ -118,6 +118,9 @@ const IndicatorGrid = ({ datos = {} }) => {
           depthRaw={datos.depthRaw}
           precio={datos.precio}
           decimales={dec}
+          buyerPercent={datos.buyerPercent}
+          bookAgeSeconds={datos.bookAgeSeconds}
+          orderBookBandPercent={datos.orderBookBandPercent}
         />
       </div>
 

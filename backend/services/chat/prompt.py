@@ -526,6 +526,8 @@ def get_trading_system_prompt(indicator_data=None, global_context=None, model_na
         best_ask = indicator_data.get('bestAsk')
         ob_source = indicator_data.get('orderBookSource', 'order_book' if market == 'crypto' else 'volume_proxy')
         depth_raw = indicator_data.get('depthRaw')
+        ob_band = indicator_data.get('orderBookBandPercent')
+        book_age = indicator_data.get('bookAgeSeconds')
         liquidity_walls = _format_liquidity_clusters(depth_raw, decimals=2)
 
         data_block = "\n[EXACT MARKET DATA FEED & LIVE INDICATORS - SOURCE OF TRUTH]\n"
@@ -549,9 +551,22 @@ def get_trading_system_prompt(indicator_data=None, global_context=None, model_na
         data_block += f"| MARKET SIGNAL | **{market_signal}** | {market_signal_summary} |\n"
         data_block += f"| Signal Counts | {buy_sig} BUY | {neutral_sig} HOLD | {sell_sig} SELL | Total Signals: {total_sig} |\n"
         data_block += f"| Indicator Signal Split | {signal_split} | Distribution of active indicator votes; NOT executed order flow or win probability |\n"
-        data_block += f"| LIQUIDITY BUBBLE MAP | Buyer Dominance: {buyer_pct_str} | Depth Source: {ob_source} |\n"
+        # El libro es un snapshot REST que se renueva cada ~12 s (DEPTH_TTL) y la
+        # dominancia se agrega en una banda de precio, no por numero de niveles:
+        # decir ambas cosas evita que el modelo narre el numero como si fuera el
+        # instante actual o una cuenta de niveles.
+        _age_txt = (f" | Book snapshot age: {book_age}s (re-pulled every ~12s, NOT tick-level)"
+                    if book_age is not None else "")
+        data_block += f"| LIQUIDITY BUBBLE MAP | Buyer Dominance: {buyer_pct_str} | Depth Source: {ob_source}{_age_txt} |\n"
         if bid_vol is not None and ask_vol is not None:
-            data_block += f"| Order Book Bid/Ask Vol | Bids: {_format_compact(bid_vol)} USDT | Asks: {_format_compact(ask_vol)} USDT | Aggregate 40-level depth |\n"
+            if ob_band is not None:
+                _agg_txt = (f"Bids/Asks are notional summed inside a +/-{float(ob_band) / 2:.3f}% "
+                            f"price band around mid (band chosen for stability, not a fixed level "
+                            f"count); resting orders, may be canceled")
+            else:
+                _agg_txt = ("Derived from real candle volume (no public L2 order book for this "
+                            "market); directional volume proxy, NOT resting orders")
+            data_block += f"| Order Book Bid/Ask Vol | Bids: {_format_compact(bid_vol)} USDT | Asks: {_format_compact(ask_vol)} USDT | {_agg_txt} |\n"
         if best_bid is not None and best_ask is not None:
             data_block += f"| Best Bid / Best Ask | ${_fmt(best_bid)} / ${_fmt(best_ask)} | Spread: {abs(float(best_ask) - float(best_bid)):.4f} USDT |\n"
         if liquidity_walls:

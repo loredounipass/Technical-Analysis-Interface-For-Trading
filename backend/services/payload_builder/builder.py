@@ -246,6 +246,8 @@ def build_payload(symbol, interval_str, market, klines, vol_24h=None,
     best_ask = liq['best_ask']
     buyer_percent = liq['buyer_percent']
     ob_source = liq['ob_source']
+    ob_band = liq.get('ob_band')
+    book_age = liq.get('book_age')
     depth_raw = liq['depth_raw']
 
     result = {
@@ -301,6 +303,12 @@ def build_payload(symbol, interval_str, market, klines, vol_24h=None,
         'bestBid': best_bid,
         'bestAsk': best_ask,
         'orderBookSource': ob_source,
+        # Ancho de banda de precio con el que se agrego la dominancia (0.10%
+        # alrededor del mid en libros liquidos; mas ancho si el par es iliquido)
+        # y edad real del libro que sirve la cache. Sin esto, un snapshot de 12 s
+        # se lee como una fotografia del instante.
+        'orderBookBandPercent': ob_band,
+        'bookAgeSeconds': book_age,
         'depthRaw': depth_raw,
         'orderBlocks': order_blocks,
         'fairValueGaps': fair_value_gaps,
