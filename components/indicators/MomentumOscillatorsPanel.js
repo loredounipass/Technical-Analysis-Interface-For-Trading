@@ -43,9 +43,9 @@ const MomentumOscillatorsPanel = ({ datos = {} }) => {
   const cciBadgeCls = !hasCci
     ? "bg-slate-500/15 border border-slate-500/40 text-slate-400"
     : cciVal > 100
-      ? "bg-[#ff3b69]/15 border border-[#ff3b69]/40 text-[#ff3b69]"
+      ? "bg-[#00f5c4]/15 border border-[#00f5c4]/40 text-[#00f5c4]"
       : cciVal < -100
-        ? "bg-[#00f5c4]/15 border border-[#00f5c4]/40 text-[#00f5c4]"
+        ? "bg-[#ff3b69]/15 border border-[#ff3b69]/40 text-[#ff3b69]"
         : "bg-amber-500/15 border border-amber-500/40 text-amber-400"
 
   return (
@@ -69,9 +69,9 @@ const MomentumOscillatorsPanel = ({ datos = {} }) => {
               className={`text-lg font-bold tabular-nums ${!hasCci
                   ? "text-slate-400"
                   : cciVal > 100
-                    ? "text-[#ff3b69]"
+                    ? "text-[#00f5c4]"
                     : cciVal < -100
-                      ? "text-[#00f5c4]"
+                      ? "text-[#ff3b69]"
                       : "text-amber-400"
                 }`}
             >
@@ -82,9 +82,9 @@ const MomentumOscillatorsPanel = ({ datos = {} }) => {
             <div className="absolute left-1/2 top-0 bottom-0 w-[1px] bg-slate-500 z-10" />
             <div
               className={`h-full transition-all duration-300 ${datos.cci > 100
-                  ? "bg-[#ff3b69] shadow-[0_0_8px_#ff3b69]"
+                  ? "bg-[#00f5c4] shadow-[0_0_8px_#00f5c4]"
                   : datos.cci < -100
-                    ? "bg-[#00f5c4] shadow-[0_0_8px_#00f5c4]"
+                    ? "bg-[#ff3b69] shadow-[0_0_8px_#ff3b69]"
                     : "bg-amber-400"
                 }`}
               style={{
