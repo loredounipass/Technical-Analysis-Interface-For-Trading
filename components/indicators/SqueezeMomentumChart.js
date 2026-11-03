@@ -1,7 +1,7 @@
 "use client"
 
 import React from "react"
-import { ResponsiveContainer, ComposedChart, Bar, Cell, Scatter, CartesianGrid, Tooltip, ReferenceLine, YAxis } from "recharts"
+import { ResponsiveContainer, ComposedChart, Bar, Cell, Scatter, CartesianGrid, Tooltip, ReferenceLine, XAxis, YAxis } from "recharts"
 import { Waves } from "lucide-react"
 import useChartCardNav from "@/components/indicators/useChartCardNav"
 import { TOOLTIP_STYLE, safeToFixed, ensureMinPoints } from "@/components/indicators/chartCardUtils"
@@ -115,6 +115,7 @@ const SqueezeMomentumChart = ({ title, datos = {} }) => {
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={sqzChartData} margin={{ top: 5, right: 10, left: 10, bottom: 0 }}>
               <CartesianGrid strokeDasharray="2 2" stroke="#132235" vertical={false} />
+              <XAxis dataKey="name" hide={true} />
               <YAxis domain={["auto", "auto"]} hide={true} />
               <ReferenceLine y={0} stroke="#1f3752" />
               <Tooltip
