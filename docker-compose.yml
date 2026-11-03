@@ -1,4 +1,20 @@
 services:
+  postgres:
+    image: postgres:16-alpine
+    env_file:
+      - ./backend/database/.env
+    container_name: trading-postgres
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
   backend:
     build:
       context: ./backend
@@ -10,16 +26,14 @@ services:
       - "5000:5000"
     environment:
       - PORT=5000
-      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:3000}
     restart: unless-stopped
 
   frontend:
     build:
-      context: .
+      context: ./frontend
       dockerfile: Dockerfile
-      args:
-        - NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL:-http://localhost:5000/api}
-        - NEXT_PUBLIC_SOCKET_URL=${NEXT_PUBLIC_SOCKET_URL:-http://localhost:5000}
+    env_file:
+      - ./frontend/.env
     container_name: trading-frontend
     ports:
       - "3000:3000"
@@ -28,3 +42,6 @@ services:
     depends_on:
       - backend
     restart: unless-stopped
+
+volumes:
+  postgres_data:

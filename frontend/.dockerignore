@@ -6,7 +6,6 @@ build
 .gitignore
 *.md
 photos
-.env
 .env*.local
 docker-compose.yml
 render.yaml

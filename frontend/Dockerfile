@@ -15,12 +15,7 @@ RUN corepack enable
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Las variables NEXT_PUBLIC_* se incrustan en el build.
-# Render las pasa automaticamente como build args desde las env vars del servicio.
-ARG NEXT_PUBLIC_API_BASE_URL=http://localhost:5000/api
-ARG NEXT_PUBLIC_SOCKET_URL=http://localhost:5000
-ENV NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL
-ENV NEXT_PUBLIC_SOCKET_URL=$NEXT_PUBLIC_SOCKET_URL
+# Next.js lee frontend/.env durante el build y expone NEXT_PUBLIC_* al cliente.
 ENV NEXT_TELEMETRY_DISABLED=1
 
 RUN pnpm run build

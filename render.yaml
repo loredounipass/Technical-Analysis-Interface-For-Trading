@@ -26,7 +26,7 @@ services:
   - type: web
     name: trading-frontend
     runtime: docker
-    rootDir: .
+    rootDir: frontend
     plan: free
     envVars:
       - key: NEXT_PUBLIC_API_BASE_URL

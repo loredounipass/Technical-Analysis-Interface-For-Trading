@@ -40,14 +40,13 @@ cd Technical-Analysis-Interface-For-Trading
 
 2. Install frontend dependencies:
 ```bash
+cd frontend
 pnpm install
-# or
-pnpm install --force
 ```
 
 3. Install backend dependencies:
 ```bash
-cd backend
+cd ../backend
 pip install -r requirements.txt
 ```
 
@@ -55,14 +54,14 @@ pip install -r requirements.txt
 
 1. Start the backend server:
 ```bash
+cd backend
 python app.py
 ```
 
 2. In another terminal, start the frontend:
 ```bash
+cd frontend
 pnpm run dev
-# or
-ppnpm dev
 ```
 
 
@@ -73,11 +72,13 @@ ppnpm dev
 Requisito: Docker Desktop instalado y corriendo.
 
 ```bash
-# 1. Copia los ejemplos de variables del frontend y backend
-cp .env.example .env
+# 1. Copia los ejemplos de variables del frontend, backend y PostgreSQL
+cp frontend/.env.example frontend/.env
 cp backend/.env.example backend/.env
+cp backend/database/.env.example backend/database/.env
+# Cambia POSTGRES_PASSWORD por una contraseña segura en backend/database/.env
 
-# 2. Levanta frontend + backend
+# 2. Levanta frontend, backend y PostgreSQL
 docker compose up --build
 
 # 3. Abre http://localhost:3000
@@ -95,30 +96,30 @@ docker compose up --build frontend  # UI en http://localhost:3000
 A continuación se muestran imágenes de la interfaz:
 
 ### Card
-![Card](photos/card.png)
+![Card](frontend/photos/card.png)
 
 ### Dashboard 1
-![Dashboard 1](photos/dashboard1.png)
+![Dashboard 1](frontend/photos/dashboard1.png)
 
 ### Dashboard 2
-![Dashboard 2](photos/dashboard2.png)
+![Dashboard 2](frontend/photos/dashboard2.png)
 
 ### Dashboard 3
-![Dashboard 3](photos/dashboard3.png)
+![Dashboard 3](frontend/photos/dashboard3.png)
 
 ### Loader
-![Loader](photos/loader.png)
+![Loader](frontend/photos/loader.png)
 
 ## 💡 Project Structure
 
 ```
-├── app/                  # Next.js configuration and main pages
-├── components/          # Reusable React components
-│   ├── indicators/     # Technical indicator components
-│   └── ui/            # UI components
-├── backend/            # Python server and analysis logic
-├── utils/             # Utilities and helpers
-└── public/            # Static files
+├── frontend/             # Next.js application and frontend assets
+│   ├── app/
+│   ├── components/
+│   └── public/
+├── backend/              # Python API and analysis logic
+│   └── database/          # PostgreSQL local configuration
+└── docker-compose.yml    # Local services
 ```
 
 ## 📄 License
