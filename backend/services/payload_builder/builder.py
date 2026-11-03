@@ -62,6 +62,7 @@ def build_payload(symbol, interval_str, market, klines, vol_24h=None):
     stoch_k = []
     stoch_d = []
     stoch_rsi_k = []
+    stoch_rsi_d = []
     cci_series = []
     macd_line = []
     macd_signal = []
@@ -78,7 +79,7 @@ def build_payload(symbol, interval_str, market, klines, vol_24h=None):
     try:
         rsi_series = compute_rsi_series(closes, period=14)
         stoch_k, stoch_d = compute_stoch_series(highs, lows, closes)
-        stoch_rsi_k = compute_stoch_rsi_series(rsi_series)
+        stoch_rsi_k, stoch_rsi_d = compute_stoch_rsi_series(rsi_series)
         cci_series = compute_cci_series(highs, lows, closes, period=20)
         mfi_series = compute_mfi_series(highs, lows, closes, quote_volumes if quote_volumes else [1.0] * len(closes), period=14)
         macd_line, macd_signal = compute_macd_series(closes, fast=12, slow=26, signal=9)
@@ -103,6 +104,7 @@ def build_payload(symbol, interval_str, market, klines, vol_24h=None):
         history['ema100'] = ema100
         history['ema200'] = ema200
         history['rsiStoch'] = stoch_rsi_k
+        history['rsiStochD'] = stoch_rsi_d
         history['stochK'] = stoch_k
         history['stochD'] = stoch_d
         history['cci'] = cci_series
@@ -144,7 +146,7 @@ def build_payload(symbol, interval_str, market, klines, vol_24h=None):
             opens = s_opens
             rsi_series = compute_rsi_series(closes, period=14)
             stoch_k, stoch_d = compute_stoch_series(highs, lows, closes)
-            stoch_rsi_k = compute_stoch_rsi_series(rsi_series)
+            stoch_rsi_k, stoch_rsi_d = compute_stoch_rsi_series(rsi_series)
             cci_series = compute_cci_series(highs, lows, closes, period=20)
             mfi_series = compute_mfi_series(highs, lows, closes, [1000.0] * len(closes), period=14)
             macd_line, macd_signal = compute_macd_series(closes, fast=12, slow=26, signal=9)
@@ -169,6 +171,7 @@ def build_payload(symbol, interval_str, market, klines, vol_24h=None):
             history['ema100'] = ema100
             history['ema200'] = ema200
             history['rsiStoch'] = stoch_rsi_k
+            history['rsiStochD'] = stoch_rsi_d
             history['stochK'] = stoch_k
             history['stochD'] = stoch_d
             history['cci'] = cci_series
@@ -232,6 +235,7 @@ def build_payload(symbol, interval_str, market, klines, vol_24h=None):
         'decimales': forex_decimals(symbol) or price_decimals(precio),
         'rsi': last_non_none(rsi_series),
         'rsiStoch': last_non_none(stoch_rsi_k),
+        'rsiStochD': last_non_none(stoch_rsi_d),
         'volumen': vol_24h if vol_24h is not None else (quote_volumes[-1] if quote_volumes else None),
         # Volumen de la ULTIMA VELA del timeframe activo (USDT). A diferencia del
         # 'volumen' (ticker 24h fijo), este SÍ se adapta al timeframe: en 15m es

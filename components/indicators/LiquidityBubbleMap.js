@@ -150,12 +150,14 @@ export default function LiquidityBubbleMap({ depthRaw, precio, decimales = 2 }) 
           <span>LIQUIDITY BUBBLE MAP</span>
         </div>
         <div
-          className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold font-mono tracking-wider ${isBidDominant
+          className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold font-mono tracking-wider ${!hasData
+              ? "bg-slate-500/15 border border-slate-500/40 text-slate-400"
+              : isBidDominant
               ? "bg-[#00f5c4]/15 border border-[#00f5c4]/40 text-[#00f5c4]"
               : "bg-[#ff3b69]/15 border border-[#ff3b69]/40 text-[#ff3b69]"
             }`}
         >
-          {isBidDominant ? "BID" : "ASK"} DOM: {bidDominance}%
+          {hasData ? `${isBidDominant ? "BID" : "ASK"} DOM: ${bidDominance}%` : "NO BOOK DATA"}
         </div>
       </div>
 
@@ -216,14 +218,18 @@ export default function LiquidityBubbleMap({ depthRaw, precio, decimales = 2 }) 
       <div className="flex items-center justify-between pt-2 border-t border-[#142335] text-[10px] font-mono tracking-wider text-slate-300">
         <span>
           Bid Vol:{" "}
-          <span className="text-[#00f5c4] font-medium">{fmtVol(totalBid)}</span>
+          <span className="text-[#00f5c4] font-medium">{hasData ? fmtVol(totalBid) : "\u2014"}</span>
         </span>
         <span className="text-slate-500">
-          {depthRaw?.source === "volume_profile" ? "VOLUME PROFILE LIQUIDITY" : "DEPTH: 40 LEVELS"}
+          {hasData
+            ? depthRaw?.source === "volume_profile"
+              ? "VOLUME PROFILE LIQUIDITY"
+              : "DEPTH: 40 LEVELS"
+            : "\u2014"}
         </span>
         <span>
           Ask Vol:{" "}
-          <span className="text-[#ff3b69] font-medium">{fmtVol(totalAsk)}</span>
+          <span className="text-[#ff3b69] font-medium">{hasData ? fmtVol(totalAsk) : "\u2014"}</span>
         </span>
       </div>
     </div>

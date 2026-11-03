@@ -96,7 +96,10 @@ def compute_stoch_series(highs, lows, closes, k_period=14, k_smooth=3, d_period=
     return k, d
 
 
-# CALCULA EL STOCHASTIC RSI %K (14, 14, 3, 3) A PARTIR DE LA SERIE DE RSI
+# CALCULA EL STOCHASTIC RSI %K y %D (14, 14, 3, 3) A PARTIR DE LA SERIE DE RSI.
+# %K = SMA(k_smooth) del estocastico crudo del RSI; %D = SMA(d_period) del %K
+# (igual que compute_stoch_series). El backend es la unica fuente: el frontend
+# muestra ambas lineas en vez de recalcular %D por su cuenta.
 def compute_stoch_rsi_series(rsi_series, stoch_period=14, k_smooth=3, d_period=3):
     vals = []
     for i in range(len(rsi_series)):
@@ -110,7 +113,8 @@ def compute_stoch_rsi_series(rsi_series, stoch_period=14, k_smooth=3, d_period=3
         ll, hh = min(window), max(window)
         vals.append(0.0 if hh == ll else (rsi_series[i] - ll) / (hh - ll) * 100)
     k = compute_sma_series(vals, k_smooth)
-    return k
+    d = compute_sma_series(k, d_period)
+    return k, d
 
 
 # CALCULA LA SERIE DE CCI (20) SOBRE TYPICAL PRICE

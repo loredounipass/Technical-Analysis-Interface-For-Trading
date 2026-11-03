@@ -16,7 +16,10 @@ export function buildCandleAndVolumeSeries(datos) {
       const h = Number(datos.history.highs[i])
       const l = Number(datos.history.lows[i])
       const c = Number(datos.history.closes[i])
-      const vol = datos.history.volumes ? Number(datos.history.volumes[i]) : Math.abs(c - o) * 100
+      // Volumen de la vela SOLO del dato del backend (history.volumes). Si la
+      // serie no viene, se usa 0 (ausencia veraz): antes se inventaba una altura
+      // con Math.abs(c - o) * 100, un dato generico que no proviene de la API.
+      const vol = datos.history.volumes ? Number(datos.history.volumes[i]) : 0
       const isBull = c >= o
 
       const t = new Date(datos.history.times[i]).toLocaleTimeString([], {

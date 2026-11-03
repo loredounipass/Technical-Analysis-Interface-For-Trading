@@ -6,37 +6,40 @@ import { Sparkles } from "lucide-react"
 import useChartCardNav from "@/components/indicators/useChartCardNav"
 import { TOOLTIP_STYLE, safeToFixed, ensureMinPoints } from "@/components/indicators/chartCardUtils"
 
-// Stochastic RSI (14, 3, 3): %K tomado del historial rsiStoch y %D como media
-// movil de 3 del propio %K, con zonas 20/80.
+// Stochastic RSI (14, 3, 3): %K y %D tomados del historial del backend
+// (history.rsiStoch / history.rsiStochD), con zonas 20/80. El frontend ya no
+// recalcula %D: el backend es la unica fuente (mismo contrato que Stoch K/D).
 const StochasticRsiChart = ({ title, datos = {} }) => {
   const { win, chartInteraction, chartCursor, renderNavControls } = useChartCardNav(datos)
 
   let stochRsiFullData = []
-  const stochRsiHistory = datos.history?.rsiStoch
-  if (Array.isArray(stochRsiHistory) && stochRsiHistory.length > 0) {
-    const kSeries = [...stochRsiHistory]
-    if (datos.rsiStoch !== null && datos.rsiStoch !== undefined) {
-      kSeries[kSeries.length - 1] = datos.rsiStoch
+  if (datos.history && Array.isArray(datos.history.rsiStoch) && datos.history.rsiStoch.length > 0) {
+    stochRsiFullData = datos.history.rsiStoch.map((k, i) => ({
+      name: `${i}`,
+      k: k,
+      d: datos.history.rsiStochD?.[i] ?? null,
+    }))
+    if (datos.rsiStoch !== null && datos.rsiStoch !== undefined && stochRsiFullData.length > 0) {
+      const last = stochRsiFullData.length - 1
+      stochRsiFullData[last] = {
+        name: `${last}`,
+        k: datos.rsiStoch,
+        d: datos.rsiStochD,
+      }
     }
-    stochRsiFullData = kSeries.map((value, index) => {
-      const dWindow = kSeries.slice(Math.max(0, index - 2), index + 1)
-      const hasCompleteDWindow = index >= 2 && dWindow.length === 3 && dWindow.every(
-        (v) => v !== null && v !== undefined && Number.isFinite(Number(v))
-      )
-      const d = hasCompleteDWindow
-        ? dWindow.reduce((sum, v) => sum + Number(v), 0) / 3
-        : null
-      return { name: `${index}`, k: value, d }
-    })
   }
   if (stochRsiFullData.length === 0 && datos.rsiStoch !== null && datos.rsiStoch !== undefined) {
-    stochRsiFullData = [{ name: "0", k: datos.rsiStoch, d: null }]
+    stochRsiFullData = [
+      { name: "0", k: datos.rsiStoch, d: datos.rsiStochD },
+      { name: "1", k: datos.rsiStoch, d: datos.rsiStochD },
+    ]
   }
   let stochRsiChartData = ensureMinPoints(stochRsiFullData.slice(win.start, win.effEnd))
 
   const rsiStochVal = Number(datos.rsiStoch)
   const hasK = Number.isFinite(rsiStochVal)
-  const stochRsiDVal = stochRsiFullData[stochRsiFullData.length - 1]?.d
+  const stochRsiDVal = Number(datos.rsiStochD)
+  const hasD = Number.isFinite(stochRsiDVal)
   const isOB = hasK && rsiStochVal >= 80
   const isOS = hasK && rsiStochVal <= 20
   const statusText = !hasK ? "NO DATA" : isOB ? "Overbought" : isOS ? "Oversold" : "Neutral"
@@ -111,9 +114,7 @@ const StochasticRsiChart = ({ title, datos = {} }) => {
       {/* Footer: lineas %K/%D con nombre y zonas 20=rojo (venta) / 80=verde (compra) */}
       <div className="flex items-center justify-between pt-2 border-t border-[#142335] text-[10px] font-mono tracking-wider">
         <span className="text-[#00f5c4]">%K · Principal: <span className="text-[#00f5c4] font-medium">{hasK ? safeToFixed(rsiStochVal, 2) : "\u2014"}</span></span>
-        <span className="text-[#ff3b69]">%D · Señal: <span className="text-[#ff3b69] font-medium">
-          {stochRsiDVal === null || stochRsiDVal === undefined ? "\u2014" : safeToFixed(stochRsiDVal, 2)}
-        </span></span>
+        <span className="text-[#ff3b69]">%D · Señal: <span className="text-[#ff3b69] font-medium">{hasD ? safeToFixed(stochRsiDVal, 2) : "\u2014"}</span></span>
         <span>Zona: <span className="text-[#ff3b69] font-medium">Venta 20</span> / <span className="text-[#00f5c4] font-medium">Compra 80</span></span>
       </div>
     </div>
