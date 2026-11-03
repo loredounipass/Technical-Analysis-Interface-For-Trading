@@ -26,6 +26,13 @@ logger = logging.getLogger(__name__)
 # El resto de campos no se usa. Los simbolos se suscriben en minusculas.
 
 MIN_RECOMPUTE_GAP = 1.5
+# Gap minimo entre re-seeds del historico de Yahoo por (simbolo, intervalo).
+# El WS de Yahoo solo manda precio (nunca volumen), asi que la vela en formacion
+# quedaria en 0 hasta el siguiente rollover. Cada REST_SEED_GAP segundos se
+# re-seedea desde el chart de Yahoo, que SI reporta el volumen parcial de la
+# vela en curso durante el horario de mercado. Solo afecta a salas con
+# suscriptores, asi que la carga queda acotada al activo que se esta viendo.
+REST_SEED_GAP = 25
 BASE_RECONNECT = 2
 MAX_RECONNECT = 60
 # Yahoo no envia nada en fines de semana/feriados: timeout largo para no
@@ -109,6 +116,7 @@ class YahooStreamThread:
         self.last_recompute = {}
         self.last_emitted = {}
         self.vol_cache = {}
+        self.last_seed = {}
         self.running = True
 
     def _get_bars(self, symbol, interval):
@@ -166,6 +174,18 @@ class YahooStreamThread:
             last[3] = min(float(last[3]), price)
             last[4] = price
             last[6] = price
+
+            # Re-seed periodico del volumen de la vela en formacion (ver
+            # REST_SEED_GAP). El quote no trae volumen; el chart de Yahoo si.
+            seed_key = f"{symbol}:{interval}"
+            now_s = now_ms / 1000.0
+            if now_s - self.last_seed.get(seed_key, 0) >= REST_SEED_GAP:
+                self.last_seed[seed_key] = now_s
+                with self.seeding_lock:
+                    if (symbol, interval) not in self.seeding:
+                        self.seeding.add((symbol, interval))
+                        threading.Thread(target=self._seed_background, args=(symbol, interval), daemon=True).start()
+
             self.recompute_and_emit(symbol, interval, bars)
 
     def recompute_and_emit(self, symbol, interval, bars):

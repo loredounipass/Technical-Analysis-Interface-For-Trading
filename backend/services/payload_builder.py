@@ -327,7 +327,11 @@ def build_payload(symbol, interval_str, market, klines, vol_24h=None):
                 lvl_vol = sum(w_vols[j] for j in range(len(w_closes)) if w_lows[j] <= level_p <= max(w_opens[j], w_closes[j]))
                 if lvl_vol <= 0:
                     continue
-                qty = lvl_vol / max(level_p, 0.0001) if market == 'crypto' else lvl_vol
+                # quote_volumes ahora es volumen en MONEDA COTIZADA (USDT/dolar)
+                # para ambos mercados. Se divide por el precio para recuperar la
+                # CANTIDAD en unidades base (monedas para crypto, acciones para
+                # stocks), que es lo que dibuja el bubble map.
+                qty = lvl_vol / max(level_p, 0.0001)
                 bids_profile.append([level_p, round(qty, 4 if market == 'crypto' else 2)])
 
             asks_profile = []
@@ -336,7 +340,7 @@ def build_payload(symbol, interval_str, market, klines, vol_24h=None):
                 lvl_vol = sum(w_vols[j] for j in range(len(w_closes)) if min(w_opens[j], w_closes[j]) <= level_p <= w_highs[j])
                 if lvl_vol <= 0:
                     continue
-                qty = lvl_vol / max(level_p, 0.0001) if market == 'crypto' else lvl_vol
+                qty = lvl_vol / max(level_p, 0.0001)
                 asks_profile.append([level_p, round(qty, 4 if market == 'crypto' else 2)])
 
             depth_raw = {

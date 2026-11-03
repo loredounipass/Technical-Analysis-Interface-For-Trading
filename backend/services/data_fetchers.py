@@ -370,7 +370,11 @@ def fetch_yahoo_chart(symbol, interval_str='15m'):
         low = float(lows[i]) if lows[i] is not None else float(closes[i])
         close = float(closes[i])
         volume = float(volumes[i]) if volumes[i] is not None else 0.0
-        bars.append([ts, open_, high, low, close, volume, close, volume])
+        # k[5] = volumen en ACCIONES (crudo de Yahoo). k[7] = volumen en
+        # DOLARES = acciones x cierre, para que el pipeline (que lee k[7] como
+        # "quote volume" tipo USDT) muestre la cifra monetaria correcta. Antes
+        # k[7] se ponía igual a las acciones y el "$" de las stocks salía mal.
+        bars.append([ts, open_, high, low, close, volume, close, volume * close])
 
     if interval_str in ('6h', '4h') and len(bars) > 1:
         chunk_size = 6 if interval_str == '6h' else 4
@@ -386,7 +390,7 @@ def fetch_yahoo_chart(symbol, interval_str='15m'):
                 chunk[-1][4],
                 sum(b[5] for b in chunk),
                 chunk[-1][4],
-                sum(b[5] for b in chunk),
+                sum(b[7] for b in chunk),
             ])
         bars = grouped
 
