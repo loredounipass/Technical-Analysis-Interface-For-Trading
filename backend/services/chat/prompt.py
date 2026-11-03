@@ -150,6 +150,20 @@ def _bb_pos(price, upper, lower):
         return 'N/A'
 
 
+# Celda compacta de squeeze para la tabla MTF: estado (ON/off/no) + signo del
+# momentum (+ alcista / - bajista). Ej: 'ON+' compresion con presion compradora.
+def _sqz_cell(state, momentum):
+    st = {'on': 'ON', 'off': 'off', 'no': 'no'}.get(state, '--')
+    sign = ''
+    if momentum is not None:
+        try:
+            m = float(momentum)
+            sign = '+' if m > 0 else ('-' if m < 0 else '')
+        except (TypeError, ValueError):
+            sign = ''
+    return f"{st}{sign}"
+
+
 # Formatea un timestamp en ms a hora UTC (coherente con velas y pivotes del sistema)
 def _fmt_ts(ms):
     if not ms:
@@ -571,19 +585,20 @@ def get_trading_system_prompt(indicator_data=None, global_context=None, model_na
         mtf = indicator_data.get('multi_timeframe') or []
         if mtf:
             base += "\n=== MULTI-TIMEFRAME CONTEXT (same asset, all OTHER timeframes) ===\n"
-            base += "All rows use the same periods: RSI(14) | Stoch K/D(14,3,3) | MACD Hist(12,26,9) | ADX(14) | CCI(20) | BB(20,2σ) | EMA50. Signals = BUY/SELL/NEUTRAL counts.\n"
-            base += "TF  | Price      | RSI    | StochK/D   | MACD Hist | ADX    | CCI      | BB pos | vs EMA50 | B/S/N  | Last candle (UTC)\n"
+            base += "All rows use the same periods: RSI(14) | Stoch K/D(14,3,3) | MACD Hist(12,26,9) | ADX(14) | Squeeze(20,2,1.5: ON/off/no + momentum sign) | CCI(20) | BB(20,2σ) | EMA50. Signals = BUY/SELL/NEUTRAL counts.\n"
+            base += "TF  | Price      | RSI    | StochK/D   | MACD Hist | ADX    | Squeeze | CCI      | BB pos | vs EMA50 | B/S/N  | Last candle (UTC)\n"
             for s in mtf:
                 base += (
                     f"{s.get('timeframe', '?'):>3} | {_fmt(s.get('precio')):>10} | "
                     f"{_fmt(s.get('rsi')):>6} | {_fmt(s.get('stochK'))}/{_fmt(s.get('stochD'))} | "
                     f"{_fmt(s.get('macdHistogram')):>7} | {_fmt(s.get('adx')):>6} | "
+                    f"{_sqz_cell(s.get('squeezeState'), s.get('squeezeMomentum')):>7} | "
                     f"{_fmt(s.get('cci')):>8} | {_bb_pos(s.get('precio'), s.get('bbUpper'), s.get('bbLower')):>6} | "
                     f"{_pct(s.get('precio'), s.get('ema50')):>8} | "
                     f"{s.get('buySignals', '?')}/{s.get('sellSignals', '?')}/{s.get('neutralSignals', '?')} | "
                     f"{_fmt_ts(s.get('ts'))}\n"
                 )
-            base += "\nUse this to judge trend alignment: if the same signal repeats across most timeframes, the setup is stronger (multi-timeframe confluence). If timeframes conflict, say so.\n"
+            base += "\nUse this to judge trend alignment: if the same signal repeats across most timeframes, the setup is stronger (multi-timeframe confluence). If timeframes conflict, say so. A squeeze ON on several timeframes at once means volatility is coiled market-wide (breakout watch).\n"
 
         # Series historicas recientes: el agente ve la EVOLUCION de cada
         # indicador (ultimos 30 candles, del mas antiguo al mas nuevo) para
