@@ -19,6 +19,11 @@ def _rsi_value(avg_gain, avg_loss):
 
 # CALCULA LA SERIE DE RSI (INDICADOR DE FUERZA RELATIVA) SOBRE UNA LISTA DE PRECIOS
 def compute_rsi_series(prices, period=14):
+    # Con menos de period+1 precios no hay deltas suficientes para sembrar la
+    # media Wilder: la serie va toda en None (mismo contrato que MFI/ADX) en
+    # lugar de devolver una serie mas larga que el input con un valor falso.
+    if len(prices) < period + 1:
+        return [None] * len(prices)
     deltas = [prices[i] - prices[i - 1] for i in range(1, len(prices))]
     seed = deltas[:period]
     up = sum(x for x in seed if x > 0) / period
