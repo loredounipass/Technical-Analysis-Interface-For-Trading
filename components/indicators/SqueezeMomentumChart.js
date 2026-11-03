@@ -1,7 +1,7 @@
 "use client"
 
 import React from "react"
-import { ResponsiveContainer, ComposedChart, Bar, Cell, Scatter, CartesianGrid, Tooltip, ReferenceLine, XAxis, YAxis } from "recharts"
+import { ResponsiveContainer, ComposedChart, Bar, Cell, ReferenceDot, CartesianGrid, Tooltip, ReferenceLine, XAxis, YAxis } from "recharts"
 import { Waves } from "lucide-react"
 import useChartCardNav from "@/components/indicators/useChartCardNav"
 import { TOOLTIP_STYLE, safeToFixed, ensureMinPoints } from "@/components/indicators/chartCardUtils"
@@ -28,14 +28,8 @@ const squeezeBarColor = (val, prev) => {
   return prev != null && val < prev ? BAR_RED : BAR_MAROON
 }
 
-// Forma del punto de squeeze sobre la linea cero. Recharts pasa el payload de
-// la fila; se colorea segun sqz y se omite si no hay estado.
-const SqueezeDot = (props) => {
-  const { cx, cy, payload } = props
-  if (cx == null || cy == null || !payload || payload.sqz == null) return null
-  const fill = payload.sqz === "on" ? DOT_ON : payload.sqz === "off" ? DOT_OFF : DOT_NO
-  return <circle cx={cx} cy={cy} r={2.4} fill={fill} stroke="#08111a" strokeWidth={0.5} />
-}
+// Color del punto de squeeze sobre la linea cero segun el estado.
+const squeezeDotColor = (s) => (s === "on" ? DOT_ON : s === "off" ? DOT_OFF : DOT_NO)
 
 // Squeeze Momentum (20, 2, 1.5): histograma de momentum con puntos de
 // compresion. Datos SOLO del backend (history.squeezeMomentum /
@@ -50,14 +44,12 @@ const SqueezeMomentumChart = ({ title, datos = {} }) => {
       name: `${i}`,
       momentum: m,
       sqz: datos.history.squeezeState?.[i] ?? null,
-      sqzDot: datos.history.squeezeState?.[i] != null ? 0 : null,
     }))
     if (sqzFullData.length > 0) {
       const last = sqzFullData.length - 1
       if (datos.squeezeMomentum !== null && datos.squeezeMomentum !== undefined) sqzFullData[last].momentum = datos.squeezeMomentum
       if (datos.squeezeState != null) {
         sqzFullData[last].sqz = datos.squeezeState
-        sqzFullData[last].sqzDot = 0
       }
     }
   }
@@ -123,7 +115,6 @@ const SqueezeMomentumChart = ({ title, datos = {} }) => {
                 labelStyle={{ color: "#ffffff" }}
                 itemStyle={{ color: "#ffffff" }}
                 formatter={(value, name) => {
-                  if (name === "sqzDot") return null
                   if (name === "momentum") {
                     return [
                       <span style={{ color: "#ffffff" }}>{safeToFixed(value, 4)}</span>,
@@ -138,7 +129,23 @@ const SqueezeMomentumChart = ({ title, datos = {} }) => {
                   <Cell key={`sqz-${index}`} fill={entry.color} fillOpacity={0.85} />
                 ))}
               </Bar>
-              <Scatter dataKey="sqzDot" shape={<SqueezeDot />} isAnimationActive={false} />
+              {/* Puntos de squeeze sobre la linea cero. ReferenceDot (no Scatter)
+                  para que se mezclen visualmente con el histograma SIN ensuciar
+                  el Tooltip, y se posicionen bien en el eje de categorias. */}
+              {sqzChartData.map((entry, index) =>
+                entry.sqz != null ? (
+                  <ReferenceDot
+                    key={`sqzdot-${index}`}
+                    x={entry.name}
+                    y={0}
+                    r={2.4}
+                    fill={squeezeDotColor(entry.sqz)}
+                    stroke="#08111a"
+                    strokeWidth={0.5}
+                    isFront
+                  />
+                ) : null
+              )}
             </ComposedChart>
           </ResponsiveContainer>
         ) : (
