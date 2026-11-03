@@ -106,15 +106,24 @@ def compute_ema_series(series, period):
 # OSCILADORES
 # ─────────────────────────────────────────────────────────────────────
 
+# VALOR RSI A PARTIR DE LA GANANCIA MEDIA Y LA PERDIDA MEDIA. SI NO HAY
+# PERDIDAS (avg_loss == 0) EL RSI VA A 100 (SOBRECOMPRA), Y SI TAMPOCO HAY
+# GANANCIA (SERIE PLANA) ES 50 (NEUTRO). CORRIGE EL CASO QUE ANTES DEVOLVIA 0.
+def _rsi_value(avg_gain, avg_loss):
+    if avg_loss == 0:
+        return 100.0 if avg_gain > 0 else 50.0
+    rs = avg_gain / avg_loss
+    return 100 - 100 / (1 + rs)
+
+
 # CALCULA LA SERIE DE RSI (INDICADOR DE FUERZA RELATIVA) SOBRE UNA LISTA DE PRECIOS
 def compute_rsi_series(prices, period=14):
     deltas = [prices[i] - prices[i - 1] for i in range(1, len(prices))]
     seed = deltas[:period]
     up = sum(x for x in seed if x > 0) / period
     down = -sum(x for x in seed if x < 0) / period
-    rs = up / down if down != 0 else 0
     rsi = [None] * (period)
-    rsi.append(100 - 100 / (1 + rs))
+    rsi.append(_rsi_value(up, down))
     up_avg = up
     down_avg = down
     for delta in deltas[period:]:
@@ -122,8 +131,7 @@ def compute_rsi_series(prices, period=14):
         down_val = -min(delta, 0)
         up_avg = (up_avg * (period - 1) + up_val) / period
         down_avg = (down_avg * (period - 1) + down_val) / period
-        rs = up_avg / down_avg if down_avg != 0 else 0
-        rsi.append(100 - 100 / (1 + rs))
+        rsi.append(_rsi_value(up_avg, down_avg))
     if len(rsi) < len(prices):
         rsi = [None] * (len(prices) - len(rsi)) + rsi
     return rsi
