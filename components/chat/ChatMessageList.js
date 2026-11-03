@@ -369,12 +369,17 @@ export default function ChatMessageList({
         )
       }), [messages, symbol, interval, intervalLabel])}
 
-      {/* Efecto de Escritura en Vivo: pipeline en etapa INFORME + texto plano */}
+      {/* Efecto de Escritura en Vivo: pipeline en etapa INFORME + texto plano.
+          Durante el stream se pinta TEXTO PLANO (no markdown): renderMarkdown
+          re-parsearia todo el texto acumulado en cada flush (~8fps), lo que da
+          un costo O(n^2) y bloquea el hilo (el texto se ve 'de golpe' y sube la
+          CPU). El markdown se aplica UNA vez, al finalizar, cuando el mensaje
+          pasa a `messages` (ver renderMarkdown de los mensajes arriba). */}
       {isTyping && typingText && (
         <div className="w-full my-2">
           <AgentPanel statusLabel="REDACTANDO INFORME" statusPulse steps={pipelineSteps}>
-            <div className="text-[13.5px] sm:text-[14.5px] font-sans leading-[1.68] text-slate-100 break-words tracking-[-0.01em]">
-              {renderMarkdown(typingText, symbol, intervalLabel)}
+            <div className="text-[13.5px] sm:text-[14.5px] font-sans leading-[1.68] text-slate-100 break-words tracking-[-0.01em] whitespace-pre-wrap">
+              {typingText}
               <span className="inline-block w-1.5 h-4 ml-1 bg-emerald-400 animate-pulse align-middle" />
             </div>
           </AgentPanel>
