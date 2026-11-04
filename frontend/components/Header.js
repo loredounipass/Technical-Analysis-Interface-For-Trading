@@ -48,7 +48,7 @@ export default function Header({
     }
   }
 
-  const timeframes = ["1m", "5m", "15m", "1h", "6h", "1d"]
+  const timeframes = ["1m", "5m", "15m", "1h", "4h", "6h", "1d"]
 
   // Selector de temporalidades: iguala las dimensiones de Change Pair; las
   // opciones se desplazan horizontalmente cuando no caben.
