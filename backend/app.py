@@ -1,4 +1,4 @@
-from flask import Flask, request
+from flask import Flask, request, g
 from flask_cors import CORS
 from flask_socketio import SocketIO
 import os
@@ -10,7 +10,11 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(level
 logger = logging.getLogger(__name__)
 
 # Load environment variables from .env file
+from pathlib import Path
 load_dotenv()
+_backend_env = Path(__file__).resolve().parent / ".env"
+if _backend_env.is_file():
+    load_dotenv(_backend_env)
 
 # ─────────────────────────────────────────────────────────────────────
 # Modulos internos
@@ -28,6 +32,11 @@ from database.chat_store import initialize_database
 from common.sockets import init_sockets
 from gateways.stream_manager import init_market_streams
 from services.chat.tools import set_market_data_source
+from controllers.routes_auth import auth_bp
+from auth.guards import is_public_route
+from auth.strategies.jwt_strategy import decode_token, is_blacklisted
+from auth.constants import TOKEN_TYPE_ACCESS
+from database import user_store
 
 # ─────────────────────────────────────────────────────────────────────
 # Flask app + CORS + SocketIO
@@ -35,8 +44,8 @@ from services.chat.tools import set_market_data_source
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024
 
-# Confia en X-Forwarded-For/Proto de Render o Vercel para ver la IP real del cliente.
-# Sin esto, request.remote_addr es siempre 127.0.0.1 (el proxy de Render)
+# Confía en X-Forwarded-For/Proto del proxy inverso para ver la IP real del cliente.
+# Sin esto, request.remote_addr es siempre 127.0.0.1 (el proxy)
 # y el rate limiting se aplica a TODOS los usuarios como si fueran uno solo.
 from werkzeug.middleware.proxy_fix import ProxyFix
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)
@@ -54,7 +63,7 @@ CORS(app, resources={
     r"/*": {
         "origins": ALLOWED_ORIGINS,
         "methods": ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
-        "allow_headers": ["Content-Type", "X-Chat-Owner-ID"]
+        "allow_headers": ["Content-Type", "X-Chat-Owner-ID", "Authorization"]
     }
 })
 
@@ -71,10 +80,69 @@ logger.info(
 socketio = SocketIO(app, cors_allowed_origins=ALLOWED_ORIGINS,
                     async_mode='threading', **socketio_kwargs)
 
-# Entorno serverless (Vercel): no hay WebSockets ni hilos de fondo entre
-# invocaciones. Las rutas HTTP /api/* funcionan igual; el frontend hace
-# fallback a polling HTTP. En Docker/Render esto no se ejecuta.
-IS_VERCEL = os.getenv("VERCEL", "").lower() in ("1", "true")
+
+# ─────────────────────────────────────────────────────────────────────
+# GUARD GLOBAL DE JWT — protege TODAS las rutas excepto las marcadas @public.
+# Equivale a APP_GUARD(JwtAuthGuard) de NestJS: la autenticación es opt-out,
+# no opt-in. Los health-checks y las rutas de auth llevan @public.
+# ─────────────────────────────────────────────────────────────────────
+@app.before_request
+def global_jwt_guard():
+    """Enforce JWT authentication on every route unless marked @public."""
+    # Preflight CORS (OPTIONS) nunca lleva token.
+    if request.method == "OPTIONS":
+        return None
+
+    # Solo aplicar a rutas de la API (/api/*), permitiendo /socket.io y estáticos.
+    if not request.path.startswith("/api/"):
+        return None
+
+    # Si la ruta no coincide con ningún endpoint, dejar que Flask gestione el 404
+    if request.endpoint is None:
+        return None
+
+    # Buscar la view function para esta ruta; solo se omite auth si tiene @public explícito
+    view_fn = app.view_functions.get(request.endpoint)
+    if view_fn is not None and is_public_route(view_fn):
+        return None  # Ruta pública explícita, saltar auth.
+
+    # ── Extraer y validar Bearer token ──
+    from flask import jsonify as _jsonify
+    auth_header = request.headers.get("Authorization", "")
+    if not auth_header.startswith("Bearer "):
+        return _jsonify({"error": "Missing or invalid Authorization header."}), 401
+
+    token = auth_header[7:].strip()
+    if not token:
+        return _jsonify({"error": "Missing token in Authorization header."}), 401
+    try:
+        payload = decode_token(token)
+    except ValueError as error:
+        return _jsonify({"error": str(error)}), 401
+    except Exception:
+        return _jsonify({"error": "Authentication failed."}), 401
+
+    if payload.get("type") != TOKEN_TYPE_ACCESS:
+        return _jsonify({"error": "Invalid token type."}), 401
+
+    if is_blacklisted(payload["jti"]):
+        return _jsonify({"error": "Token has been revoked."}), 401
+
+    try:
+        user = user_store.find_by_id(payload["sub"])
+    except ValueError:
+        return _jsonify({"error": "Invalid user ID in token."}), 401
+    except Exception as db_err:
+        logger.exception("[Auth] Database error looking up user %s: %s", payload.get("sub"), db_err)
+        return _jsonify({"error": "Database authentication error."}), 500
+
+    if user is None or not user.get("is_active"):
+        return _jsonify({"error": "User not found or inactive."}), 401
+
+    # Inyectar usuario autenticado y payload en el contexto de Flask.
+    g.current_user = user
+    g.jwt_payload = payload
+    return None
 
 
 
@@ -101,6 +169,8 @@ def set_security_headers(response):
     response.headers['X-Content-Type-Options'] = 'nosniff'
     response.headers['X-Frame-Options'] = 'DENY'
     response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+    response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+    response.headers['Permissions-Policy'] = 'geolocation=(), microphone=(), camera=()'
     return response
 
 
@@ -119,8 +189,10 @@ set_market_data_source(_get_trading_cached)
 
 
 # ─────────────────────────────────────────────────────────────────────
-# Registrar blueprints (trading + news + chat/AI)
+# Registrar blueprints (auth + trading + news + chat/AI)
 # ─────────────────────────────────────────────────────────────────────
+app.register_blueprint(auth_bp)
+
 init_trading_routes(_get_trading_cached)
 app.register_blueprint(trading_bp)
 
@@ -138,21 +210,16 @@ initialize_database()
 
 # ─────────────────────────────────────────────────────────────────────
 # SOCKETS & REAL-TIME STREAMING
-# (omitido en Vercel: el runtime serverless no mantiene conexiones
-#  WebSocket ni streams de mercado entre invocaciones)
 # ─────────────────────────────────────────────────────────────────────
-if not IS_VERCEL:
-    init_sockets(socketio, _get_trading_cached)
-    if market_store.redis_active() and not market_store.is_feeder_role():
-        # El unico cliente de los exchanges es el feeder worker (feeder.py).
-        # La API no abre WebSockets a Binance/Coinbase ni polla REST: solo lee
-        # Redis y reenvia a los clientes.
-        logger.info("[App] Redis activo: streams deshabilitados en la API "
-                    "(el feeder es el unico escritor del feed).")
-    else:
-        init_market_streams(socketio)
+init_sockets(socketio, _get_trading_cached)
+if market_store.redis_active() and not market_store.is_feeder_role():
+    # El unico cliente de los exchanges es el feeder worker (feeder.py).
+    # La API no abre WebSockets a Binance/Coinbase ni polla REST: solo lee
+    # Redis y reenvia a los clientes.
+    logger.info("[App] Redis activo: streams deshabilitados en la API "
+                "(el feeder es el unico escritor del feed).")
 else:
-    logger.info("VERCEL=1 detectado: SocketIO y streams de mercado deshabilitados")
+    init_market_streams(socketio)
 
 
 if __name__ == '__main__':

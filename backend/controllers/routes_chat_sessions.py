@@ -1,8 +1,8 @@
-"""API routes for anonymous chat history and preferences."""
+"""API routes for authenticated user chat history, sessions, and preferences."""
 
 from uuid import UUID
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, g
 
 from database import chat_store
 from services.chat import AVAILABLE_MODELS
@@ -12,10 +12,10 @@ MODEL_KEYS = set(AVAILABLE_MODELS)
 
 
 def _owner_id():
-    try:
-        return chat_store.normalize_owner_id(request.headers.get("X-Chat-Owner-ID"))
-    except ValueError as error:
-        return None, (jsonify({"error": str(error)}), 400)
+    user = getattr(g, "current_user", None)
+    if user and user.get("id"):
+        return user["id"]
+    return None, (jsonify({"error": "Unauthorized"}), 401)
 
 
 def _session_id(raw_id):

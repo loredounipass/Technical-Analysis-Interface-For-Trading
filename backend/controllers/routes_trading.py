@@ -5,11 +5,12 @@ con soporte para crypto y stocks, rate limiting y cache.
 """
 
 import logging
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, g
 from common.cache import rate_limited
 from common import market_store
 from common.redis_client import is_feeder_role
 from database import chat_store, market_preferences
+from auth.guards import public
 
 logger = logging.getLogger(__name__)
 
@@ -27,10 +28,10 @@ def init_trading_routes(get_trading_cached_fn):
 @trading_bp.get('/api/trading/provider-preference')
 def get_provider_preference():
     try:
-        owner_id = chat_store.normalize_owner_id(
-            request.headers.get('X-Chat-Owner-ID')
-        )
-        provider = market_preferences.get_crypto_provider(owner_id)
+        user = getattr(g, "current_user", None)
+        if not user or not user.get("id"):
+            return jsonify({'error': 'Unauthorized'}), 401
+        provider = market_preferences.get_crypto_provider(user["id"])
         return jsonify({'crypto_provider': provider})
     except ValueError as error:
         return jsonify({'error': str(error)}), 400
@@ -48,11 +49,11 @@ def update_provider_preference():
     if provider not in ('binance', 'coinbase'):
         return jsonify({'error': 'crypto_provider must be binance or coinbase.'}), 400
     try:
-        owner_id = chat_store.normalize_owner_id(
-            request.headers.get('X-Chat-Owner-ID')
-        )
+        user = getattr(g, "current_user", None)
+        if not user or not user.get("id"):
+            return jsonify({'error': 'Unauthorized'}), 401
         saved_provider = market_preferences.update_crypto_provider(
-            owner_id, provider
+            user["id"], provider
         )
         return jsonify({'crypto_provider': saved_provider})
     except ValueError as error:
@@ -63,6 +64,7 @@ def update_provider_preference():
 
 
 @trading_bp.get('/api/trading/feed-health')
+@public
 def get_feed_health():
     """Diagnostico del feed: quien escribe, que salas hay y que tan fresco esta.
 
@@ -70,6 +72,10 @@ def get_feed_health():
     logs: en modo Redis la API no consulta el exchange, asi que un snapshot
     ausente o viejo es un problema del worker, no del frontend.
     """
+    ip = request.remote_addr or 'unknown'
+    if rate_limited(ip):
+        return jsonify({'error': 'Too many requests'}), 429
+
     health = market_store.feed_health()
     health['role'] = 'feeder' if is_feeder_role() else 'api'
     symbol = (request.args.get('symbol') or '').upper()

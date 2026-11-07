@@ -16,7 +16,7 @@ def normalize_owner_id(value):
     try:
         return UUID(str(value))
     except (ValueError, TypeError, AttributeError) as error:
-        raise ValueError("A valid X-Chat-Owner-ID UUID is required.") from error
+        raise ValueError("A valid owner UUID is required.") from error
 
 
 def get_connection():

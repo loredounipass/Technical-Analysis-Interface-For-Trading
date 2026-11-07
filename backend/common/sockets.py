@@ -24,6 +24,12 @@ room_errors_lock = threading.Lock()
 last_emitted = {}
 last_emitted_lock = threading.Lock()
 
+# Control de abuso en WebSockets
+MAX_ROOMS_PER_SOCKET = 10
+REFRESH_THROTTLE_SECONDS = 5.0
+last_refresh_by_sid = {}
+last_refresh_lock = threading.Lock()
+
 MAX_CONSECUTIVE_ERRORS = 3
 ERROR_BACKOFF_SECONDS = 300
 
@@ -82,15 +88,30 @@ def init_sockets(socketio, fetch_data_func):
                     market_store.room_release(room)
 
     def _on_join(data):
+        if not isinstance(data, dict):
+            return
         room = data.get('room')
-        if not room: return
-        join_room(room)
+        if not room or not isinstance(room, str):
+            return
+
+        # Validar formato del room antes de aceptar suscripción
+        try:
+            parse_room(room)
+        except ValueError as err:
+            logger.warning("[Socket] Rechazada suscripción a sala inválida: %s (%s)", room, err)
+            return
+
         sid = request.sid
         with sid_rooms_lock:
             rooms = sid_rooms.setdefault(sid, set())
             if room in rooms:
                 return
+            if len(rooms) >= MAX_ROOMS_PER_SOCKET:
+                logger.warning("[Socket] Cliente %s superó el límite de salas (%s)", sid, MAX_ROOMS_PER_SOCKET)
+                return
             rooms.add(room)
+
+        join_room(room)
         with subscriber_lock:
             subscriber_rooms[room] = subscriber_rooms.get(room, 0) + 1
         # En modo Redis el registro de salas es compartido: el feeder solo
@@ -100,8 +121,11 @@ def init_sockets(socketio, fetch_data_func):
         logger.info(f"[Socket] Client joined room: {room} (Total subscribers: {subscriber_rooms[room]})")
 
     def _on_leave(data):
+        if not isinstance(data, dict):
+            return
         room = data.get('room')
-        if not room: return
+        if not room or not isinstance(room, str):
+            return
         leave_room(room)
         sid = request.sid
         with sid_rooms_lock:
@@ -117,6 +141,8 @@ def init_sockets(socketio, fetch_data_func):
         sid = request.sid
         with sid_rooms_lock:
             rooms = list(sid_rooms.pop(sid, set()))
+        with last_refresh_lock:
+            last_refresh_by_sid.pop(sid, None)
         for room in rooms:
             remove_room_subscriber(room)
         if rooms:
@@ -125,8 +151,22 @@ def init_sockets(socketio, fetch_data_func):
             logger.info(f"[Socket] Client disconnected: {sid} (no subscribed rooms)")
 
     def _on_request_refresh(data):
+        if not isinstance(data, dict):
+            return
         room = data.get('room')
-        if not room: return
+        if not room or not isinstance(room, str):
+            return
+
+        # Rate-limiting por conexión (SID) para proteger la cuota de los exchanges
+        sid = request.sid
+        now = time.time()
+        with last_refresh_lock:
+            last_time = last_refresh_by_sid.get(sid, 0.0)
+            if now - last_time < REFRESH_THROTTLE_SECONDS:
+                logger.warning("[Socket] Rate-limited request_refresh del cliente %s", sid)
+                return
+            last_refresh_by_sid[sid] = now
+
         try:
             market, provider, symbol, interval = parse_room(room)
             data = fetch_data_func(

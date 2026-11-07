@@ -6,7 +6,7 @@ y el agente de chat. Quien escribe es exclusivamente el feeder worker
 
 Todo es perezoso: si la libreria o el servidor no estan disponibles, redis_enabled()
 devuelve False y la aplicacion sigue usando el cache en memoria de common/cache.py
-(modo Docker local simple / Vercel serverless sin Redis).
+(modo memoria local sin Redis).
 """
 
 import os

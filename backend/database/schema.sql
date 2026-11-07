@@ -1,3 +1,20 @@
+-- ─── Auth: User accounts ───────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS users (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    email TEXT UNIQUE NOT NULL,
+    username TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS users_email_lower_idx
+    ON users (lower(email));
+CREATE UNIQUE INDEX IF NOT EXISTS users_username_lower_idx
+    ON users (lower(username));
+
+-- ─── Chat ──────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS chat_preferences (
     owner_id UUID PRIMARY KEY,
     selected_model TEXT NOT NULL DEFAULT 'nvidia-nemotron',

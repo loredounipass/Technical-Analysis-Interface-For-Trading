@@ -7,10 +7,11 @@ import logging
 
 import json
 from uuid import UUID
-from flask import Blueprint, jsonify, request, Response, stream_with_context
+from flask import Blueprint, jsonify, request, Response, stream_with_context, g
 from services.chat import nvidia_chat, nvidia_chat_stream, NvidiaChatError, AVAILABLE_MODELS, classify_intent
 from common.cache import rate_limited
 from database import chat_store
+from auth.guards import public
 
 logger = logging.getLogger(__name__)
 
@@ -85,11 +86,16 @@ def chat_endpoint():
     if not isinstance(prompt, str) or not prompt.strip():
         return jsonify({'error': 'prompt is required'}), 400
     prompt = prompt.strip()
+    user = getattr(g, "current_user", None)
+    if not user or not user.get("id"):
+        return jsonify({'error': 'Unauthorized'}), 401
+    owner_id = user["id"]
+
+    raw_session_id = data.get('session_id')
     try:
-        owner_id = chat_store.normalize_owner_id(request.headers.get('X-Chat-Owner-ID'))
-        current_session_id = str(UUID(str(data.get('session_id'))))
-    except ValueError as error:
-        return jsonify({'error': str(error)}), 400
+        current_session_id = str(UUID(str(raw_session_id)))
+    except (ValueError, TypeError, AttributeError):
+        return jsonify({'error': 'A valid session_id UUID is required.'}), 400
 
     state = chat_store.get_state(owner_id)
     current_session = next(
@@ -296,6 +302,7 @@ def chat_endpoint():
 
 
 @chat_bp.route('/api/models')
+@public
 def get_models():
     """Returns available AI models."""
     models = []
@@ -312,12 +319,14 @@ def get_models():
 
 @chat_bp.route('/api/search/health')
 def search_health():
-    """Diagnostico de busqueda web para depurar en el servidor desplegado.
+    """Diagnóstico de búsqueda web protegido (requiere autenticación).
 
     Uso: GET /api/search/health?q=Binance+hack&source=all&time_range=week
-    Devuelve config real (orden de proveedores, key cargada) + una busqueda en
-    vivo con temporizacion y errores crudos. No revela la key completa.
     """
+    ip = request.remote_addr or 'unknown'
+    if rate_limited(ip):
+        return jsonify({'error': 'Too many requests'}), 429
+
     import time as _t
     from urllib.parse import unquote
     import services.chat.web_search as ws
@@ -330,12 +339,10 @@ def search_health():
     r = ws.web_search(q, max_results=5, source=src, time_range=tr)
     secs = round(_t.monotonic() - t0, 2)
 
-    key = ws._SERPAPI_API_KEY
     return jsonify({
         'config': {
             'WEB_SEARCH_PROVIDER': ws._PROVIDER_ORDER,
             'SERPAPI_KEY_LOADED': bool(ws._HAS_SERPAPI),
-            'SERPAPI_KEY_HEAD': (key[:6] + '…' + key[-4:]) if ws._HAS_SERPAPI else None,
         },
         'query': q, 'source': src, 'time_range': tr,
         'seconds': secs,

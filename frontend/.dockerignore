@@ -9,5 +9,4 @@ photos
 .env*.local
 docker-compose.yml
 render.yaml
-vercel.json
 package-lock.json
