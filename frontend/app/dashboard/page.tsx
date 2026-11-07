@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Dashboard from "@/components/Dashboard"
+import { PrivateRoute } from "@/components/guards/PrivateRoute"
 
 type Moneda = {
   nombre: string
@@ -56,11 +57,12 @@ export default function DashboardPage() {
   if (!hydrated || !moneda) return null
 
   return (
-    <Dashboard
-      moneda={moneda}
-      market={moneda.market}
-      onCambiarMoneda={cambiarMoneda}
-    />
+    <PrivateRoute>
+      <Dashboard
+        moneda={moneda}
+        market={moneda.market}
+        onCambiarMoneda={cambiarMoneda}
+      />
+    </PrivateRoute>
   )
 }
-

@@ -5,6 +5,7 @@ import { Newspaper, ExternalLink, Loader2, Globe, Clock, TrendingUp, Zap, ArrowU
 import Link from "next/link"
 import Header from "@/components/Header"
 import { fetchNewsBySymbol } from "@/services/api/newsApi"
+import { PrivateRoute } from "@/components/guards/PrivateRoute"
 
 const COINS = [
   { symbol: "BTCUSDT", name: "Bitcoin", short: "BTC", color: "#f7931a", gradient: "from-amber-500/20 to-orange-600/5" },
@@ -109,7 +110,8 @@ export default function NewsPage() {
   const getCoinMeta = (symbol) => marketList.find(c => c.symbol === symbol)
 
   return (
-    <div className="min-h-screen" style={{ background: "#05070a" }}>
+    <PrivateRoute>
+      <div className="min-h-screen" style={{ background: "#05070a" }}>
       <Header />
       {/* Animated grid background */}
       <div className="fixed inset-0 opacity-[0.03] pointer-events-none" style={{
@@ -551,5 +553,6 @@ export default function NewsPage() {
         </footer>
       </div>
     </div>
+    </PrivateRoute>
   )
 }

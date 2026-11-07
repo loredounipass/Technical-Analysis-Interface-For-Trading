@@ -1,10 +1,11 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { ArrowLeftRight, Newspaper, Activity, Diamond, LayoutDashboard, ChevronLeft, ChevronRight } from "lucide-react"
+import { ArrowLeftRight, Newspaper, Activity, Diamond, LayoutDashboard, ChevronLeft, ChevronRight, LogIn, UserPlus, LogOut, User } from "lucide-react"
 import { useRouter, usePathname } from "next/navigation"
 import InstallButton from "./InstallButton"
 import { formatDisplaySymbol } from "@/utils/dataUtils"
+import { useAuth } from "@/hooks/useAuth"
 
 export default function Header({
   moneda,
@@ -20,6 +21,7 @@ export default function Header({
   const router = useRouter()
   const pathname = usePathname()
   const isNewsPage = pathname === "/news"
+  const { user, isAuthenticated, openLoginDialog, openRegisterDialog, logout } = useAuth()
 
   const [activeAsset, setActiveAsset] = useState(moneda)
 
@@ -243,6 +245,49 @@ export default function Header({
                 className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-full bg-[#09111b] border border-[#16283d] text-slate-400 hover:text-white hover:border-[#00f5c4]/40 transition-colors"
               >
                 <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Right side: Auth Controls */}
+        <div className="order-2 lg:order-3 ml-auto flex items-center gap-2 flex-shrink-0">
+          {!isAuthenticated ? (
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => openLoginDialog()}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#09111b] border border-[#16283d] hover:border-[#00f5c4]/40 hover:bg-[#00f5c4]/5 text-white transition-all text-xs font-semibold tracking-wider uppercase shadow-sm"
+              >
+                <LogIn className="w-3.5 h-3.5 text-[#00f5c4]" />
+                <span className="hidden sm:inline">LOGIN</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => openRegisterDialog()}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#00f5c4] hover:bg-[#33f7d0] text-[#070c14] transition-all text-xs font-bold tracking-wider uppercase shadow-[0_0_12px_rgba(0,245,196,0.3)]"
+              >
+                <UserPlus className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">REGISTRO</span>
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#09111b] border border-[#00f5c4]/30 text-white shadow-[0_0_8px_rgba(0,245,196,0.1)]">
+                <div className="w-4 h-4 rounded-full bg-[#00f5c4]/20 border border-[#00f5c4]/50 flex items-center justify-center text-[#00f5c4]">
+                  <User className="w-2.5 h-2.5" />
+                </div>
+                <span className="font-bold text-xs text-slate-100 max-w-[100px] sm:max-w-[140px] truncate">
+                  {user?.username || user?.email?.split("@")[0] || "Trader"}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => logout()}
+                title="Cerrar Sesión"
+                className="p-1.5 rounded-full bg-[#09111b] border border-[#16283d] hover:border-[#ff3b69]/50 hover:bg-[#ff3b69]/10 text-slate-400 hover:text-[#ff3b69] transition-all"
+              >
+                <LogOut className="w-3.5 h-3.5" />
               </button>
             </div>
           )}

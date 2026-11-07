@@ -5,7 +5,7 @@ import { BarChart3, Activity, Zap, Shield, Globe, ChevronRight, Radio, Bitcoin, 
 import CoinLogo from "@/components/CoinLogo"
 import { formatDisplaySymbol } from "@/utils/dataUtils"
 
-export default function CoinSelector({ monedas, acciones, indices, onSelect }) {
+export default function CoinSelector({ monedas, acciones, indices, onSelect, hideTopStatus = false }) {
   const [hoveredKey, setHoveredKey] = useState(null)
   const [mounted, setMounted] = useState(false)
   const [time, setTime] = useState("")
@@ -50,14 +50,14 @@ export default function CoinSelector({ monedas, acciones, indices, onSelect }) {
       "GC=F": { from: "#f5c542", to: "#a16207", glow: "rgba(245, 197, 66, 0.25)" },
       "EURUSD=X": { from: "#2f6fed", to: "#1e3a8a", glow: "rgba(47, 111, 237, 0.25)" },
     }
-    
+
     if (knownColors[symbol]) return knownColors[symbol]
 
     let hash = 0
     for (let i = 0; i < symbol.length; i++) {
       hash = symbol.charCodeAt(i) + ((hash << 5) - hash)
     }
-    
+
     const h = Math.abs(hash % 360)
     return {
       from: `hsl(${h}, 80%, 60%)`,
@@ -90,27 +90,28 @@ export default function CoinSelector({ monedas, acciones, indices, onSelect }) {
 
       {/* Main content */}
       <div
-        className={`relative z-10 w-full max-w-2xl transition-all duration-700 ${
-          mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
-        }`}
+        className={`relative z-10 w-full max-w-2xl transition-all duration-700 ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
+          }`}
       >
         {/* Top status bar */}
-        <div className="flex items-center justify-between mb-8 px-2 font-mono">
-          <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-[#0c1420] border border-[#16283d]">
-            <div className="w-2 h-2 rounded-full bg-[#00f5c4] shadow-[0_0_8px_#00f5c4] animate-pulse" />
-            <span className="text-[10px] text-[#00f5c4] uppercase tracking-widest font-bold">
-              SYS.ON • DATA FEED ACTIVE
-            </span>
-          </div>
+        {!hideTopStatus && (
+          <div className="flex items-center justify-between mb-8 px-2 font-mono">
+            <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-[#0c1420] border border-[#16283d]">
+              <div className="w-2 h-2 rounded-full bg-[#00f5c4] shadow-[0_0_8px_#00f5c4] animate-pulse" />
+              <span className="text-[10px] text-[#00f5c4] uppercase tracking-widest font-bold">
+                SYS.ON • DATA FEED ACTIVE
+              </span>
+            </div>
 
-          <div className="flex items-center gap-4 text-[11px]">
-            <span className="text-slate-400">UTC {time}</span>
-            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[#0c1420] border border-[#16283d]">
-              <Radio className="w-3 h-3 text-[#00f5c4]" />
-              <span className="text-[10px] text-slate-300 font-bold">LIVE</span>
+            <div className="flex items-center gap-4 text-[11px]">
+              <span className="text-slate-400">UTC {time}</span>
+              <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[#0c1420] border border-[#16283d]">
+                <Radio className="w-3 h-3 text-[#00f5c4]" />
+                <span className="text-[10px] text-slate-300 font-bold">LIVE</span>
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Logo & Title */}
         <div className="text-center mb-10">
@@ -163,11 +164,10 @@ export default function CoinSelector({ monedas, acciones, indices, onSelect }) {
               <button
                 key={key}
                 onClick={() => setMarket(key)}
-                className={`flex items-center gap-2 px-4 py-1 rounded-full text-[11px] font-bold tracking-wider transition-all uppercase ${
-                  market === key
+                className={`flex items-center gap-2 px-4 py-1 rounded-full text-[11px] font-bold tracking-wider transition-all uppercase ${market === key
                     ? "bg-[#00f5c4]/15 text-[#00f5c4] border border-[#00f5c4] shadow-[0_0_12px_rgba(0,245,196,0.25)]"
                     : "text-slate-400 hover:text-white border border-transparent"
-                }`}
+                  }`}
               >
                 <Icon className="w-3.5 h-3.5" />
                 {label}

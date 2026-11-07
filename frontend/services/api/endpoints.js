@@ -37,4 +37,11 @@ export const ENDPOINTS = {
 
   // POST /api/tts  -> síntesis de voz (ruta usada por el frontend)
   tts: () => `/tts`,
+
+  // ── Auth endpoints ──
+  authRegister: () => `/auth/register`,
+  authLogin:    () => `/auth/login`,
+  authRefresh:  () => `/auth/refresh`,
+  authLogout:   () => `/auth/logout`,
+  authProfile:  () => `/auth/profile`,
 }
